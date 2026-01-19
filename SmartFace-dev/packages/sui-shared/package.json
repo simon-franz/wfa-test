@@ -1,0 +1,43 @@
+{
+  "name": "@hrworks/sui-shared",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "sideEffects": false,
+  "dependencies": {
+    "@emotion/cache": "11.14.0",
+    "@emotion/react": "catalog:",
+    "@emotion/styled": "catalog:",
+    "@floating-ui/react": "catalog:",
+    "@floating-ui/react-dom": "catalog:",
+    "@hrworks/design-system": "workspace:*",
+    "@juggle/resize-observer": "^3.4.0",
+    "@react-hook/window-size": "^3.1.1",
+    "date-fns": "catalog:",
+    "lodash": "catalog:",
+    "next": "catalog:",
+    "react-swipeable": "catalog:",
+    "react-wrap-balancer": "^1.1.1",
+    "tabbable": "catalog:"
+  },
+  "peerDependencies": {
+    "@types/lodash": "catalog:",
+    "mobx": "catalog:",
+    "mobx-react": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@hrworks/types": "workspace:*",
+    "@hrworks/typescript-config": "workspace:*",
+    "@storybook/preview-api": "^8.6.14",
+    "@storybook/react": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "type-fest": "catalog:",
+    "typescript": "catalog:"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

@@ -1,0 +1,81 @@
+name: Deploy Job Server
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment Name'
+        required: true
+        default: development
+        type: choice
+        options:
+          - production
+          - testing
+          - demo
+          - private
+
+jobs:
+  build:
+    name: Build and Deploy for ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: ${{ github.event.inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Build docker image
+        env:
+          IMAGE_TAG: latest
+          IMAGE_NAME: stellenportal
+        run: |
+          docker build -f ./packages/stellenportal/Dockerfile . -t $IMAGE_NAME:$IMAGE_TAG
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME_JOB }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Tag and push APP to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: latest
+          IMAGE_NAME: stellenportal
+        run: |
+          # Tag the previously built image for ECR
+          docker tag $IMAGE_NAME:$IMAGE_TAG $ECR_REGISTRY/hrw/sf/job:$IMAGE_TAG
+
+          # Push the image to ECR
+          docker push $ECR_REGISTRY/hrw/sf/job:$IMAGE_TAG
+
+          # Output the image name for potential further use
+          echo "image=$ECR_REGISTRY/hrw/sf/job:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition --task-definition hrw-job --query taskDefinition > .github/hrw-job.json
+
+      - name: Render Amazon ECS task definition for App Container
+        id: render-app-container
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: .github/hrw-job.json
+          container-name: app
+          image: ${{ steps.login-ecr.outputs.registry }}/hrw/sf/job:latest
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-app-container.outputs.task-definition }}
+          service: hrw-job-service
+          cluster: hrw-job-cluster
+          wait-for-service-stability: false

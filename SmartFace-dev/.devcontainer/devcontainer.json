@@ -1,0 +1,43 @@
+{
+  "name": "SmartFace",
+  "dockerFile": "Dockerfile",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "github.vscode-pull-request-github",
+        "ms-azuretools.vscode-docker",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": { "path": "/bin/zsh" }
+        },
+        "extensions.ignoreRecommendations": true,
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "always"
+        }
+      }
+    }
+  },
+  "remoteUser": "sfUser",
+  "runArgs": ["--network=host"],
+  "containerEnv": {
+    "DISPLAY": ":0",
+    "WAYLAND_DISPLAY": "",
+    "SSH_AUTH_SOCK": "/home/sfUser/.ssh/agent.sock"
+  },
+  "remoteEnv": {
+    "DOCKER_BUILDKIT": "1"
+  },
+  "workspaceFolder": "/home/sfUser/repos/SmartFace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/sfUser/repos/SmartFace,type=bind,consistency=cached",
+  "mounts": [
+    "source=${localEnv:HOME}/.ssh,target=/home/sfUser/.ssh,type=bind,consistency=cached,readonly",
+    "source=${localEnv:HOME}/.gitconfig,target=/tmp/.gitconfig-host,type=bind,readonly",
+    "source=/tmp,target=/tmp,type=bind"
+  ],
+  "postCreateCommand": "/home/sfUser/repos/SmartFace/.devcontainer/scripts/.postCreateCommandScript.sh"
+}

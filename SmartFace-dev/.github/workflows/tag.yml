@@ -1,0 +1,69 @@
+name: Deploy Tagged Version
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - '**'
+
+jobs:
+  build:
+    name: Build project
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Create variables
+        id: variables
+        run: echo "subpath=build/production/${{ github.ref_name }}" >> $GITHUB_OUTPUT
+
+      - name: Build SmartFace
+        uses: ./.github/actions/sf-build-project
+        with:
+          public-url: ${{ vars.PUBLIC_URL }}/${{ steps.variables.outputs.subpath }}
+
+      - name: Deploy to S3 development bucket
+        uses: hrworks/hrworks-actions/.github/actions/aws-deploy-to-s3-bucket@main
+        with:
+          aws-role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+          is-public: 'true'
+          origin-path: ./build
+          target-path: ${{ vars.AWS_BUCKET }}/${{ steps.variables.outputs.subpath }}
+
+  send-email:
+    name: Send E-Mail
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 10
+    environment: development
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Send Notification via Mail
+        uses: hrworks/hrworks-actions/.github/actions/aws-send-email-notification@main
+        with:
+          aws-role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+          sender-name: 'DevOps SmartFace'
+          sender-email: ${{ vars.CI_SENDER_EMAIL }}
+          recipient: ${{ vars.CI_RECIPIENT_EMAIL }}
+          reply-to: ${{ vars.CI_RECIPIENT_EMAIL }}
+          subject: 'Version released - ${{ github.ref_name }}'
+          html: '<p><b>Hooray! Let us all celebrate ${{ github.ref_name }}!</b></p>'

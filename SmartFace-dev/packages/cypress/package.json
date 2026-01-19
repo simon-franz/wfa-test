@@ -1,0 +1,39 @@
+{
+  "name": "@hrworks/cypress",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "cypress:open": "NODE_NO_WARNINGS=1 VITE_CJS_IGNORE_WARNING=true cypress open",
+    "cy": "NODE_NO_WARNINGS=1 VITE_CJS_IGNORE_WARNING=true cypress"
+  },
+  "devDependencies": {
+    "@emotion/babel-plugin": "catalog:",
+    "@emotion/react": "catalog:",
+    "@emotion/styled": "catalog:",
+    "@hrworks/design-system": "workspace:*",
+    "@hrworks/cypress-utils": "workspace:*",
+    "@hrworks/typescript-config": "workspace:*",
+    "@reportportal/agent-js-cypress": "^5.4.0",
+    "@simonsmith/cypress-image-snapshot": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "babel-plugin-react-compiler": "catalog:",
+    "cypress": "catalog:",
+    "cypress-mochawesome-reporter": "^3.8.2",
+    "cypress-multi-reporters": "^2.0.5",
+    "dotenv": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-checker": "catalog:",
+    "vite-tsconfig-paths": "catalog:"
+  },
+  "exports": {
+    ".": null
+  }
+}

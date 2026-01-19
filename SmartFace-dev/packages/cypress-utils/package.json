@@ -1,0 +1,28 @@
+{
+  "name": "@hrworks/cypress-utils",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@emotion/react": "catalog:",
+    "@emotion/styled": "catalog:",
+    "@hrworks/design-system": "workspace:*",
+    "@hrworks/localization": "workspace:*",
+    "@hrworks/sui-shared": "workspace:*",
+    "@hrworks/types": "workspace:*",
+    "@hrworks/typescript-config": "workspace:*",
+    "@simonsmith/cypress-image-snapshot": "catalog:",
+    "@types/lodash": "catalog:",
+    "@types/react": "catalog:",
+    "cypress": "catalog:",
+    "cypress-real-events": "^1.14.0",
+    "lodash": "catalog:",
+    "motion": "catalog:",
+    "react": "catalog:"
+  },
+  "exports": {
+    "./commands": "./src/support/commands.ts",
+    "./fixtures": "./src/fixtures/index.ts",
+    "./functions": "./src/functions/index.ts"
+  }
+}

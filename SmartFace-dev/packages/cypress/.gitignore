@@ -1,0 +1,7 @@
+# Cypress
+outputs/downloads/
+outputs/cyErrors/
+outputs/plugin/diffs/
+outputs/reports/
+**/__diff_output__/
+*.diff.png

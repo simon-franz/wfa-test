@@ -1,0 +1,10 @@
+export const MAX_PDF_WIDTH = 10_000;
+export const MAX_PDF_HEIGHT = 10_000;
+export const EXPORT_LIMIT_DEFAULT = Number.POSITIVE_INFINITY;
+export const EXPORT_SERVER_MAX_PAYLOAD = 1_000_000;
+export const LEAF_GROUPING_THRESHOLD_LIMIT = 3;
+export const NODE_WIDTH = 280;
+export const NODE_ANIMATION_DURATION = 250;
+export const FIT_VIEW_PADDING = 0.3;
+export const MIN_ZOOM = 0.18;
+export const ZOOM_DURATION = 300;

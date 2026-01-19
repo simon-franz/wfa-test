@@ -1,0 +1,60 @@
+{
+  "activateCameraPage": {
+    "title": "Enable QR code recognition for clock in and clock out",
+    "buttonText": "Activate camera"
+  },
+  "backButton": {
+    "text": "Back"
+  },
+  "clockInMethodSelector": {
+    "personsTab": "Person selection",
+    "qrCodeTab": "Use QR code"
+  },
+  "header": {
+    "logoAltText": "HR works logo"
+  },
+  "namePad": {
+    "title": "Select your name",
+    "noRegisteredUserText": "No registered user available.",
+    "filterControls": {
+      "allUsersButton": "All"
+    }
+  },
+  "pinInputConsole": {
+    "text": "Please enter your 4-digit PIN."
+  },
+  "pinPad": {
+    "clockInButtonText": "Clock in",
+    "clockOutButtonText": "Clock out"
+  },
+  "qrCodeScannerPage": {
+    "title": "Hold the QR code in front of the camera to identify yourself.",
+    "invalidQrCodeModal": {
+      "closeButtonText": "Close",
+      "title": "Error",
+      "text": "Invalid QR code"
+    }
+  },
+  "statusPage": {
+    "title": "The time terminal page could not be found",
+    "subtitle": "The time terminal page you requested is no longer available or the link is invalid. Please check the URL."
+  },
+  "clockInPanel": {
+    "welcomeTitle": "Welcome, {userDisplayName}.",
+    "timeQualificationPanel": {
+      "label": "Working time type",
+      "noOptionsAvailableText": "No available working time type",
+      "workingTimeTypeKey": {
+        "workingTime": "Working time",
+        "doctorsAppointment": "Doctor's appointment",
+        "educationAndTraining": "Education and training",
+        "governmentAgencyAppointment": "Government agency appointment",
+        "businessErrand": "Business trip",
+        "physicalTherapy": "Physical therapy",
+        "postOffice": "Post office",
+        "null": "No option available"
+      },
+      "selectProjectLabel": "Project"
+    }
+  }
+}

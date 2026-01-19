@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "yoavbls.pretty-ts-errors",
+    "mylesmurphy.prettify-ts",
+    "naumovs.color-highlight",
+    "clinyong.vscode-css-modules",
+    "styled-components.vscode-styled-components",
+    "github.vscode-github-actions",
+    "eamodio.gitlens",
+    "huuums.vscode-fast-folder-structure"
+  ]
+}

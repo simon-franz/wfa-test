@@ -1,0 +1,60 @@
+{
+  "activateCameraPage": {
+    "title": "QR-Code-Erkennung aktivieren für An- und Abmeldung",
+    "buttonText": "Kamera aktivieren"
+  },
+  "backButton": {
+    "text": "Zurück"
+  },
+  "clockInMethodSelector": {
+    "personsTab": "Personenauswahl",
+    "qrCodeTab": "QR-Code nutzen"
+  },
+  "header": {
+    "logoAltText": "HR works logo"
+  },
+  "namePad": {
+    "title": "Wählen Sie Ihren Namen aus",
+    "noRegisteredUserText": "Kein registrierter User vorhanden.",
+    "filterControls": {
+      "allUsersButton": "Alle"
+    }
+  },
+  "pinInputConsole": {
+    "text": "Bitte geben Sie Ihre 4-stellige PIN ein."
+  },
+  "pinPad": {
+    "clockInButtonText": "Einstempeln",
+    "clockOutButtonText": "Ausstempeln"
+  },
+  "qrCodeScannerPage": {
+    "title": "Halten Sie den QR-Code vor die Kamera, um sich zu identifizieren.",
+    "invalidQrCodeModal": {
+      "closeButtonText": "Schließen",
+      "title": "Fehler",
+      "text": "Ungültiger QR-Code"
+    }
+  },
+  "statusPage": {
+    "title": "Die Zeitkiosk-Seite konnte nicht gefunden werden",
+    "subtitle": "Die von Ihnen aufgerufene Zeitkiosk-Seite ist nicht mehr verfügbar oder der Link ist ungültig. Bitte überprüfen Sie die URL."
+  },
+  "clockInPanel": {
+    "welcomeTitle": "Herzlich Willkommen, {userDisplayName}.",
+    "timeQualificationPanel": {
+      "label": "Arbeitszeitart",
+      "noOptionsAvailableText": "Keine verfügbare Arbeitszeitart",
+      "workingTimeTypeKey": {
+        "workingTime": "Arbeitszeit",
+        "doctorsAppointment": "Arztgang",
+        "educationAndTraining": "Aus- und Weiterbildung",
+        "governmentAgencyAppointment": "Behördengang",
+        "businessErrand": "Dienstgang",
+        "physicalTherapy": "Physiotherapie",
+        "postOffice": "Postamt",
+        "null": "Keine Option verfügbar"
+      },
+      "selectProjectLabel": "Projekt"
+    }
+  }
+}

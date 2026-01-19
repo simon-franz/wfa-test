@@ -1,0 +1,35 @@
+{
+  "name": "@hrworks/design-system",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "sideEffects": false,
+  "dependencies": {
+    "modern-normalize": "^3.0.1",
+    "@fontsource/nunito": "^5.2.6",
+    "@fontsource/open-sans": "^5.2.6",
+    "@fontsource/roboto": "^5.2.6",
+    "@fontsource/inter": "^5.2.6",
+    "@emotion/react": "catalog:",
+    "@emotion/styled": "catalog:",
+    "motion": "catalog:",
+    "lodash": "catalog:",
+    "react": "catalog:",
+    "mobx-react": "catalog:"
+  },
+  "devDependencies": {
+    "@hrworks/types": "workspace:*",
+    "@hrworks/typescript-config": "workspace:*",
+    "@types/react": "catalog:",
+    "@types/lodash": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles/*": "./src/styles/*"
+  },
+  "scripts": {
+    "build-theme": "bun src/theme/buildTheme.mjs"
+  }
+}

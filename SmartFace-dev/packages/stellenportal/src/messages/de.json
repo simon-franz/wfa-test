@@ -1,0 +1,153 @@
+{
+  "Main": {
+    "apply": "Bewerben",
+    "email": "E-Mail",
+    "search": "Suchen",
+    "advanced-search": "Erweiterte Suche",
+    "reset": "Zurücksetzen",
+    "home": "Home",
+    "share": "Teilen",
+    "application-form": "Bewerbungsformular",
+    "job-offer": "Stellenanzeige",
+    "all": "Alle"
+  },
+  "Metadata": {
+    "title": "HR WORKS - Stellenportal"
+  },
+  "Job": {
+    "carreer-level": "Karrierelevel",
+    "carreerLevelKey": {
+      "notSpecified": "Nicht angegeben",
+      "professional": "Professional",
+      "apprenticeOrWorkingStudent": "Studium/Praktikum/Ausbildung",
+      "studentTraineeOrApprenticeship": "Studium/Praktikum/Ausbildung",
+      "executive": "Executive",
+      "manager": "Manager",
+      "seniorExecutive": "Senior Executive",
+      "youngProfessional": "Young Professional"
+    },
+    "scope-of-activities": "Tätigkeitsbereich",
+    "scopeOfActivitiesKey": {
+      "administration": "Verwaltung",
+      "analysisAndStatistics": "Analyse und Statistik",
+      "consulting": "Beratung",
+      "customerService": "Kundenservice",
+      "engineeringAndTechnical": "Ingenieurwesen und Technik",
+      "financeAccountingAndControlling": "Finanzen, Buchhaltung und Controlling",
+      "graphicDesignAndArchitecture": "Grafikdesign und Architektur",
+      "healthMedicalAndSocial": "Gesundheit, Medizin und Soziales",
+      "hr": "Human Resources",
+      "itAndSoftwareDevelopment": "HR/IT und Softwareentwicklung",
+      "legal": "Recht",
+      "managementAndCorporateDevelopment": "Management und Unternehmensentwicklung",
+      "marketingAndAdvertising": "Marketing und Werbung",
+      "notSpecified": "Nicht angegeben",
+      "otherDisciplines": "Andere Bereiche",
+      "prAndJournalism": "PR und Journalismus",
+      "processPlanningAndQa": "Prozessplanung und QS",
+      "productionAndManufacturing": "Produktion und Fertigung",
+      "productManagement": "Produktmanagement",
+      "projectManagement": "Projektmanagement",
+      "purchasingMaterialsManagementAndLogistics": "Einkauf, Materialwirtschaft und Logistik",
+      "salesAndCommerce": "Vertrieb und Handel",
+      "researchAndDevelopment": "Forschung und Entwicklung"
+    },
+    "working-time-model": "Arbeitszeit",
+    "workingTimeModelKey": {
+      "notSpecified": "Nicht angegeben",
+      "fullTime": "Vollzeit",
+      "fullTimeOrPartTime": "Vollzeit / Teilzeit",
+      "partTimeAndFullTime": "Vollzeit / Teilzeit",
+      "partTime": "Teilzeit"
+    },
+    "place-of-work-type": "Arbeitsort",
+    "placeOfWorkTypeKey": {
+      "hybrid": "Hybrides Arbeiten",
+      "onsite": "Onsite",
+      "remote": "Remote"
+    },
+    "employmentContractType": "Arbeitsverhältnis",
+    "employmentContractTypeKey": {
+      "notSpecified": "Nicht angegeben",
+      "apprenticeship": "Ausbildung",
+      "externalEmployee": "Externe Mitarbeiter",
+      "internship": "Praktikum",
+      "marginalEmployment": "Geringfügige Beschäftigung",
+      "permanentEmployment": "Unbefristete Anstellung",
+      "shortTermEmployment": "Befristete Anstellung",
+      "studentJob": "Studentenjob"
+    },
+    "locations": "Standorte",
+    "contact": "Kontaktperson"
+  },
+  "Form": {
+    "required-fields": "Pflichtfelder"
+  },
+  "FormFields": {
+    "salutation": "Anrede",
+    "salutation-options": {
+      "mr": "Herr",
+      "ms": "Frau",
+      "none": "Keine Angabe"
+    },
+    "title": "Titel",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "email": "E-Mail",
+    "phone": "Telefon",
+    "street": "Straße",
+    "streetNumber": "Hausnummer",
+    "additional": "Adresszusatz",
+    "countryCode": "Land",
+    "zipCode": "Postleitzahl",
+    "city": "Stadt",
+    "birthday": "Geburtsdatum",
+    "birthplace": "Geburtsort",
+    "fieldOfStudy": "Studienrichtung",
+    "lastAnnualSalary": "Letztes Jahresgehalt",
+    "lastAnnualSalaryCurrency": "Währung",
+    "desiredSalary": "Gewünschtes Gehalt",
+    "earliestPossibleJoinDate": "Frühestmöglicher Eintrittstermin",
+    "noticePeriodTimeAmount": "Kündigungsfrist Dauer",
+    "noticePeriodTimeUnit": "Kündigungsfrist Einheit",
+    "noticePeriodTimeReference": "Kündigungsfrist Bezug",
+    "hasNoticePeriod": "Ich habe eine Kündigungsfrist",
+    "isSeverelyDisabled": "Ich bin Schwerbehindert",
+    "remark": "Weitere Anmerkungen",
+    "mayBePassedWithinCorporateGroup": "Darf innerhalb der Unternehmensgruppe weitergegeben werden",
+    "hasPrivacyTermsAccepted": "Ich erlaube die Verwendung meiner gesamten Bewerbungsunterlagen auch für weitere Bewerbungsverfahren (Talentpool). Die Einwilligung ist mit Wirkung für die Zukunft widerruflich.",
+    "files": {
+      "label": "Bewerbungsunterlagen hinzufügen",
+      "helptext": "Maximal 5 Dateien (20 MB gesamt), Dateityp: pdf, jpeg, jpg, png",
+      "trigger-text": "Datei(en) hinzufügen",
+      "errors": {
+        "sizeOfAllFiles": "Die Gesamtgröße der Dateien darf 20MB nicht überschreiten",
+        "allowedFileTypes": "Nur PDF und Bilddateien sind erlaubt"
+      }
+    },
+    "submit-button": "Bewerbung einreichen",
+    "submit-button-pending": "Sendet Bewerbung"
+  },
+  "Validation": {
+    "invalid-mail": "Bitte geben Sie eine gültige E-Mail-Adresse an",
+    "missing-name": "Bitte geben Sie einen Namen an"
+  },
+  "Footer": {
+    "privacy-policy": "Datenschutzerklärung",
+    "imprint": "Impressum",
+    "powered-by": "Bereitgestellt von HR WORKS"
+  },
+  "Testing": {
+    "noCustomerCompanyIdTitle": "Kein Unternehmen ausgewählt",
+    "noCustomerCompanyIdSubtitle": "Bitte eine CustomerCompanyNumber als Teil der URL angeben. (Diese Seite ist nur auf Testing sichtbar)",
+    "redirectButtonTitle": "Beispiel Stellenportal"
+  },
+  "Error": {
+    "title": "Error",
+    "message": "Oops, da ist etwas schiefgelaufen! Unser Team wurde benachrichtigt und arbeitet an einer Lösung."
+  },
+  "Languages": {
+    "en": "Englisch",
+    "de": "Deutsch"
+  }
+}

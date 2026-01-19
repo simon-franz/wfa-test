@@ -1,0 +1,6 @@
+files:
+  - source: /packages/localization/src/components/LocalizationProvider/languages/en.json
+    translation: /packages/localization/src/components/LocalizationProvider/languages/%two_letters_code%.json
+    type: json
+    json_options:
+      keep_json_structure: true

@@ -1,0 +1,127 @@
+name: Deploy Development Build
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+
+jobs:
+  unixTimestamp:
+    name: Create unixTimestamp Variable
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      unixTimestamp: ${{ steps.variables.outputs.unixTimestamp }}
+    steps:
+      - name: Create variables
+        id: variables
+        run: echo "unixTimestamp=$(date +%s)" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    needs: unixTimestamp
+    timeout-minutes: 15
+    environment: development
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Create variables
+        id: variables
+        run: echo "subpath=build/development/${{ needs.unixTimestamp.outputs.unixTimestamp }}" >> $GITHUB_OUTPUT
+
+      - name: Build SmartFace
+        uses: ./.github/actions/sf-build-project
+        with:
+          public-url: ${{ vars.PUBLIC_URL }}/${{ steps.variables.outputs.subpath }}
+
+      - name: Deploy to S3 development bucket
+        uses: hrworks/hrworks-actions/.github/actions/aws-deploy-to-s3-bucket@main
+        with:
+          aws-role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+          is-public: 'true'
+          origin-path: ./build
+          target-path: ${{ secrets.TARGET_PATH }}/${{ steps.variables.outputs.subpath }}
+
+  send-email:
+    name: Send E-Mail
+    runs-on: ubuntu-latest
+    needs: [build, unixTimestamp]
+    timeout-minutes: 10
+    environment: development
+    permissions:
+      id-token: write
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Get all successful workflows
+        run: |
+          TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          REPO="${{ github.repository }}"
+          API_URL="https://api.github.com"
+          WORKFLOWS=$(curl -s -H "Authorization: Bearer $TOKEN" "$API_URL/repos/$REPO/actions/runs" | jq '.workflow_runs[] | select(.path == ".github/workflows/dev.yml" and .conclusion == "success" and .status == "completed")')
+          WORKFLOWS_JSON=$(echo "$WORKFLOWS" | jq -c -M .)
+          echo "WORKFLOWS=$WORKFLOWS_JSON" >> $GITHUB_ENV
+
+      - name: Get Commit Messages from last successful workflow-run / branch-start
+        run: |
+          if [[ -z "$WORKFLOWS" ]]; then
+            FIRST_COMMIT=$(git cherry -v dev ${{ github.ref_name }} | awk 'NR==1{print $2}' | cut -c 1-7)
+          else
+            FIRST_COMMIT=$( echo $WORKFLOWS | jq '.head_sha' | head -n 1 | cut -c 1-7 | tr -d '"' )
+          fi
+          {
+            echo 'COMMIT_MESSAGES<<EOF'
+            git log $FIRST_COMMIT..HEAD --format="%s"
+            echo EOF
+          } >> $GITHUB_ENV
+
+      - id: escape-commits
+        name: Escape HTML Elements in Commit Messages
+        if: ${{ env.COMMIT_MESSAGES != '' }}
+        uses: hrworks/hrworks-actions/.github/actions/escape-html-elements@main
+        with:
+          string-to-escape: ${{ env.COMMIT_MESSAGES }}
+
+      - name: Create HTML Commit-List with Jira- & PR-URLs
+        run: |
+          if [[ -z "$COMMIT_MESSAGES" ]]; then
+            echo "EMAIL_COMMITS=<p>Last build includes no new commits</p>" >> $GITHUB_ENV
+          else
+            COMMIT_LIST="<ul>"
+
+            while IFS= read -r line; do
+              COMMIT_LIST+="<li>${line}</li>"
+            done < <(printf "%s" "${{ steps.escape-commits.outputs.escaped-string }}" | \
+              sed -E 's/(FE-[0-9]{1,6})[[:space:]]*:/<a href="https:\/\/hrworks.atlassian.net\/browse\/\1">\1<\/a>:/' | \
+              awk 'match($0, /\(#[0-9]+\)/) {
+                pr_number=substr($0, RSTART+2, RLENGTH-3);
+                gsub(/\(#[0-9]+\)/, "(<a href=\"https://github.com/hrworks/SmartFace/pull/"pr_number"\">#"pr_number"</a>)")
+              } 1')
+
+            COMMIT_LIST+="</ul>"
+            echo "EMAIL_COMMITS=<p>Last build includes following commits:</p>$COMMIT_LIST" >> $GITHUB_ENV
+          fi
+
+      - name: Send Notification via Mail
+        uses: hrworks/hrworks-actions/.github/actions/aws-send-email-notification@main
+        with:
+          aws-role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+          sender-name: 'DevOps SmartFace'
+          sender-email: ${{ vars.CI_SENDER_EMAIL }}
+          recipient: ${{ vars.CI_RECIPIENT_EMAIL }}
+          reply-to: ${{ vars.CI_RECIPIENT_EMAIL }}
+          subject: 'DEV: New Version - ${{ needs.unixTimestamp.outputs.unixTimestamp }}'
+          html: '<p>Unix timestamp of latest commit: <b>${{ needs.unixTimestamp.outputs.unixTimestamp }}</b></p>${{ env.EMAIL_COMMITS }}'

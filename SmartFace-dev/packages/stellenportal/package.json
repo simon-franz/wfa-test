@@ -1,0 +1,42 @@
+{
+  "name": "@hrworks/stellenportal",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 1337",
+    "stellenportal-dev": "next dev -p 1337",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "docker-start": "docker compose -f docker-compose.yml up -d",
+    "docker-stop": "docker compose -f docker-compose.yml down",
+    "docker-build": "cd ../../ && docker build -f ./packages/stellenportal/Dockerfile . -t stellenportal:stellenportal",
+    "docker-logs": "docker compose -f docker-compose.yml logs -f"
+  },
+  "dependencies": {
+    "@emotion/react": "catalog:",
+    "@emotion/styled": "catalog:",
+    "@hrworks/api-client": "workspace:*",
+    "@hrworks/design-system": "workspace:*",
+    "@hrworks/sui-core": "workspace:*",
+    "@hrworks/sui-extension": "workspace:*",
+    "@hrworks/sui-shared": "workspace:*",
+    "@sentry/nextjs": "catalog:",
+    "js-cookie": "3.0.5",
+    "next": "catalog:",
+    "next-intl": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@hrworks/api-schema": "workspace:*",
+    "@hrworks/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "eslint": "catalog:",
+    "@types/js-cookie": "3.0.5",
+    "typescript": "catalog:"
+  }
+}

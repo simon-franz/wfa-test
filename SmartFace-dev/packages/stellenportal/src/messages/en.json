@@ -1,0 +1,153 @@
+{
+  "Main": {
+    "apply": "Apply",
+    "email": "Email",
+    "search": "Search",
+    "advanced-search": "Advanced Search",
+    "reset": "Reset",
+    "home": "Home",
+    "share": "Share",
+    "application-form": "Application form",
+    "job-offer": "Job offer",
+    "all": "All"
+  },
+  "Metadata": {
+    "title": "HR WORKS - Job portal"
+  },
+  "Job": {
+    "carreer-level": "Carreer Level",
+    "carreerLevelKey": {
+      "notSpecified": "Not Specified",
+      "professional": "Professional",
+      "apprenticeOrWorkingStudent": "Student/Trainee/Apprenticeship",
+      "studentTraineeOrApprenticeship": "Student/Trainee/Apprenticeship",
+      "executive": "Executive",
+      "manager": "Manager",
+      "seniorExecutive": "Senior Executive",
+      "youngProfessional": "Young Professional"
+    },
+    "scope-of-activities": "Scope of Activities",
+    "scopeOfActivitiesKey": {
+      "administration": "Administration",
+      "analysisAndStatistics": "Analysis and Statistics",
+      "consulting": "Consulting",
+      "customerService": "Customer Service",
+      "engineeringAndTechnical": "Engineering and Technical",
+      "financeAccountingAndControlling": "Finance, Accounting and Controlling",
+      "graphicDesignAndArchitecture": "Graphic Design and Architecture",
+      "healthMedicalAndSocial": "Health, Medical and Social",
+      "hr": "Human Resources",
+      "itAndSoftwareDevelopment": "HR/IT and Software Development",
+      "legal": "Legal",
+      "managementAndCorporateDevelopment": "Management and Corporate Development",
+      "marketingAndAdvertising": "Marketing and Advertising",
+      "notSpecified": "Not Specified",
+      "otherDisciplines": "Other Disciplines",
+      "prAndJournalism": "PR and Journalism",
+      "processPlanningAndQa": "Process Planning and QA",
+      "productionAndManufacturing": "Production and Manufacturing",
+      "productManagement": "Product Management",
+      "projectManagement": "Project Management",
+      "purchasingMaterialsManagementAndLogistics": "Purchasing, Materials Management and Logistics",
+      "salesAndCommerce": "Sales and Commerce",
+      "researchAndDevelopment": "Research and Development"
+    },
+    "working-time-model": "Working time",
+    "workingTimeModelKey": {
+      "notSpecified": "Not Specified",
+      "fullTime": "Full time",
+      "fullTimeOrPartTime": "Full time / Part time",
+      "partTimeAndFullTime": "Full time / Part time",
+      "partTime": "Part time"
+    },
+    "place-of-work-type": "Place of work",
+    "placeOfWorkTypeKey": {
+      "hybrid": "Hybrid",
+      "onsite": "Onsite",
+      "remote": "Remote"
+    },
+    "employmentContractType": "Work relation",
+    "employmentContractTypeKey": {
+      "notSpecified": "Not specified",
+      "apprenticeship": "Apprenticeship",
+      "externalEmployee": "External employee",
+      "internship": "Internship",
+      "marginalEmployment": "Marginal employment",
+      "permanentEmployment": "Permanent employment",
+      "shortTermEmployment": "Short-term employment",
+      "studentJob": "Student job"
+    },
+    "locations": "Locations",
+    "contact": "Contact"
+  },
+  "Form": {
+    "required-fields": "Required fields"
+  },
+  "FormFields": {
+    "salutation": "Salutation",
+    "salutation-options": {
+      "mr": "Mr.",
+      "ms": "Ms.",
+      "none": "None"
+    },
+    "title": "Title",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "phone": "Phone",
+    "street": "Street",
+    "streetNumber": "Street Number",
+    "additional": "Additional Address Info",
+    "countryCode": "Country",
+    "zipCode": "ZIP Code",
+    "city": "City",
+    "birthday": "Date of Birth",
+    "birthplace": "Place of Birth",
+    "fieldOfStudy": "Field of Study",
+    "lastAnnualSalary": "Last Annual Salary",
+    "lastAnnualSalaryCurrency": "Currency",
+    "desiredSalary": "Desired Salary",
+    "earliestPossibleJoinDate": "Earliest Possible Start Date",
+    "noticePeriodTimeAmount": "Notice Period Length",
+    "noticePeriodTimeUnit": "Notice Period Unit",
+    "noticePeriodTimeReference": "Notice Period Reference",
+    "hasNoticePeriod": "I have a notice period",
+    "isSeverelyDisabled": "I am severely disabled",
+    "remark": "Additional Comments",
+    "mayBePassedWithinCorporateGroup": "May be shared within corporate group",
+    "hasPrivacyTermsAccepted": "I accept the privacy policy",
+    "files": {
+      "label": "Add Documents",
+      "helptext": "Maximum of 5 Files (20 MB in total), File-Types: pdf, jpeg, jpg, png",
+      "trigger-text": "Choose Files",
+      "errors": {
+        "sizeOfAllFiles": "Total size must be less than 20MB",
+        "allowedFileTypes": "Only PDF and image files are allowed"
+      }
+    },
+    "submit-button": "Send Application",
+    "submit-button-pending": "Sending Application"
+  },
+  "Validation": {
+    "invalid-mail": "Please enter a valid E-Mail Address",
+    "missing-name": "Please enter a name"
+  },
+  "Footer": {
+    "privacy-policy": "Privacy Policy",
+    "imprint": "Imprint",
+    "powered-by": "Powered by HR WORKS"
+  },
+  "Testing": {
+    "noCustomerCompanyIdTitle": "No Company Selected",
+    "noCustomerCompanyIdSubtitle": "Please add a CustomerCompanyNumber as part of the URL. (This Page is only visible on Testing)",
+    "redirectButtonTitle": "Example Job-Portal"
+  },
+  "Error": {
+    "title": "Error",
+    "message": "Oops, something went wrong! Our team has been notified and is working on it in case there is a problem."
+  },
+  "Languages": {
+    "en": "English",
+    "de": "German"
+  }
+}

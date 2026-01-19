@@ -1,0 +1,305 @@
+{
+  "Emotion setup": {
+    "prefix": "xxset",
+    "body": [
+      "import styled from '@emotion/styled';",
+      "",
+      "const ${1:ComponentName} = styled.${2:htmlElement}({",
+      "  $0",
+      "});",
+      "",
+      "export const S = {${1:ComponentName}} as const;"
+    ],
+    "description": "Setup for a .styles file with a styled component",
+    "scope": "typescript"
+  },
+  "Emotion setup with theme component": {
+    "prefix": "xxsett",
+    "body": [
+      "import styled from '@emotion/styled';",
+      "",
+      "const ${1:ComponentName} = styled.${2:htmlElement}(({theme}) => ({",
+      "  $0",
+      "}));",
+      "",
+      "export const S = {${1:ComponentName}} as const;"
+    ],
+    "description": "Setup for a .styles file with a styled component and theme",
+    "scope": "typescript"
+  },
+  "Emotion setup with typed component": {
+    "prefix": "xxsetts",
+    "body": [
+      "import styled from '@emotion/styled';",
+      "",
+      "const ${1:ComponentName} = styled.${2:htmlElement}<${3:type}>(({${4:property}}) => ({",
+      "  $0",
+      "}));",
+      "",
+      "export const S = {${1:ComponentName}} as const;"
+    ],
+    "description": "Setup for a .styles file with a typed styled component",
+    "scope": "typescript"
+  },
+  "Emotion setup with react component": {
+    "prefix": "xxsetr",
+    "body": [
+      "import styled from '@emotion/styled';",
+      "",
+      "const ${1:ComponentName} = styled(${2:htmlElement})({",
+      "  $0",
+      "});",
+      "",
+      "export const S = {${1:ComponentName}} as const;"
+    ],
+    "description": "Setup for a .styles file with a typed styled component",
+    "scope": "typescript"
+  },
+  "Emotion setup with typed react component": {
+    "prefix": "xxsettr",
+    "body": [
+      "import styled from '@emotion/styled';",
+      "",
+      "const ${1:ComponentName} = styled(${2:React-Component}, {shouldForwardProps})<{$${3:type}}>(({$${4:property}}) => ({",
+      "  $0",
+      "}));",
+      "",
+      "export const S = {${1:ComponentName}} as const;"
+    ],
+    "description": "Setup for a .styles file with a typed styled component",
+    "scope": "typescript"
+  },
+  "Emotion setup with react theme component": {
+    "prefix": "xxsetrt",
+    "body": [
+      "import styled from '@emotion/styled';",
+      "",
+      "const ${1:ComponentName} = styled(${2:htmlElement})(({theme}) => ({",
+      "  $0",
+      "}));",
+      "",
+      "export const S = {${1:ComponentName}} as const;"
+    ],
+    "description": "Setup for a .styles file with a styled component and theme",
+    "scope": "typescript"
+  },
+  "Export S Object": {
+    "prefix": "xxes",
+    "body": ["export const S = {} as const;"],
+    "description": "Creates a exported S object",
+    "scope": "typescript"
+  },
+  "Styled Component": {
+    "prefix": "xxsc",
+    "body": ["const ${1:ComponentName} = styled.${2:htmlElement}({", "  $0", "});"],
+    "description": "Creates a styled component",
+    "scope": "typescript"
+  },
+  "Styled React Component": {
+    "prefix": "xxsrc",
+    "body": ["const ${1:ComponentName} = styled(${2:React-Component})({", "  $0", "});"],
+    "description": "Creates a styled component",
+    "scope": "typescript"
+  },
+  "Styled Component Theme": {
+    "prefix": "xxsct",
+    "body": ["const ${1:ComponentName} = styled.${2:htmlElement}(({theme}) => ({", "  $0", "}));"],
+    "description": "Creates a styled component with theme",
+    "scope": "typescript"
+  },
+  "Styled React Component Theme": {
+    "prefix": "xxsrct",
+    "body": ["const ${1:ComponentName} = styled(${2:React-Component})(({theme}) => ({", "  $0", "}));"],
+    "description": "Creates a styled component with theme",
+    "scope": "typescript"
+  },
+  "Typed Styled Component": {
+    "prefix": "xxtsc",
+    "body": [
+      "const ${1:ComponentName} = styled.${2:htmlElement}<${3:type}>(({${4:property}}) => ({",
+      "  $0",
+      "}));",
+      ""
+    ],
+    "description": "Creates a typed styled component",
+    "scope": "typescript"
+  },
+  "Typed Styled React Component ": {
+    "prefix": "xxtsrc",
+    "body": [
+      "const ${1:ComponentName} = styled(${2:React-Component}, {shouldForwardProps})<{$${3:type}}>(({$${4:property}}) => ({",
+      "$0",
+      "}));",
+      ""
+    ],
+    "description": "Creates a typed styled component",
+    "scope": "typescript"
+  },
+  "Import Emotion Styled": {
+    "prefix": "xxies",
+    "body": ["import styled from '@emotion/styled';"],
+    "description": "Imports the Emotion styled package",
+    "scope": "typescript"
+  },
+  "Import Emotion CSS": {
+    "prefix": "xxiec",
+    "body": ["import css from '@emotion/react';"],
+    "description": "Imports the Emotion css package",
+    "scope": "typescript"
+  },
+  "CSS Function": {
+    "prefix": "xxcf",
+    "body": ["const ${1:functionName} = () => css({", "$0", "});"],
+    "description": "Creates a css function",
+    "scope": "typescript"
+  },
+  "CSS Function with Theme": {
+    "prefix": "xxcft",
+    "body": ["const ${1:functionName} = (theme:Theme) => css({", "$0", "});"],
+    "description": "Creates a css function with theme parameter",
+    "scope": "typescript"
+  },
+  "Storybook Default Story": {
+    "prefix": "xxstory",
+    "body": [
+      "import type { Meta, StoryObj } from '@storybook/react';",
+      "",
+      "const meta = {",
+      "title:'${1:uiName}/${2:Component}',",
+      "component:${2:Component},",
+      "parameters:{ layout:'centered' },",
+      "tags:['autodocs'],",
+      "args:{",
+      "// defaultArgs",
+      "},",
+      "} satisfies Meta<typeof ${2:Component}>;",
+      "",
+      "export default meta;",
+      "",
+      "type Story = StoryObj<typeof meta>;",
+      "",
+      "export const Default:Story = {};"
+    ],
+    "description": "Creates a basic Story for Storybook",
+    "scope": "typescriptreact "
+  },
+  "Dev-Page": {
+    "prefix": "xxpage",
+    "body": [
+      "// @ts-check",
+      "",
+      "import { classicLayoutFactory } from '../../../../shared/smartFaceComponentFactories/core/classicLayoutFactory.js';",
+      "import { pageFactory } from '../../../../shared/smartFaceComponentFactories/core/pageFactory.js';",
+      "import { smartFaceFactory } from '../../../../shared/smartFaceComponentFactories/core/smartFaceFactory.js';",
+      "import { footer } from '../shared/footer.js';",
+      "import { sidebar } from '../shared/sidebar.js';",
+      "",
+      "/**",
+      " * @type { import('../../../../src/types/shared/BackendResponseType/SmartFaceBackendDataType').SmartFaceBackendDataType }",
+      " */",
+      "export const ${1:componentPage} = smartFaceFactory({",
+      "sfComponents:[",
+      "pageFactory({",
+      "document:{ head:{ title:'${2:Component Page}' } },",
+      "componentChildren:[",
+      "classicLayoutFactory({",
+      "sidebar:sidebar('${3:component-page}', ['${4:sidebarParent}']),",
+      "content:{",
+      "componentChildren:[],",
+      "},",
+      "footer,",
+      "}),",
+      "],",
+      "}),",
+      "],",
+      "});"
+    ],
+    "description": "Creates a Basic Dev-Server Page",
+    "scope": "javascript "
+  },
+  "OnClick-Mock": {
+    "prefix": "xxonclick",
+    "body": [
+      "onClick:[",
+      "{",
+      "type:'request',",
+      "data:{",
+      "action:'reflect',",
+      "reflectedData:patchFactory([",
+      "{",
+      "targetSfId:'${1:sfId}',",
+      "operation:'${2:operation}',",
+      "path:'props.${3:prop}',",
+      "value:'${4:value}',",
+      "},",
+      "]),",
+      "},",
+      "},",
+      "],"
+    ],
+    "description": "Creates a Basic onClick to Patch Props",
+    "scope": "javascript "
+  },
+  "Cypress-Test-Setup": {
+    "prefix": "xxtest",
+    "body": [
+      "import type { ${1:Component}UiPropsType } from '@type/${1:Component}Type';",
+      "import ${1:Component} from '@ui/components/${1:Component}';",
+
+      "const render${1:Component} = (props: ${1:Component}UiPropsType) => {",
+      "renderComponentWithTheme(${1:Component}, { ...props });",
+      "};",
+      " ",
+      "$0"
+    ],
+    "description": "Creates a basic test template for cypress",
+    "scope": "typescriptreact"
+  },
+  "Cypress-Context": {
+    "prefix": "xxcontext",
+    "body": ["context('${1:ComponentName}: ${2:test-type}', () => {", "$0", "});"],
+    "description": "Creates a context expression for cypress",
+    "scope": "typescriptreact"
+  },
+  "Cypress-Describe": {
+    "prefix": "xxdescribe",
+    "body": ["describe('${1:what}', () => {", "it('${2:expected-outcome}', () => {", "$0", "});", "  });"],
+    "description": "Creates a describe expression for cypress",
+    "scope": "typescriptreact"
+  },
+  "Cypress-screenshot": {
+    "prefix": "xxscreenshot",
+    "body": [" cy.matchImageSnapshotAndUpload(${1:screenshotName});"],
+    "description": "Creates a describe expression for cypress",
+    "scope": "typescriptreact"
+  },
+  "Cypress-ClickSpy": {
+    "prefix": "xxspy",
+    "body": ["cy.spy().as('onClickSpy')"],
+    "description": "Creates a click Spy",
+    "scope": "typescriptreact"
+  },
+  "Component Cypress Test Template": {
+    "prefix": "xxcytest",
+    "body": [
+      "import { generateVisualTests } from '@hrworks/cypress/component/helpers';",
+      "import { renderComponentWithTheme } from '@hrworks/cypress';",
+      "",
+      "const defaultProps: ${1:Component}Props = {",
+      "  $0",
+      "};",
+      "",
+      "const renderComponent = (props?: Partial<${1:Component}Props>) => {",
+      "  renderComponentWithTheme(${1:Component}, { ...defaultProps, ...props }, { checkForExistence: true });",
+      "};",
+      "",
+      "context('${1:Component}: visual test', () => {",
+      "});",
+      "",
+      "context('${1:Component}: functional tests', () => {",
+      "});"
+    ],
+    "description": "Creates a complete component test template for Cypress component testing",
+    "scope": "typescriptreact"
+  }
+}

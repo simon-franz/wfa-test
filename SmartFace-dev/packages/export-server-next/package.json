@@ -1,0 +1,36 @@
+{
+  "name": "@hrworks/export-server-next",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 5000",
+    "export-server-next-dev": "next dev -p 5000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.758.0",
+    "@emotion/react": "catalog:",
+    "@emotion/styled": "catalog:",
+    "@sentry/nextjs": "catalog:",
+    "@xyflow/react": "catalog:",
+    "@hrworks/design-system": "workspace:*",
+    "cors": "catalog:",
+    "jsonwebtoken": "catalog:",
+    "next": "catalog:",
+    "puppeteer": "^24.15.0",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@hrworks/typescript-config": "workspace:*",
+    "@types/cors": "catalog:",
+    "@types/jsonwebtoken": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "typescript": "catalog:"
+  }
+}

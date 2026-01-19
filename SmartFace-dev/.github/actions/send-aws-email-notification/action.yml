@@ -1,0 +1,51 @@
+name: 'Send E-Mail Notification'
+description: 'Send Notification to E-Mail Address via AWS'
+
+inputs:
+  aws-role-to-assume:
+    description: 'AWS role to assume'
+    required: true
+  aws-region:
+    description: 'AWS region'
+    required: true
+  sender:
+    description: 'Sender-Mail'
+    required: true
+  recipient:
+    description: 'Recipient-Mail'
+    required: true
+  subject:
+    description: 'Subject'
+    required: true
+  text:
+    description: 'TEXT'
+    required: true
+  html:
+    description: 'HTML'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up AWS credentials
+      uses: aws-actions/configure-aws-credentials@v5
+      with:
+        role-to-assume: ${{ inputs.aws-role-to-assume }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Send email
+      shell: bash
+      run: |
+        SENDER_EMAIL="${{ inputs.sender }}"
+        RECIPIENT_EMAIL="${{ inputs.recipient }}"
+        SUBJECT="${{ inputs.subject }}"
+        BODY="${{ inputs.text }}"
+        HTML="<p>${{ inputs.html }}</p>"
+        aws ses send-email \
+          --from "$SENDER_EMAIL" \
+          --to "$RECIPIENT_EMAIL" \
+          --subject "$SUBJECT" \
+          --text "$TEXT" \
+          --html "$HTML"

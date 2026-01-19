@@ -1,0 +1,48 @@
+<style>
+  html {
+    box-sizing: border-box;
+  }
+
+  *,
+  *:before,
+  *:after {
+    box-sizing: inherit;
+  }
+
+  html {
+    height: 100%;
+  }
+
+  #storybook-root {
+    height: 100%;
+  }
+
+  body {
+    /* TODO: Check why / if setting of background-color is really necessary here */
+    background-color: white !important;
+    min-height: 100vh;
+  }
+
+  #root {
+    min-height: 100%;
+  }
+
+  /* TODO: Check why / if styling of prismjs is really necessary here */
+  .prismjs * {
+    background-color: revert;
+  }
+
+  #error-message {
+    color: unset;
+  }
+
+  #error-stack {
+    background: unset;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+</style>

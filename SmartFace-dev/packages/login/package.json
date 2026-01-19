@@ -1,0 +1,50 @@
+{
+  "name": "@hrworks/login",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 4242",
+    "build": "next build",
+    "lint": "next lint",
+    "dev:services:up": "bun src/utils/system/serviceUp.ts",
+    "dev:services:down": "bun src/utils/system/serviceUp.ts --shutdown",
+    "dev:services:restart": "bun run dev:services:down && bun run dev:services:up",
+    "dev:services:onlyAuth": "bun src/utils/system/serviceUp.ts --services-only",
+    "setup:localstack": "bun src/utils/system/setupLocalstack.ts",
+    "check:emails": "bun src/utils/external/email/checkEmails.ts"
+  },
+  "dependencies": {
+    "@emotion/react": "catalog:",
+    "@emotion/styled": "catalog:",
+    "@hrworks/api-client": "workspace:*",
+    "@hrworks/design-system": "workspace:*",
+    "@hrworks/error-handling": "workspace:*",
+    "@hrworks/sui-core": "workspace:*",
+    "@hrworks/sui-shared": "workspace:*",
+    "@sentry/nextjs": "catalog:",
+    "aws-sdk": "^2.1691.0",
+    "ioredis": "^5.4.1",
+    "@react-email/components": "0.5.7",
+    "@react-email/render": "1.1.3",
+    "jsonwebtoken": "catalog:",
+    "input-otp": "catalog:",
+    "motion": "catalog:",
+    "next": "catalog:",
+    "next-intl": "catalog:",
+    "cookies-next": "4.3.0",
+    "dotenv": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@hrworks/types": "workspace:*",
+    "@hrworks/typescript-config": "workspace:*",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:"
+  }
+}

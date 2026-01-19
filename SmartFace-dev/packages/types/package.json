@@ -1,0 +1,17 @@
+{
+  "name": "@hrworks/types",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "sideEffects": false,
+  "devDependencies": {
+    "@hrworks/typescript-config": "workspace:*",
+    "@types/react": "catalog:",
+    "react": "catalog:",
+    "type-fest": "catalog:",
+    "typescript": "catalog:"
+  },
+  "exports": {
+    ".": "./src/"
+  }
+}

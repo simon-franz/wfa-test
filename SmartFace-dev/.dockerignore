@@ -1,0 +1,25 @@
+# Dependencies
+node_modules
+npm-debug.log
+
+# Git
+.git/
+.gitignore
+
+# Build outputs
+.next/
+**/.next/
+dist/
+**/dist/
+build/
+**/build/
+
+# Cache directories
+.turbo/
+**/.turbo/
+.cache/
+**/.cache/
+
+# Storybook
+storybook-static/
+**/storybook-static/

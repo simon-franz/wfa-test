@@ -1,0 +1,1 @@
+export { TabAdapter } from './TabAdapter';

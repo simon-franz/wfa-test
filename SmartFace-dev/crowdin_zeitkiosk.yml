@@ -1,0 +1,4 @@
+files:
+  - source: /packages/zeitkiosk/messages/en.json
+    translation: /packages/zeitkiosk/messages/%two_letters_code%.json
+    type: json

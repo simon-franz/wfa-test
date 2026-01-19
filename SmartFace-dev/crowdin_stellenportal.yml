@@ -1,0 +1,6 @@
+files:
+  - source: /packages/stellenportal/src/messages/en.json
+    translation: /packages/stellenportal/src/messages/%two_letters_code%.json
+    type: json
+    json_options:
+      keep_json_structure: true

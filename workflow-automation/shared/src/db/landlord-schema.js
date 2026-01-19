@@ -1,0 +1,14 @@
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+// Landlord database schema - stores tenant information
+// Each tenant gets their own separate SQLite database
+export const tenants = sqliteTable('tenants', {
+    id: text('id').primaryKey(), // ULID
+    hrworksOrgId: text('hrworks_org_id').notNull().unique(),
+    name: text('name').notNull(),
+    dbPath: text('db_path').notNull(), // Path to tenant's SQLite database
+    isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+    settings: text('settings', { mode: 'json' }).$type().notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+//# sourceMappingURL=landlord-schema.js.map

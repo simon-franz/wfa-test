@@ -1,0 +1,14 @@
+{
+  "name": "@hrworks/icons",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "sideEffects": false,
+  "scripts": {
+    "icons": "bun scripts/index.js"
+  },
+  "devDependencies": {
+    "commander": "catalog:",
+    "dotenv": "catalog:"
+  }
+}

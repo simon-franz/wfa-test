@@ -1,0 +1,87 @@
+# TODO: Create a deployment workflow to be shared with Secondaries
+name: Deploy Login Server
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment Name'
+        required: true
+        default: development
+        type: choice
+        options:
+          - production
+          - testing
+          - demo
+          - private
+      # - AWS_ROLE_TO_ASSUME_JOB ist anders
+      # - Tag von ECR ist anders
+jobs:
+  build:
+    name: Build and Deploy for ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: ${{ github.event.inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Build docker image
+        env:
+          IMAGE_TAG: latest
+          IMAGE_NAME: login
+        run: |
+          docker build \
+            --build-arg NODE_ENV=production \
+            -f ./packages/login/Dockerfile \
+            . \
+            -t $IMAGE_NAME:$IMAGE_TAG
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME_LOGIN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Tag and push APP to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: latest
+          IMAGE_NAME: login
+        run: |
+          # Tag the previously built image for ECR
+          docker tag $IMAGE_NAME:$IMAGE_TAG $ECR_REGISTRY/hrw/sf/login:$IMAGE_TAG
+
+          # Push the image to ECR
+          docker push $ECR_REGISTRY/hrw/sf/login:$IMAGE_TAG
+
+          # Output the image name for potential further use
+          echo "image=$ECR_REGISTRY/hrw/sf/login:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition --task-definition hrw-login --query taskDefinition > .github/hrw-login.json
+
+      - name: Render Amazon ECS task definition for App Container
+        id: render-app-container
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: .github/hrw-login.json
+          container-name: app
+          image: ${{ steps.login-ecr.outputs.registry }}/hrw/sf/login:latest
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-app-container.outputs.task-definition }}
+          service: hrw-login-service
+          cluster: hrw-login-cluster
+          wait-for-service-stability: false

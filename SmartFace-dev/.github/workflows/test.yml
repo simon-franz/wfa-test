@@ -1,0 +1,446 @@
+name: Run Tests
+
+on:
+  workflow_dispatch:
+  schedule: # Mo-Fr, 00:00 Uhr & 12:00 Uhr
+    - cron: '0 11,23 * 11,12,1-3 1-5' # UTC: +1 = CET (Central European Time)
+    - cron: '0 10,22 * 4-10 1-5' # UTC: +2 = CEST (Central European Summer Time)
+
+jobs:
+  build-docker-image:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    outputs:
+      image-id: ${{ steps.image-build.outputs.imageid }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and cache Docker image
+        id: image-build
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_SUMMARY: false
+        with:
+          context: .devcontainer
+          file: .devcontainer/Dockerfile
+          push: false
+          load: true
+          tags: sf-image:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/sf-image.tar
+
+      - name: Upload Docker image as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sf-docker-image
+          path: /tmp/sf-image.tar
+          retention-days: 1
+
+  generate-matrix:
+    name: Generate Test Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      components: ${{ steps.parse-components.outputs.components }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Bun 1.3.3
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.3
+
+      - name: Parse components from ES module
+        id: parse-components
+        run: |
+          COMPONENTS_JSON=$(bun -e "import('./packages/cypress/test-components.mjs').then(m => console.log(JSON.stringify(m.TEST_COMPONENTS))).catch(e => { console.error('Error:', e.message); process.exit(1); })")
+          echo "components=$COMPONENTS_JSON" >> $GITHUB_OUTPUT
+
+  start-report-portal:
+    name: Start Report Portal Launch
+    runs-on: ubuntu-latest
+    environment: development
+    outputs:
+      launch-uuid: ${{ steps.create-launch.outputs.launch-uuid }}
+    steps:
+      - name: Create Report Portal Launch
+        id: create-launch
+        env:
+          REPORT_PORTAL_API_KEY: ${{ secrets.REPORT_PORTAL_API_KEY }}
+        run: |
+          echo "🚀 Creating Report Portal Launch..."
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://test-dashboard.internal-hrworks.de/api/v1/hrworks/launch" \
+            -H "Authorization: bearer $REPORT_PORTAL_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "CI: Frontend Tests",
+              "description": "CI: Frontend Tests",
+              "startTime": "'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'",
+              "mode": "DEFAULT",
+              "attributes": [
+                {
+                  "key": "source",
+                  "value": "CI"
+                },
+                {
+                  "key": "build",
+                  "value": "${{ github.run_number }}"
+                }
+              ]
+            }')
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+
+          if [ "$HTTP_CODE" -eq 201 ]; then
+            LAUNCH_UUID=$(echo "$BODY" | jq -r '.id')
+            echo "launch-uuid=$LAUNCH_UUID" >> $GITHUB_OUTPUT
+            echo "✅ Launch created with ID: $LAUNCH_UUID"
+          else
+            echo "❌ Failed to create launch (HTTP $HTTP_CODE)"
+            # Don't fail the workflow, just skip ReportPortal
+            echo "launch-uuid=" >> $GITHUB_OUTPUT
+          fi
+
+  run-tests:
+    name: Run Tests
+    needs: [build-docker-image, generate-matrix, start-report-portal]
+    runs-on: ubuntu-latest
+    environment: development
+    timeout-minutes: 40
+    strategy:
+      matrix:
+        component: ${{ fromJson(needs.generate-matrix.outputs.components) }}
+      fail-fast: false
+
+    env:
+      EXECUTION_ENVIRONMENT: CI
+      REPORT_PORTAL_API_KEY: ${{ secrets.REPORT_PORTAL_API_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: sf-docker-image
+          path: /tmp
+
+      - name: Load Docker image
+        run: |
+          docker load --input /tmp/sf-image.tar
+          docker image ls -a
+
+      - name: Set XDG_RUNTIME_DIR
+        run: |
+          mkdir -p /tmp/runtime-root
+          chmod 700 /tmp/runtime-root
+          echo "XDG_RUNTIME_DIR=/tmp/runtime-root" >> $GITHUB_ENV
+
+      - name: Run container
+        run: |
+          docker run -d --name sf-container \
+            --privileged --network host \
+            -v "${{ github.workspace }}:/home/sfUser/repos/SmartFace:rw" \
+            -v "/var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:rw" \
+            -w /home/sfUser/repos/SmartFace \
+            --env EXECUTION_ENVIRONMENT=CI \
+            --env XDG_RUNTIME_DIR=/tmp/runtime-root \
+            --env ELECTRON_DISABLE_SANDBOX=1 \
+            --env FONTCONFIG_PATH=/etc/fonts \
+            --env REPORT_PORTAL_API_KEY="${{ secrets.REPORT_PORTAL_API_KEY }}" \
+            --env REPORT_PORTAL_LAUNCH_UUID="${{ needs.start-report-portal.outputs.launch-uuid }}" \
+            --env TEST_COMPONENTS="${{ matrix.component }}" \
+            --user 1000:1000 \
+            --entrypoint="" \
+            sf-image \
+            /bin/bash -c "while true; do sleep 30; done"
+
+      - name: Fix ownership in container
+        run: |
+          docker exec sf-container sudo chown -R 1000:1000 /home/sfUser
+
+      - name: Install dependencies in container
+        run: |
+          docker exec sf-container bun install
+
+      - name: Debug environment variables
+        run: |
+          echo "🔍 Debugging Launch UUID transfer:"
+          echo "Launch UUID from start-report-portal: ${{ needs.start-report-portal.outputs.launch-uuid }}"
+          docker exec sf-container env | grep REPORT_PORTAL || echo "❌ No REPORT_PORTAL env vars found"
+          docker exec sf-container env | grep TEST_COMPONENTS || echo "❌ No TEST_COMPONENTS found"
+
+      - name: Run tests in container
+        run: |
+          docker exec -e DISPLAY= -e TEST_COMPONENTS="${{ matrix.component }}" -e REPORT_PORTAL_LAUNCH_UUID="${{ needs.start-report-portal.outputs.launch-uuid }}" sf-container bun run --bun --cwd packages/cypress cy run --headless --component -b chrome
+
+      - name: Check for test reports
+        id: check-reports
+        if: success() || (failure() && needs.run-tests.result != 'cancelled')
+        run: |
+          if find packages/cypress/outputs/reports -name "mochawesome-report-*.json" -print -quit | grep -q .; then
+            echo "has-reports=true" >> $GITHUB_OUTPUT
+          else
+            echo "has-reports=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload test reports
+        if: always() && steps.check-reports.outputs.has-reports == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ matrix.component }}
+          path: packages/cypress/outputs/reports/mochawesome-report-*.json
+          retention-days: 3
+
+      - name: Check for diff images
+        id: check-diffs
+        if: always()
+        run: |
+          if find packages/cypress/outputs/plugin/diffs -name "*.diff.png" -print -quit | grep -q .; then
+            echo "has-diffs=true" >> $GITHUB_OUTPUT
+          else
+            echo "has-diffs=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload diff images as artifacts
+        if: always() && steps.check-diffs.outputs.has-diffs == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs-${{ matrix.component }}
+          path: packages/cypress/outputs/plugin/diffs/**/*.diff.png
+          retention-days: 3
+
+      - name: Check for error screenshots
+        id: check-errors
+        if: always()
+        run: |
+          if find packages/cypress/outputs/cyErrors -name "*.png" -print -quit | grep -q .; then
+            echo "has-errors=true" >> $GITHUB_OUTPUT
+          else
+            echo "has-errors=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Cypress error screenshots
+        if: always() && steps.check-errors.outputs.has-errors == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-errors-${{ matrix.component }}
+          path: packages/cypress/outputs/cyErrors/**/*.png
+          retention-days: 3
+
+      - name: Clean up git config and container
+        if: always()
+        run: |
+          # Fix git config permissions before GitHub Actions cleanup
+          sudo chown -R runner:runner .git/ 2>/dev/null || true
+          sudo chmod -R u+w .git/ 2>/dev/null || true
+
+          # Stop and remove container
+          docker stop sf-container 2>/dev/null || true
+          docker rm sf-container 2>/dev/null || true
+
+      - name: Cleanup git configuration
+        if: always()
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          git config --global --unset-all http.https://github.com/.extraheader || true
+
+  generate-summary:
+    name: Merge Reports & Generate Summary
+    needs: [run-tests]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Download all test reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-report-*
+          path: ./reports
+          merge-multiple: false
+
+      - name: Generate summary
+        run: |
+          echo "# 🧪 Cypress Test Results - All Components" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Generated at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Initialize counters
+          total_tests=0
+          total_passed=0
+          total_failed=0
+          total_skipped=0
+          total_duration=0
+          total_attempts=0
+          total_retried_tests=0
+          component_count=0
+
+          # Process each report file
+          echo "## 📊 Component Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status | Tests | Passed | Failed | Skipped | Retries | Duration |" >> $GITHUB_STEP_SUMMARY
+          echo "| --------- | ------ | ----- | ------ | ------ | ------- | ------- | -------- |" >> $GITHUB_STEP_SUMMARY
+
+          # Process each artifact directory (each contains reports for one component)
+          for artifact_dir in ./reports/test-report-*; do
+            if [ -d "$artifact_dir" ]; then
+              # Extract component name from directory name
+              component_name=$(basename "$artifact_dir" | sed 's/test-report-//')
+              
+              # Find the report file in this directory
+              report_file=$(find "$artifact_dir" -name "mochawesome-report-*.json" | head -1)
+              
+              if [ -f "$report_file" ]; then
+                component_count=$((component_count + 1))
+              
+                tests=$(jq -r '.stats.tests // 0' "$report_file")
+                passed=$(jq -r '.stats.passes // 0' "$report_file")
+                failed=$(jq -r '.stats.failures // 0' "$report_file")
+                skipped=$(jq -r '.stats.pending // 0' "$report_file")
+                duration=$(jq -r '.stats.duration // 0' "$report_file")
+                
+                # Count retries/attempts
+                component_attempts=$(jq -r '[.results[].suites[].tests[] | select(.attempts) | .attempts | length] | add // 0' "$report_file")
+                tests_with_retries=$(jq -r '[.results[].suites[].tests[] | select(.attempts and (.attempts | length) > 1)] | length' "$report_file")
+                
+                duration_sec=$(echo "scale=2; $duration/1000" | bc -l)
+                
+                # Add to totals
+                total_tests=$((total_tests + tests))
+                total_passed=$((total_passed + passed))
+                total_failed=$((total_failed + failed))
+                total_skipped=$((total_skipped + skipped))
+                total_duration=$(echo "$total_duration + $duration" | bc -l)
+                total_attempts=$((total_attempts + component_attempts))
+                total_retried_tests=$((total_retried_tests + tests_with_retries))
+                
+                # Determine status with visual indicators
+                if [ $failed -eq 0 ] && [ $tests -gt 0 ]; then
+                  status_indicator="✅ Success"
+                  component_display="**$component_name**"
+                elif [ $failed -gt 0 ]; then
+                  status_indicator="❌ Failed"
+                  component_display="<span style='color: red'>**$component_name**</span>"
+                else
+                  status_indicator="⚠️ No Tests"
+                  component_display="⚠️ $component_name"
+                fi
+                
+                # Format retry information
+                if [ $tests_with_retries -gt 0 ]; then
+                  retry_info="$tests_with_retries/$component_attempts"
+                else
+                  retry_info="-"
+                fi
+                
+                # Add row to table
+                echo "| $component_display | $status_indicator | $tests | $passed | $failed | $skipped | $retry_info | ${duration_sec}s |" >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
+          done
+
+          # Add summary totals
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📈 Overall Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          total_duration_sec=$(echo "scale=2; $total_duration/1000" | bc -l)
+
+          echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "| ------ | ----- |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🧩 Components Tested | $component_count |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🧮 Total Tests | $total_tests |" >> $GITHUB_STEP_SUMMARY
+          echo "| ✅ Tests Passed | $total_passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| ❌ Tests Failed | $total_failed |" >> $GITHUB_STEP_SUMMARY
+          echo "| ⏩ Tests Skipped | $total_skipped |" >> $GITHUB_STEP_SUMMARY
+          echo "| ⏱️ Total Duration | ${total_duration_sec}s |" >> $GITHUB_STEP_SUMMARY
+
+          if [ $total_retried_tests -gt 0 ]; then
+            echo "| 🔄 Tests with Retries | $total_retried_tests |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🎯 Total Attempts | $total_attempts |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Calculate success rate
+          if [ $total_tests -gt 0 ]; then
+            success_rate=$(echo "scale=1; $total_passed * 100 / $total_tests" | bc -l)
+            echo "| 📊 Success Rate | ${success_rate}% |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Add status indicator
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ $total_failed -eq 0 ]; then
+            echo "## ✅ All Tests Passed!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Some Tests Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please check the individual component results above for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  cleanup-artifacts:
+    name: Cleanup Artifacts
+    needs: [generate-summary]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Delete report artifacts only
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: test-report-*
+          failOnError: false
+
+  finish-report-portal:
+    name: Finish Report Portal Launch
+    needs: [start-report-portal, run-tests]
+    runs-on: ubuntu-latest
+    environment: development
+    if: always() && needs.start-report-portal.result == 'success' && needs.start-report-portal.outputs.launch-uuid != ''
+    steps:
+      - name: Finish Report Portal Launch
+        env:
+          REPORT_PORTAL_API_KEY: ${{ secrets.REPORT_PORTAL_API_KEY }}
+        run: |
+          LAUNCH_UUID="${{ needs.start-report-portal.outputs.launch-uuid }}"
+
+          echo "🏁 Finishing Report Portal Launch: $LAUNCH_UUID"
+
+          # Debug: Check if API key is available (safely)
+          if [ -z "$REPORT_PORTAL_API_KEY" ]; then
+            echo "❌ REPORT_PORTAL_API_KEY is empty or not set"
+            exit 1
+          else
+            echo "✅ API Key is available"
+          fi
+
+          # Finish the launch
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT \
+            "https://test-dashboard.internal-hrworks.de/api/v1/hrworks/launch/$LAUNCH_UUID/finish" \
+            -H "Authorization: bearer $REPORT_PORTAL_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "endTime": "'$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)'",
+              "status": "PASSED"
+            }')
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+
+          if [ "$HTTP_CODE" -eq 200 ]; then
+            echo "✅ Launch finished successfully"
+          else
+            echo "⚠️ Failed to finish launch (HTTP $HTTP_CODE) - this is not critical"
+          fi

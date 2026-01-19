@@ -1,0 +1,4 @@
+{
+  "extends": ["@hrworks/typescript-config/react", "@hrworks/typescript-config/cypress"],
+  "include": ["src", "*.d.ts"]
+}

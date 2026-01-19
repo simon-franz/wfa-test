@@ -1,0 +1,15 @@
+**/assets/*
+build
+node_modules
+public/ui-assets
+packages/design-system/src/theme/tokens.json
+.history
+storybook-static/
+*.min.css
+*.min.js
+.fttemplates
+.next
+.turbo
+.pnpm-store
+pnpm-lock.yaml
+bun.lock

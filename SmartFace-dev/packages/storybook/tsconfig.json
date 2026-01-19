@@ -1,0 +1,6 @@
+{
+  "extends": "@hrworks/typescript-config/react",
+  "include": [".storybook/**/*"],
+
+  "references": [{ "path": "./tsconfig.node.json" }]
+}

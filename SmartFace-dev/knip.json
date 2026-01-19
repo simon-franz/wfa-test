@@ -1,0 +1,71 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignore": [".fttemplates/ComponentSetup/*", "global.d.ts"],
+  "ignoreDependencies": ["@biomejs/biome", "@eslint/js", "typescript-eslint", "turbo"],
+  "workspaces": {
+    "packages/*": {
+      "entry": "src/{index,main}.{js,ts,tsx}",
+      "project": "**/*.{css,js,mjs,ts,tsx}"
+    },
+    "packages/adapterbook": {
+      "ignore": "src/routeTree.gen.ts",
+      "ignoreDependencies": ["@emotion/babel-plugin", "babel-plugin-react-compiler"]
+    },
+    "packages/cypress": {
+      "ignore": "test-components.mjs",
+      "ignoreDependencies": [
+        "@emotion/babel-plugin",
+        "@emotion/react",
+        "@emotion/styled",
+        "@types/react",
+        "@types/react-dom",
+        "babel-plugin-react-compiler",
+        "react",
+        "react-dom"
+      ]
+    },
+    "packages/design-system": {
+      "entry": "src/**/index.ts",
+      "ignoreDependencies": ["modern-normalize", "@fontsource/*"]
+    },
+    "packages/error-handling": {
+      "entry": ["src/index.ts", "**/*.cy.tsx"]
+    },
+    "packages/{export-server-next,login}": {
+      "entry": "src/{instrumentation,middleware}.ts"
+    },
+    "packages/icons": {
+      "entry": "scripts/**/index.js"
+    },
+    "packages/localization": {
+      "ignoreDependencies": ["@emotion/react"]
+    },
+    "packages/smartface": {
+      "entry": ["src/**/index.{ts,tsx}", "smart-face-scripts/server-mock/server.js"],
+      "ignore": "src/main/lib/IconSetsController/iconsets/streamline/svgs/*",
+      "ignoreDependencies": ["@emotion/babel-plugin", "babel-plugin-react-compiler", "cross-env"]
+    },
+    "packages/sui-{admin,shared}": {
+      "entry": "src/**/index.ts"
+    },
+    "packages/sui-{core,extension}": {
+      "entry": ["src/**/index.ts", "**/*.cy.tsx"]
+    },
+    "packages/stellenportal": {
+      "entry": "{instrumentation,instrumentation-client}.ts"
+    },
+    "packages/storybook": {
+      "ignoreDependencies": ["@emotion/babel-plugin", "babel-plugin-react-compiler"]
+    },
+    "packages/types": {
+      "entry": "src/**/index.ts"
+    },
+    "packages/typescript-config": {
+      "entry": "{base,cypress,next,react}.json",
+      "project": ["*.json", "!package.json"]
+    },
+    "packages/zeitkiosk": {
+      "entry": "src/app/**/{layout,not-found,page}.tsx"
+    }
+  }
+}

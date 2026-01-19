@@ -1,0 +1,4 @@
+{
+  "extends": "@hrworks/typescript-config/react",
+  "include": ["src/**/*"]
+}

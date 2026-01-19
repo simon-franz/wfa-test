@@ -1,0 +1,24 @@
+{
+  "name": "@hrworks/mock-internal-api",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "mock-internal-api-dev": "bun --watch src/index.ts",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "express": "catalog:",
+    "cors": "catalog:",
+    "morgan": "1.10.0"
+  },
+  "devDependencies": {
+    "@hrworks/typescript-config": "workspace:*",
+    "@types/cors": "catalog:",
+    "@types/express": "catalog:",
+    "@types/morgan": "^1.9.4",
+    "rimraf": "^4.4.1",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

@@ -1,0 +1,4 @@
+files:
+  - source: /packages/login/messages/en.json
+    translation: /packages/login/messages/%two_letters_code%.json
+    type: json

@@ -1,0 +1,40 @@
+{
+  "name": "@hrworks/storybook",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "storybook dev -p 6006",
+    "build": "storybook build --output-dir build",
+    "lint": "eslint .",
+    "preview": "vite preview --outDir=build"
+  },
+  "dependencies": {
+    "@emotion/react": "catalog:",
+    "@emotion/styled": "catalog:",
+    "@hrworks/sui-core": "workspace:*",
+    "@hrworks/design-system": "workspace:*",
+    "@storybook/theming": "^8.6.14",
+    "react": "catalog:",
+    "storybook-dark-mode": "^4.0.2"
+  },
+  "devDependencies": {
+    "@emotion/babel-plugin": "catalog:",
+    "@hrworks/typescript-config": "workspace:*",
+    "@storybook/addon-essentials": "^8.6.14",
+    "@storybook/addon-interactions": "^8.6.14",
+    "@storybook/react": "catalog:",
+    "@storybook/react-vite": "^8.6.14",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@vitejs/plugin-legacy": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "babel-plugin-react-compiler": "catalog:",
+    "eslint": "catalog:",
+    "storybook": "^8.6.14",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-checker": "catalog:",
+    "vite-tsconfig-paths": "catalog:"
+  }
+}

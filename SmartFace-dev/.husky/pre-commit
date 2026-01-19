@@ -1,0 +1,9 @@
+branch="$(git branch --show-current)"
+
+case "$branch" in
+  "dev"|"main")
+    printf "\e[0;31mFAILED: Commit directly to $branch branch is not permitted\e[0;0m\n"
+    exit 1;;
+esac
+
+bun pre-commit

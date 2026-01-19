@@ -1,0 +1,78 @@
+services:
+  # Login Application
+  login:
+    build:
+      context: ../../
+      dockerfile: packages/login/Dockerfile
+    container_name: hrworks-login-app
+    ports:
+      - '4242:3000'
+    environment:
+      - HOSTNAME=0.0.0.0
+      - PORT=3000
+    env_file:
+      - .env.development
+      - path: .env.development.local
+        required: false
+    depends_on:
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    profiles:
+      - container-mode
+
+  # Redis for 2FA code storage
+  redis:
+    image: redis:7-alpine
+    container_name: hrworks-login-redis
+    ports:
+      - '6379:6379'
+    command: redis-server --requirepass Redis_Tester_123 --save 20 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', 'Redis_Tester_123', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # LocalStack for AWS services (SES for emails)
+  localstack:
+    image: localstack/localstack:2.3
+    container_name: hrworks-login-localstack
+    ports:
+      - '4566:4566' # LocalStack Gateway
+      - '4571:4571' # LocalStack Web UI
+    environment:
+      - DEBUG=0
+      - SERVICES=ses
+      - PERSISTENCE=0
+      - SKIP_INFRA_DOWNLOADS=1
+      - LS_LOG=warn
+    volumes:
+      - localstack_data:/tmp/localstack
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:4566/health']
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  redis_data:
+    driver: local
+  localstack_data:
+    driver: local
+
+# Network for service communication
+networks:
+  default:
+    name: hrworks-login-dev

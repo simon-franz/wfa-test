@@ -1,0 +1,25 @@
+{
+  "name": "@hrworks/typescript-config",
+  "version": "0.0.1",
+  "description": "Shared TypeScript configurations for HR WORKS projects",
+  "keywords": [
+    "typescript",
+    "config",
+    "tsconfig"
+  ],
+  "private": true,
+  "files": [
+    "*.json"
+  ],
+  "devDependencies": {
+    "@emotion/react": "catalog:",
+    "@simonsmith/cypress-image-snapshot": "catalog:"
+  },
+  "exports": {
+    "./base": "./base.json",
+    "./next": "./next.json",
+    "./paths": "./paths.json",
+    "./react": "./react.json",
+    "./cypress": "./cypress.json"
+  }
+}

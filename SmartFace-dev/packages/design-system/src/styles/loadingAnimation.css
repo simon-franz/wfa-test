@@ -1,0 +1,157 @@
+@property --angle1 {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@property --angle2 {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@property --angle1Color {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #242166;
+}
+
+@property --angle2Color {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+
+#loaderLayout {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+:root {
+  --color-base: #242166;
+  --color-piece: #5b57a2;
+  --color-inner-quarter: #b480ff;
+}
+
+:root[data-theme='dark'] {
+  --color-base: #9ba1e1;
+  --color-piece: #5e64af;
+  --color-inner-quarter: #c1c5f8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] {
+    --color-base: #9ba1e1;
+    --color-piece: #5e64af;
+    --color-inner-quarter: #c1c5f8;
+  }
+}
+
+#loaderWrapper {
+  --size: 150px;
+  --animation-settings: 3.7s ease infinite;
+  --inner-size: 45%;
+  --quarter-scale-factor: 1.02; /* Neue Variable für den Scale-Faktor */
+
+  position: relative;
+  height: var(--size);
+  width: var(--size);
+}
+
+#loader {
+  width: inherit;
+  height: inherit;
+  background: conic-gradient(var(--angle1Color) var(--angle1), var(--angle2Color) var(--angle2));
+  border-radius: 100%;
+  animation: donutAnim var(--animation-settings);
+  mask: radial-gradient(circle at center, transparent calc(var(--inner-size) - 0.7%), black var(--inner-size));
+  z-index: 10;
+}
+
+#loader::after,
+#loaderWrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: calc(var(--size) / 2) solid transparent;
+  opacity: 0;
+}
+
+#loader::after {
+  border-bottom-color: var(--color-piece);
+  animation: donut-quarter-anim var(--animation-settings);
+  transform: rotate(45deg);
+}
+
+#loaderWrapper::after {
+  border-right-color: var(--color-inner-quarter);
+  mask: radial-gradient(circle, black var(--inner-size), transparent var(--inner-size));
+  transform: rotate(180deg) scale(var(--quarter-scale-factor));
+  z-index: -1;
+  animation: inner-quarter-anim var(--animation-settings);
+}
+
+@keyframes donutAnim {
+  0% {
+    --angle1: 0deg;
+    --angle2: 0deg;
+  }
+  27%,
+  81% {
+    --angle1: 360deg;
+    --angle2: 0deg;
+    --angle1Color: var(--color-base);
+    --angle2Color: transparent;
+  }
+  81.0001% {
+    --angle1: 0deg;
+    --angle2: 0deg;
+    --angle1Color: transparent;
+    --angle2Color: var(--color-base);
+  }
+  100% {
+    --angle1: 360deg;
+    --angle2: 360deg;
+    --angle1Color: transparent;
+    --angle2Color: var(--color-base);
+  }
+}
+
+@keyframes donut-quarter-anim {
+  16% {
+    transform: rotate(45deg);
+    opacity: 0;
+  }
+  56%,
+  73% {
+    transform: rotate(315deg);
+    opacity: 1;
+  }
+  87%,
+  100% {
+    transform: rotate(550deg);
+    opacity: 0;
+  }
+}
+
+@keyframes inner-quarter-anim {
+  14% {
+    transform: rotate(180deg) scale(var(--quarter-scale-factor));
+    opacity: 0;
+  }
+  38%,
+  77% {
+    transform: rotate(405deg) scale(var(--quarter-scale-factor));
+    opacity: 1;
+  }
+  95% {
+    transform: rotate(585deg) scale(var(--quarter-scale-factor));
+    opacity: 0;
+  }
+}

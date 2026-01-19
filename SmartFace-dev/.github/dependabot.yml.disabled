@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    ignore:
+      - dependency-name: 'yarn'
+      - dependency-name: 'node'
+    commit-message:
+      prefix: 'chore(deps)'
+    open-pull-requests-limit: 4
+
+  - package-ecosystem: 'npm'
+    directory: '/packages/smartface'
+    schedule:
+      interval: 'weekly'
+    ignore:
+      - dependency-name: 'yarn'
+      - dependency-name: 'node'
+      - dependency-name: 'react'
+      - dependency-name: 'mobx'
+      - dependency-name: 'axios'
+    commit-message:
+      prefix: 'chore(deps)'
+    open-pull-requests-limit: 4

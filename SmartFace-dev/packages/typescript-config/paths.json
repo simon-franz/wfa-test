@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "baseUrl": "../../",
+    "paths": {
+      "@hrworks/export-server-next": ["./packages/export-server-next/src"],
+      "@hrworks/export-server-next/*": ["./packages/export-server-next/src/*"],
+      "@hrworks/adapterbook": ["./packages/adapterbook/src"],
+      "@hrworks/adapterbook/*": ["./packages/adapterbook/src/*"],
+      "@hrworks/api-client": ["./packages/api-client/src"],
+      "@hrworks/api-client/*": ["./packages/api-client/src/*"],
+      "@hrworks/icons": ["./packages/icons/"],
+      "@hrworks/icons/*": ["./packages/icons/*"],
+      "@hrworks/design-system": ["./packages/design-system/src"],
+      "@hrworks/design-system/*": ["./packages/design-system/src/*"],
+      "@hrworks/error-handling": ["./packages/error-handling/src"],
+      "@hrworks/error-handling/*": ["./packages/error-handling/src/*"],
+      "@hrworks/localization": ["./packages/localization/src"],
+      "@hrworks/localization/*": ["./packages/localization/src/*"],
+      "@hrworks/mock-internal-api": ["./packages/mock-internal-api/src"],
+      "@hrworks/mock-internal-api/*": ["./packages/mock-internal-api/src/*"],
+      "@hrworks/sui-shared": ["./packages/sui-shared/src"],
+      "@hrworks/sui-shared/*": ["./packages/sui-shared/src/*"],
+      "@hrworks/smartface": ["./packages/smartface/src"],
+      "@hrworks/smartface/*": ["./packages/smartface/src/*"],
+      "@hrworks/stellenportal": ["./packages/stellenportal/src"],
+      "@hrworks/stellenportal/*": ["./packages/stellenportal/src/*"],
+      "@hrworks/login": ["./packages/login/src"],
+      "@hrworks/login/*": ["./packages/login/src/*"],
+      "@hrworks/types": ["./packages/types/src"],
+      "@hrworks/types/*": ["./packages/types/src/*"],
+      "@hrworks/sui-core": ["./packages/sui-core/src"],
+      "@hrworks/sui-core/*": ["./packages/sui-core/src/*"],
+      "@hrworks/sui-extension/": ["./packages/sui-extension/src/"],
+      "@hrworks/sui-extension/*": ["./packages/sui-extension/src/*"],
+      "@hrworks/zeitkiosk": ["./packages/zeitkiosk/src"],
+      "@hrworks/zeitkiosk/*": ["./packages/zeitkiosk/src/*"]
+    }
+  }
+}

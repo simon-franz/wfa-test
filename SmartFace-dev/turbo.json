@@ -1,0 +1,37 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "lint": {},
+    "sf-dev": {
+      "persistent": true,
+      "cache": false,
+      "env": ["VITE_API_BASE_URL"]
+    },
+    "mock-api": {
+      "persistent": true,
+      "cache": false
+    },
+    "export-server-next-dev": {
+      "persistent": true,
+      "cache": false
+    },
+    "stellenportal-dev": {
+      "persistent": true,
+      "cache": false
+    },
+    "mock-internal-api-dev": {
+      "persistent": true,
+      "cache": false
+    },
+    "dev:stepo": {
+      "persistent": true,
+      "cache": false,
+      "dependsOn": ["stellenportal-dev", "mock-internal-api-dev"]
+    },
+    "dev:all": {
+      "persistent": true,
+      "cache": false,
+      "dependsOn": ["sf-dev", "mock-api"]
+    }
+  }
+}

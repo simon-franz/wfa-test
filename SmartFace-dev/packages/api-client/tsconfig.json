@@ -1,0 +1,8 @@
+{
+  "extends": "@hrworks/typescript-config/react",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules", "**/*.test.ts"]
+}

@@ -1,0 +1,56 @@
+{
+  "LoginForm": {
+    "welcomeTitle": "Welcome",
+    "welcomeBackTitle": "Welcome back",
+    "companyId": "Company ID",
+    "userId": "User ID",
+    "password": "Password",
+    "rememberMe": "Remember login data",
+    "tooltip": "Enable this option to save your company and user ID for future logins. Your password will not be stored.",
+    "loginButton": "Sign in",
+    "forgotCredentialsButton": "Forgot credentials?",
+    "ssoButton": "Sign in with SSO",
+    "ssoLoginButton": "Sign in with SSO",
+    "orDividerText": "or"
+  },
+  "Footer": {
+    "legalNotice": "Legal Notice",
+    "privacyPolicy": "Privacy Policy"
+  },
+  "StatusPage": {
+    "title": "The login page could not be found",
+    "subtitle": "The login page you requested is no longer available or the link is invalid. Please check the URL."
+  },
+  "ErrorBoundary": {
+    "title": "Something went wrong",
+    "message": "An unexpected error occurred",
+    "information": "Our team has been notified and is working to fix this issue."
+  },
+  "PasswordReset": {
+    "title": "Forgot credentials?",
+    "description": "Enter your email address and we will send you a link to reset your credentials.",
+    "humanVerificationLabel": "I am human",
+    "confirmButton": "Send link",
+    "backToLogin": "Back to login"
+  },
+  "TwoFactor": {
+    "title": "Two-Factor Authentication",
+    "selectionDescription": "This browser is not yet authorized for use with HR WORKS. Please select a 2FA method.",
+    "emailDescription": "An email has been sent to {email}. Please check your inbox and enter the verification code contained in the email in the input field below or click on the link in the email to unlock your browser.",
+    "authenticatorDescription": "Please enter the 6-digit code from your authenticator app.",
+    "yubiKeyDescription": "Insert your YubiKey and wait until it glows green. Then touch the sensor with your finger for one second. Enter the verification code afterwards.",
+    "emailButton": "E-Mail",
+    "emailButtonHelptext": "Via email to {email}",
+    "authenticatorButton": "Authenticator",
+    "authenticatorButtonHelptext": "Created: {createdAt}. Last used: {lastUsedAt}",
+    "yubiKeyButton": "YubiKey",
+    "yubiKeyButtonHelptext": "Created: {createdAt}. Last used: {lastUsedAt}",
+    "verifyButton": "Verify Confirmation Code",
+    "verifyingButton": "Verifying...",
+    "codeInvalid": "Invalid or expired code. Please try again.",
+    "codeAlreadyActive": "A verification code is already active. Please check your email or wait before requesting a new code.",
+    "sendError": "Failed to send verification code. Please try again.",
+    "backToLogin": "Back to Login",
+    "backToSelection": "Back to Selection"
+  }
+}

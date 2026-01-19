@@ -1,0 +1,25 @@
+{
+  "name": "@hrworks/error-handling",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "sideEffects": false,
+  "dependencies": {
+    "@sentry/react": "9.4.0",
+    "@hrworks/design-system": "workspace:*",
+    "@hrworks/localization": "workspace:*",
+    "@emotion/styled": "catalog:",
+    "@emotion/react": "catalog:",
+    "react": "catalog:"
+  },
+  "devDependencies": {
+    "@storybook/react": "catalog:",
+    "@types/react": "catalog:",
+    "typescript": "catalog:",
+    "@hrworks/cypress-utils": "workspace:*",
+    "@hrworks/typescript-config": "workspace:*"
+  },
+  "exports": {
+    ".": "./src/"
+  }
+}

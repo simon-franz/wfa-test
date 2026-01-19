@@ -1,0 +1,56 @@
+{
+  "LoginForm": {
+    "welcomeTitle": "Herzlich Willkommen",
+    "welcomeBackTitle": "Willkommen zurück",
+    "companyId": "Firmenkennung",
+    "userId": "Benutzerkennung",
+    "password": "Passwort",
+    "rememberMe": "Zugangsdaten merken",
+    "tooltip": "Aktivieren Sie diese Option, um Ihre Firmen- und Benutzerkennung für zukünftige Logins zu speichern. Ihr Passwort wird dabei nicht gespeichert.",
+    "loginButton": "Anmelden",
+    "forgotCredentialsButton": "Zugangsdaten vergessen?",
+    "ssoButton": "Mit SSO anmelden",
+    "ssoLoginButton": "Mit SSO anmelden",
+    "orDividerText": "oder"
+  },
+  "Footer": {
+    "legalNotice": "Impressum",
+    "privacyPolicy": "Datenschutz"
+  },
+  "StatusPage": {
+    "title": "Die Login Seite konnte nicht gefunden werden",
+    "subtitle": "Die von Ihnen aufgerufene Login Seite ist nicht mehr verfügbar oder der Link ist ungültig. Bitte überprüfen Sie die URL."
+  },
+  "ErrorBoundary": {
+    "title": "Etwas ist schief gelaufen",
+    "message": "Ein unerwarteter Fehler ist aufgetreten",
+    "information": "Unser Team wurde benachrichtigt und arbeitet daran, dieses Problem zu beheben."
+  },
+  "PasswordReset": {
+    "title": "Zugangsdaten vergessen?",
+    "description": "Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum Zurücksetzen Ihrer Zugangsdaten.",
+    "humanVerificationLabel": "Ich bin ein Mensch",
+    "confirmButton": "Link senden",
+    "backToLogin": "Zurück zum Login"
+  },
+  "TwoFactor": {
+    "title": "Zwei-Faktor-Authentifizierung",
+    "selectionDescription": "Dieser Browser ist noch nicht für die Nutzung von HR WORKS freigeschaltet. Wählen Sie eine 2FA-Methode aus.",
+    "emailDescription": "An {email} wurde eine E-Mail gesendet. Bitte prüfen Sie Ihren Posteingang und geben Sie den in der E-Mail enthaltenen Bestätigungscode in das untenstehende Eingabefeld ein oder klicken Sie auf den Link in der E-Mail, um den Browser freizuschalten.",
+    "authenticatorDescription": "Geben Sie bitte den 6-stelligen Code aus der Authenticator App ein.",
+    "yubiKeyDescription": "Stecken Sie den YubiKey ein und warten Sie bis er grün leuchtet. Berühren Sie dann den Sensor eine Sekunde lang mit Ihrem Finger. Geben Sie anschließend den Bestätigungscode ein.",
+    "emailButton": "E-Mail",
+    "emailButtonHelptext": "Per E-Mail an {email}",
+    "authenticatorButton": "Authenticator",
+    "authenticatorButtonHelptext": "Erstellt: {createdAt}. Zuletzt verwendet: {lastUsedAt}",
+    "yubiKeyButton": "YubiKey",
+    "yubiKeyButtonHelptext": "Erstellt: {createdAt}. Zuletzt verwendet: {lastUsedAt}",
+    "verifyButton": "Bestätigungscode verifizieren",
+    "verifyingButton": "Wird überprüft...",
+    "codeInvalid": "Ungültiger oder abgelaufener Code. Bitte versuchen Sie es erneut.",
+    "codeAlreadyActive": "Ein Verifizierungscode ist bereits aktiv. Bitte überprüfen Sie Ihre E-Mail oder warten Sie, bevor Sie einen neuen Code anfordern.",
+    "sendError": "Bestätigungscode konnte nicht verwendet werden, versuchen sie es erneut.",
+    "backToLogin": "Zurück zum Login",
+    "backToSelection": "Zurück zur Auswahl"
+  }
+}

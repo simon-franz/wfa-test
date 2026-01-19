@@ -1,0 +1,96 @@
+{
+  "name": "Onboarding-Prozess",
+  "description": "Automatisierter Onboarding-Workflow für neue Mitarbeiter. Bestellt abhängig von der Rolle entweder einen Laptop oder einen Standard-PC.",
+  "definition": {
+    "nodes": [
+      {
+        "id": "trigger-1",
+        "type": "manual-trigger",
+        "name": "Manueller Start",
+        "position": { "x": 250, "y": 50 },
+        "config": {
+          "description": "Startet den Onboarding-Prozess für einen neuen Mitarbeiter"
+        }
+      },
+      {
+        "id": "http-1",
+        "type": "http-request",
+        "name": "Person Details abrufen",
+        "position": { "x": 250, "y": 170 },
+        "config": {
+          "method": "GET",
+          "url": "{{$trigger.payload.apiBaseUrl}}/v2/persons/{{$trigger.payload.personnelNumber}}",
+          "headers": {
+            "Authorization": "Bearer {{$vars.accessToken}}"
+          },
+          "timeout": 30000,
+          "retries": 2
+        }
+      },
+      {
+        "id": "condition-1",
+        "type": "condition",
+        "name": "Rolle prüfen",
+        "position": { "x": 250, "y": 310 },
+        "config": {
+          "expression": "$nodes['http-1'].output.body.position = 'Developer'"
+        }
+      },
+      {
+        "id": "http-laptop",
+        "type": "http-request",
+        "name": "Laptop bestellen",
+        "position": { "x": 100, "y": 450 },
+        "config": {
+          "method": "POST",
+          "url": "{{$trigger.payload.orderApiUrl}}/orders",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"type\": \"laptop\", \"model\": \"MacBook Pro 14\", \"employee\": \"{{$nodes['http-1'].output.body.personnelNumber}}\"}",
+          "timeout": 30000
+        }
+      },
+      {
+        "id": "http-pc",
+        "type": "http-request",
+        "name": "Standard-PC bestellen",
+        "position": { "x": 400, "y": 450 },
+        "config": {
+          "method": "POST",
+          "url": "{{$trigger.payload.orderApiUrl}}/orders",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"type\": \"desktop\", \"model\": \"Standard Office PC\", \"employee\": \"{{$nodes['http-1'].output.body.personnelNumber}}\"}",
+          "timeout": 30000
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-1",
+        "source": "trigger-1",
+        "target": "http-1"
+      },
+      {
+        "id": "edge-2",
+        "source": "http-1",
+        "target": "condition-1"
+      },
+      {
+        "id": "edge-3",
+        "source": "condition-1",
+        "target": "http-laptop",
+        "sourceHandle": "true"
+      },
+      {
+        "id": "edge-4",
+        "source": "condition-1",
+        "target": "http-pc",
+        "sourceHandle": "false"
+      }
+    ],
+    "variables": {}
+  }
+}

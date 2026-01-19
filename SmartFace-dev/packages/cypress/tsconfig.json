@@ -1,0 +1,9 @@
+{
+  "extends": "@hrworks/typescript-config/cypress",
+  "compilerOptions": {
+    "types": ["cypress", "@simonsmith/cypress-image-snapshot/types", "vite/client"],
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
+  },
+  "include": ["src", "cypress.config.ts"]
+}

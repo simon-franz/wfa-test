@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="REPLACE_FOR_BACKEND_LANG">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>REPLACE_FOR_BACKEND_TITLE</title>
+  </head>
+  <body style="margin: 0">
+    <script>
+      window.smartFaceBackendConfig = 'REPLACE_FOR_BACKEND_CONFIG';
+    </script>
+    <script>
+      (() => {
+        const theme = window.smartFaceBackendConfig?.sfTheme;
+        document.documentElement.dataset.theme =
+          theme === 'hrwLightMode'
+            ? 'light'
+            : theme === 'hrwDarkMode'
+              ? 'dark'
+              : theme === 'hrwSystemMode'
+                ? 'system'
+                : undefined;
+        document.currentScript.remove();
+      })();
+    </script>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <div id="loaderLayout">
+      <div id="loaderWrapper">
+        <div id="loader"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>

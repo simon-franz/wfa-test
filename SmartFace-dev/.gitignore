@@ -1,0 +1,50 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+build
+node_modules
+storybook-static
+dist
+dist-ssr
+*.local
+
+# Package-Management
+.turbo
+.pnp.*
+.pnpm-store/*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/emotion.code-snippets
+!.vscode/settings.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+tsconfig.local.json
+public/ui-assets
+
+# Temporary files
+vite.config.js.timestamp*
