@@ -1,9 +1,11 @@
 import { memo } from 'react';
+import { NodePlayButton } from '../components/NodePlayButton';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import styled from 'styled-components';
 import type { WorkflowNodeData } from '../../../stores/designer.store';
 
 const NodeContainer = styled.div<{ $selected: boolean }>`
+  position: relative;
   min-width: 200px;
   background-color: var(--color-bg-secondary);
   border: 2px solid ${(props) => (props.$selected ? 'var(--color-primary)' : '#ff6b35')};
@@ -63,7 +65,7 @@ const StyledHandle = styled(Handle)`
   border: 2px solid var(--color-bg-secondary);
 `;
 
-export const HRWorksNode = memo(({ data, selected }: NodeProps<WorkflowNodeData>) => {
+export const HRWorksNode = memo(({ data, selected, id }: NodeProps<WorkflowNodeData>) => {
   const getConfigPreview = () => {
     const config = data.config;
     if (config.endpoint) {
@@ -76,6 +78,7 @@ export const HRWorksNode = memo(({ data, selected }: NodeProps<WorkflowNodeData>
 
   return (
     <NodeContainer $selected={!!selected}>
+      <NodePlayButton nodeId={id} executionState={data.executionState} />
       <StyledHandle type="target" position={Position.Left} />
       <NodeHeader>
         <NodeIcon>HR</NodeIcon>

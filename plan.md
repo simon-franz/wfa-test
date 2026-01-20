@@ -140,6 +140,23 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
 - Node Palette (Start, Action, End)
 - Connection Drawing zwischen Nodes
 - Node Configuration Panel
+- **JWT Authentication**: Alle API-Requests zum Backend müssen Authorization-Header mit JWT-Token enthalten (`Authorization: Bearer <token>`)
+- **Context Panel / Variable Picker**: 
+  - Zeigt Outputs aller vorherigen Nodes im Workflow
+  - Klickbar zum Einfügen von Variablen-Referenzen (z.B. `{{node_name.output.field}}`)
+  - Expandable JSON-Tree-View der verfügbaren Daten
+  - Syntax-Highlighting für JSON
+  - Filterfunktion zum Suchen von Feldern
+  - Wird beim Klick in Input-Felder als Overlay/Sidebar angezeigt
+- **Node-by-Node Testing (Play-Button)**:
+  - Jeder Node hat einen Play-Button zum einzelnen Ausführen
+  - Play-Button nur aktiv, wenn alle vorherigen Nodes ausgeführt wurden
+  - Sequentielle Ausführung: A → B → C (B erst nach A, C erst nach B)
+  - Output wird im Node gespeichert und im Context Panel verfügbar
+  - Visuelles Feedback: Node zeigt Status (pending, running, success, error)
+  - Output-Preview direkt am Node (expandable)
+  - "Run All"-Button zum Ausführen aller Nodes in Reihenfolge
+  - Cached Outputs bleiben erhalten bis Workflow-Definition ändert
 - Workflow Speichern/Laden
 
 ### UI-Spezifikationen (Detail)
@@ -239,6 +256,15 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
 **API-Client Generierung:** → Siehe **[plan-hrworks-integration.md](./plan-hrworks-integration.md)**
 
 > ℹ️ Im finalen `workflow-automation` Projekt wird diese Datei nach `docs/` verschoben.
+
+**Async Job Handling:**
+- HR WORKS API verwendet Job-basierte asynchrone Verarbeitung für Write-Operationen (POST/PUT/DELETE)
+- Backend pollt automatisch den Job-Status über `/jobs/{jobId}` Endpoint
+- Frontend zeigt Node als "running" bis Job abgeschlossen ist (Status: pending → finished/failed)
+- UI-Mapping: Async-Calls werden als synchrone Operationen dargestellt - Node bleibt aktiv bis Job fertig
+- Timeout-Handling: Nach 60 Sekunden wird Job als fehlgeschlagen markiert
+- Retry-Logic: Bei Netzwerkfehlern automatische Wiederholung (max. 3x)
+- **Output-Mapping**: Bei Erfolg wird nur das `data` Objekt aus der Job-Response als Node-Output gesetzt (ohne Wrapper)
 
 **Node-Konfiguration im Designer:**
 1. **Dropdown: API-Endpoint auswählen**
@@ -415,6 +441,14 @@ $count(approvers[status = "approved"]) >= 3  // Mit Funktionen
 - Pre-built Connectors: Email (SMTP, Exchange, Gmail), Slack/Teams, SharePoint/OneDrive, SAP/DATEV (optional)
 
 ### Testing & Quality Assurance
+- **Node-by-Node Testing (Phase 1)**:
+  - Play-Button an jedem Node für einzelne Ausführung
+  - Sequentielle Abhängigkeiten (Node nur ausführbar wenn Vorgänger ausgeführt)
+  - Output Caching für Context Panel
+  - Mock Trigger Data für Testing
+  - Visuelles Status-Feedback (pending, running, success, error)
+  - Output-Preview direkt am Node
+  - "Run All"-Button für komplette Workflow-Ausführung
 - Workflow Testing: Test Mode (Dry-Run), Mock Data Injection, Step-by-Step Debugging, Unit Tests
 - Versioning: Workflow Versions, Rollback, A/B Testing, Canary Deployments
 

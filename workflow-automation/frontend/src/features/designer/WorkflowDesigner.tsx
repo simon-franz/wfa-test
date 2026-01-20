@@ -19,6 +19,7 @@ import { TriggerNode } from './nodes/TriggerNode';
 import { ActionNode } from './nodes/ActionNode';
 import { ConditionNode } from './nodes/ConditionNode';
 import { HRWorksNode } from './nodes/HRWorksNode';
+import { DataTransformNode } from './nodes/DataTransformNode';
 import { DeletableEdge } from './edges/DeletableEdge';
 import { ContextMenu } from './ContextMenu';
 
@@ -28,6 +29,7 @@ const nodeTypes = {
   actionNode: ActionNode,
   conditionNode: ConditionNode,
   hrworksNode: HRWorksNode,
+  dataTransformNode: DataTransformNode,
 };
 
 // Define custom edge types
@@ -128,6 +130,7 @@ function WorkflowDesignerInner() {
 
   const handlePaneClick = useCallback(() => {
     selectNode(null);
+    setContextMenu(null);
   }, [selectNode]);
 
   const handleFullscreen = useCallback(() => {

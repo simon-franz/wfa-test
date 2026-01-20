@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useAuthStore } from './auth.store';
 import {
   Node,
   Edge,
@@ -16,6 +17,14 @@ export interface WorkflowNodeData {
   label: string;
   nodeType: string;
   config: Record<string, unknown>;
+  executionState?: NodeExecutionState;
+}
+
+export interface NodeExecutionState {
+  status: 'idle' | 'ready' | 'running' | 'success' | 'error';
+  output?: unknown;
+  error?: string;
+  executedAt?: Date;
 }
 
 export type WorkflowNode = Node<WorkflowNodeData>;
@@ -61,6 +70,12 @@ interface DesignerState {
   canUndo: () => boolean;
   canRedo: () => boolean;
   pushToHistory: () => void;
+
+  // Node Execution
+  executeNode: (nodeId: string) => Promise<void>;
+  canExecuteNode: (nodeId: string) => boolean;
+  clearNodeExecution: (nodeId: string) => void;
+  clearAllExecutions: () => void;
 }
 
 // Convert workflow definition to React Flow nodes/edges
@@ -121,6 +136,12 @@ function getFlowNodeType(nodeType: string): string {
   }
   if (nodeType === 'condition') {
     return 'conditionNode';
+  }
+  if (nodeType === 'hrworks') {
+    return 'hrworksNode';
+  }
+  if (nodeType === 'data-transform') {
+    return 'dataTransformNode';
   }
   return 'actionNode';
 }
@@ -251,12 +272,48 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
   },
 
   updateNodeConfig: (nodeId, config) => {
+    const { nodes, edges } = get();
+    
+    // Clear execution state for this node and all dependent nodes
+    const nodesToClear = new Set<string>([nodeId]);
+    
+    // Find all nodes that depend on this node (recursively)
+    const findDependents = (id: string) => {
+      edges
+        .filter((e) => e.source === id)
+        .forEach((edge) => {
+          if (!nodesToClear.has(edge.target)) {
+            nodesToClear.add(edge.target);
+            findDependents(edge.target);
+          }
+        });
+    };
+    
+    findDependents(nodeId);
+    
     set((state) => ({
-      nodes: state.nodes.map((node) =>
-        node.id === nodeId
-          ? { ...node, data: { ...node.data, config } }
-          : node,
-      ),
+      nodes: state.nodes.map((node) => {
+        if (node.id === nodeId) {
+          return { 
+            ...node, 
+            data: { 
+              ...node.data, 
+              config,
+              executionState: undefined, // Clear execution state when config changes
+            } 
+          };
+        }
+        if (nodesToClear.has(node.id)) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              executionState: undefined, // Clear dependent nodes too
+            },
+          };
+        }
+        return node;
+      }),
       isDirty: true,
     }));
   },
@@ -327,4 +384,164 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
       history: [],
       historyIndex: -1,
     }),
+
+  // Node Execution
+  canExecuteNode: (nodeId) => {
+    const { nodes, edges } = get();
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) {
+      console.log('canExecuteNode: node not found', nodeId);
+      return false;
+    }
+
+    // Find all predecessor nodes
+    const predecessors = edges
+      .filter((e) => e.target === nodeId)
+      .map((e) => nodes.find((n) => n.id === e.source))
+      .filter(Boolean);
+
+    console.log('canExecuteNode:', {
+      nodeId,
+      nodeType: node.data.nodeType,
+      predecessorsCount: predecessors.length,
+      predecessors: predecessors.map(p => ({ id: p.id, status: p.data.executionState?.status })),
+      result: predecessors.length === 0 ? true : predecessors.every(pred => pred?.data.executionState?.status === 'success')
+    });
+
+    // Trigger nodes can always be executed
+    if (node.data.nodeType.includes('trigger')) {
+      return true;
+    }
+
+    // Nodes without predecessors can be executed (e.g., HR WORKS nodes)
+    if (predecessors.length === 0) {
+      return true;
+    }
+
+    // All predecessors must have been executed successfully
+    return predecessors.every(
+      (pred) => pred?.data.executionState?.status === 'success'
+    );
+  },
+
+  executeNode: async (nodeId) => {
+    const { nodes, edges } = get();
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node || !get().canExecuteNode(nodeId)) return;
+
+    // Set running state
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
+        n.id === nodeId
+          ? {
+              ...n,
+              data: {
+                ...n.data,
+                executionState: { status: 'running' },
+              },
+            }
+          : n
+      ),
+    }));
+
+    try {
+      // Collect outputs from predecessor nodes
+      const predecessorOutputs: Record<string, unknown> = {};
+      edges
+        .filter((e) => e.target === nodeId)
+        .forEach((edge) => {
+          const predNode = nodes.find((n) => n.id === edge.source);
+          if (predNode?.data.executionState?.output) {
+            predecessorOutputs[predNode.data.label] = predNode.data.executionState.output;
+          }
+        });
+
+      // Call backend API to execute node
+      const token = useAuthStore.getState().accessToken;
+      const response = await fetch('/api/workflows/test-node', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          nodeType: node.data.nodeType,
+          config: node.data.config,
+          context: predecessorOutputs,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Execution failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      // Set success state with output
+      set((state) => ({
+        nodes: state.nodes.map((n) =>
+          n.id === nodeId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  executionState: {
+                    status: 'success',
+                    output: result.output,
+                    executedAt: new Date(),
+                  },
+                },
+              }
+            : n
+        ),
+      }));
+    } catch (error) {
+      // Set error state
+      set((state) => ({
+        nodes: state.nodes.map((n) =>
+          n.id === nodeId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  executionState: {
+                    status: 'error',
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                    executedAt: new Date(),
+                  },
+                },
+              }
+            : n
+        ),
+      }));
+    }
+  },
+
+  clearNodeExecution: (nodeId) => {
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
+        n.id === nodeId
+          ? {
+              ...n,
+              data: {
+                ...n.data,
+                executionState: undefined,
+              },
+            }
+          : n
+      ),
+    }));
+  },
+
+  clearAllExecutions: () => {
+    set((state) => ({
+      nodes: state.nodes.map((n) => ({
+        ...n,
+        data: {
+          ...n.data,
+          executionState: undefined,
+        },
+      })),
+    }));
+  },
 }));

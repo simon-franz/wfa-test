@@ -1,6 +1,8 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import styled from 'styled-components';
 import { useDesignerStore } from '../../stores/designer.store';
+import { ContextPanel } from './ContextPanel';
+import { ContextInput } from './components/ContextInput';
 
 const PanelContainer = styled.div`
   width: 320px;
@@ -135,9 +137,29 @@ const HRWORKS_ENDPOINT_PARAMS: Record<string, Array<{ name: string; label: strin
     { name: 'id', label: 'Person ID', type: 'text', required: true },
   ],
   'persons.create': [
-    { name: 'firstName', label: 'Vorname', type: 'text', required: true },
-    { name: 'lastName', label: 'Nachname', type: 'text', required: true },
-    { name: 'email', label: 'E-Mail', type: 'email', required: true },
+    { name: 'personId', label: 'Person ID (Login)', type: 'text', required: true },
+    { name: 'personnelNumber', label: 'Personalnummer', type: 'text', required: true },
+    { name: 'firstName', label: 'Vorname', type: 'text', required: false },
+    { name: 'lastName', label: 'Nachname', type: 'text', required: false },
+    { name: 'email', label: 'E-Mail', type: 'email', required: false },
+    { name: 'birthday', label: 'Geburtstag (YYYY-MM-DD)', type: 'text', required: false },
+    { name: 'gender', label: 'Geschlecht', type: 'select', required: false, options: [
+      { value: 'male', label: 'Männlich' },
+      { value: 'female', label: 'Weiblich' },
+      { value: 'diverse', label: 'Divers' },
+    ]},
+    { name: 'joinDate', label: 'Eintrittsdatum (YYYY-MM-DD)', type: 'text', required: false },
+    { name: 'organizationUnitNumber', label: 'Organisationseinheit Nr.', type: 'text', required: false },
+    { name: 'position', label: 'Position', type: 'text', required: false },
+    { name: 'employmentType', label: 'Beschäftigungsart', type: 'select', required: false, options: [
+      { value: 'regularEmployee', label: 'Regulärer Mitarbeiter' },
+      { value: 'apprentice', label: 'Auszubildender' },
+      { value: 'intern', label: 'Praktikant' },
+      { value: 'marginalEmployment', label: 'Geringfügige Beschäftigung' },
+      { value: 'shortTermEmployment', label: 'Kurzfristige Beschäftigung' },
+      { value: 'studentTrainee', label: 'Werkstudent' },
+      { value: 'externalWorker', label: 'Externe Arbeitskraft' },
+    ]},
   ],
   'persons.update': [
     { name: 'id', label: 'Person ID', type: 'text', required: true },
@@ -159,6 +181,9 @@ const HRWORKS_ENDPOINT_PARAMS: Record<string, Array<{ name: string; label: strin
 export function ConfigPanel() {
   const { nodes, selectedNodeId, selectNode, updateNodeName, updateNodeConfig, deleteNode } =
     useDesignerStore();
+
+  const [contextPanelVisible, setContextPanelVisible] = useState(false);
+  const [activeInputKey, setActiveInputKey] = useState<string>('');
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
 
@@ -189,6 +214,35 @@ export function ConfigPanel() {
     }
   }, [selectedNodeId, deleteNode]);
 
+  const openContextPanel = useCallback((inputKey: string) => {
+    setActiveInputKey(inputKey);
+    setContextPanelVisible(true);
+  }, []);
+
+  const handleSelectVariable = useCallback(
+    (variable: string) => {
+      if (!selectedNode || !activeInputKey) return;
+
+      // Handle nested keys like "parameters.id"
+      if (activeInputKey.startsWith('parameters.')) {
+        const paramName = activeInputKey.replace('parameters.', '');
+        const parameters = (selectedNode.data.config.parameters as Record<string, string>) || {};
+        const currentValue = parameters[paramName] || '';
+        const newValue = currentValue + variable;
+
+        handleConfigChange('parameters', {
+          ...parameters,
+          [paramName]: newValue,
+        });
+      } else {
+        const currentValue = (selectedNode.data.config[activeInputKey] as string) || '';
+        const newValue = currentValue + variable;
+        handleConfigChange(activeInputKey, newValue);
+      }
+    },
+    [selectedNode, activeInputKey, handleConfigChange],
+  );
+
   if (!selectedNode) {
     return null;
   }
@@ -201,9 +255,11 @@ export function ConfigPanel() {
         return (
           <FormGroup>
             <Label>Beschreibung</Label>
-            <Textarea
+            <ContextInput
+              multiline
               value={(config.description as string) || ''}
               onChange={(e) => handleConfigChange('description', e.target.value)}
+              onOpenContext={() => openContextPanel('description')}
               placeholder="Optionale Beschreibung..."
             />
           </FormGroup>
@@ -214,10 +270,10 @@ export function ConfigPanel() {
           <>
             <FormGroup>
               <Label>Cron Expression</Label>
-              <Input
-                type="text"
+              <ContextInput
                 value={(config.cronExpression as string) || ''}
                 onChange={(e) => handleConfigChange('cronExpression', e.target.value)}
+                onOpenContext={() => openContextPanel('cronExpression')}
                 placeholder="0 9 * * 1-5"
               />
             </FormGroup>
@@ -254,18 +310,20 @@ export function ConfigPanel() {
             </FormGroup>
             <FormGroup>
               <Label>URL</Label>
-              <Input
-                type="text"
+              <ContextInput
                 value={(config.url as string) || ''}
                 onChange={(e) => handleConfigChange('url', e.target.value)}
+                onOpenContext={() => openContextPanel('url')}
                 placeholder="https://api.example.com/endpoint"
               />
             </FormGroup>
             <FormGroup>
               <Label>Body (JSON)</Label>
-              <Textarea
+              <ContextInput
+                multiline
                 value={(config.body as string) || ''}
                 onChange={(e) => handleConfigChange('body', e.target.value)}
+                onOpenContext={() => openContextPanel('body')}
                 placeholder='{"key": "value"}'
               />
             </FormGroup>
@@ -284,9 +342,11 @@ export function ConfigPanel() {
         return (
           <FormGroup>
             <Label>Bedingung (JSONata)</Label>
-            <Textarea
+            <ContextInput
+              multiline
               value={(config.expression as string) || ''}
               onChange={(e) => handleConfigChange('expression', e.target.value)}
+              onOpenContext={() => openContextPanel('expression')}
               placeholder='$nodes.getData.output.role = "Developer"'
             />
           </FormGroup>
@@ -319,8 +379,99 @@ export function ConfigPanel() {
           </>
         );
 
+      case 'data-transform':
+        return (
+          <>
+            <FormGroup>
+              <Label>Operation</Label>
+              <Select
+                value={(config.operation as string) || ''}
+                onChange={(e) => {
+                  updateNodeConfig(selectedNodeId!, {
+                    ...config,
+                    operation: e.target.value,
+                  });
+                }}
+              >
+                <option value="">-- Wählen --</option>
+                <option value="count">Anzahl (Count)</option>
+                <option value="extract">Feld extrahieren</option>
+                <option value="filter">Filtern</option>
+                <option value="map">Transformieren (Map)</option>
+                <option value="sum">Summe</option>
+                <option value="average">Durchschnitt</option>
+              </Select>
+            </FormGroup>
+            
+            {config.operation && (
+              <>
+                <FormGroup>
+                  <Label>Eingabe-Pfad</Label>
+                  <ContextInput
+                    value={(config.inputPath as string) || ''}
+                    onChange={(e) => handleConfigChange('inputPath', e.target.value)}
+                    onOpenContext={() => openContextPanel('inputPath')}
+                    placeholder="z.B. {{hrworks.output.data}}"
+                  />
+                </FormGroup>
+
+                {config.operation === 'extract' && (
+                  <FormGroup>
+                    <Label>Feld-Pfad</Label>
+                    <ContextInput
+                      value={(config.fieldPath as string) || ''}
+                      onChange={(e) => handleConfigChange('fieldPath', e.target.value)}
+                      onOpenContext={() => openContextPanel('fieldPath')}
+                      placeholder="z.B. id oder person.name"
+                    />
+                  </FormGroup>
+                )}
+
+                {config.operation === 'filter' && (
+                  <FormGroup>
+                    <Label>Filter-Bedingung (JSONata)</Label>
+                    <ContextInput
+                      multiline
+                      value={(config.filterExpression as string) || ''}
+                      onChange={(e) => handleConfigChange('filterExpression', e.target.value)}
+                      onOpenContext={() => openContextPanel('filterExpression')}
+                      placeholder='status = "active"'
+                    />
+                  </FormGroup>
+                )}
+
+                {config.operation === 'map' && (
+                  <FormGroup>
+                    <Label>Map-Expression (JSONata)</Label>
+                    <ContextInput
+                      multiline
+                      value={(config.mapExpression as string) || ''}
+                      onChange={(e) => handleConfigChange('mapExpression', e.target.value)}
+                      onOpenContext={() => openContextPanel('mapExpression')}
+                      placeholder='{ "name": firstName & " " & lastName }'
+                    />
+                  </FormGroup>
+                )}
+
+                {(config.operation === 'sum' || config.operation === 'average') && (
+                  <FormGroup>
+                    <Label>Feld für Berechnung</Label>
+                    <ContextInput
+                      value={(config.fieldPath as string) || ''}
+                      onChange={(e) => handleConfigChange('fieldPath', e.target.value)}
+                      onOpenContext={() => openContextPanel('fieldPath')}
+                      placeholder="z.B. amount oder salary"
+                    />
+                  </FormGroup>
+                )}
+              </>
+            )}
+          </>
+        );
+
       case 'hrworks':
-        const currentParams = HRWORKS_ENDPOINT_PARAMS[config.endpoint as string] || [];
+        const selectedEndpoint = (config.endpoint as string) || '';
+        const currentParams = HRWORKS_ENDPOINT_PARAMS[selectedEndpoint] || [];
         const parameters = (config.parameters as Record<string, string>) || {};
 
         return (
@@ -328,10 +479,14 @@ export function ConfigPanel() {
             <FormGroup>
               <Label>API Endpoint</Label>
               <Select
-                value={(config.endpoint as string) || ''}
+                value={selectedEndpoint}
                 onChange={(e) => {
-                  handleConfigChange('endpoint', e.target.value);
-                  handleConfigChange('parameters', {});
+                  const newEndpoint = e.target.value;
+                  updateNodeConfig(selectedNodeId!, {
+                    ...config,
+                    endpoint: newEndpoint,
+                    parameters: {},
+                  });
                 }}
               >
                 <option value="">-- Wählen --</option>
@@ -351,7 +506,7 @@ export function ConfigPanel() {
                 </optgroup>
               </Select>
             </FormGroup>
-            {currentParams.length > 0 && (
+            {selectedEndpoint && currentParams.length > 0 && (
               <>
                 <Divider />
                 <SectionTitle>Parameter</SectionTitle>
@@ -361,20 +516,45 @@ export function ConfigPanel() {
                       {param.label}
                       {param.required && ' *'}
                     </Label>
-                    <Input
-                      type={param.type}
-                      value={parameters[param.name] || ''}
-                      onChange={(e) =>
-                        handleConfigChange('parameters', {
-                          ...parameters,
-                          [param.name]: e.target.value,
-                        })
-                      }
-                      placeholder={`z.B. {{trigger.${param.name}}}`}
-                    />
+                    {param.type === 'select' ? (
+                      <Select
+                        value={parameters[param.name] || ''}
+                        onChange={(e) =>
+                          handleConfigChange('parameters', {
+                            ...parameters,
+                            [param.name]: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="">-- Bitte wählen --</option>
+                        {param.options?.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </Select>
+                    ) : (
+                      <ContextInput
+                        type={param.type}
+                        value={parameters[param.name] || ''}
+                        onChange={(e) =>
+                          handleConfigChange('parameters', {
+                            ...parameters,
+                            [param.name]: e.target.value,
+                          })
+                        }
+                        onOpenContext={() => openContextPanel(`parameters.${param.name}`)}
+                        placeholder={`z.B. {{trigger.${param.name}}}`}
+                      />
+                    )}
                   </FormGroup>
                 ))}
               </>
+            )}
+            {selectedEndpoint && currentParams.length === 0 && (
+              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+                Keine Parameter erforderlich
+              </p>
             )}
           </>
         );
@@ -406,6 +586,13 @@ export function ConfigPanel() {
           <DeleteButton onClick={handleDelete}>Knoten löschen</DeleteButton>
         )}
       </PanelBody>
+
+      <ContextPanel
+        visible={contextPanelVisible}
+        onClose={() => setContextPanelVisible(false)}
+        onSelectVariable={handleSelectVariable}
+        currentNodeId={selectedNodeId || undefined}
+      />
     </PanelContainer>
   );
 }

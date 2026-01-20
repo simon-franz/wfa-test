@@ -98,4 +98,24 @@ export class WorkflowService {
   async deactivate(tenantId: string, id: string, userId: string) {
     return this.update(tenantId, id, userId, { status: 'inactive' });
   }
+
+  async testNode(tenantId: string, nodeType: string, config: any, context: Record<string, any>) {
+    // Mock execution for now - return dummy data based on node type
+    if (nodeType === 'hrworks') {
+      return {
+        success: true,
+        output: {
+          persons: [
+            { personnelNumber: '001', firstName: 'Max', lastName: 'Mustermann' },
+            { personnelNumber: '002', firstName: 'Erika', lastName: 'Musterfrau' },
+          ],
+        },
+      };
+    }
+
+    return {
+      success: true,
+      output: { message: 'Node executed successfully', config, context },
+    };
+  }
 }

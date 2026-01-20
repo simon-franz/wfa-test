@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import Database from 'better-sqlite3';
 import { drizzle, BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq } from 'drizzle-orm';
-import { tenants, type TenantRecord, type NewTenantRecord } from 'shared/db';
+import { tenants, type TenantRecord, type NewTenantRecord, type TenantSettingsJson } from 'shared/db';
 import { ulid } from 'shared/utils';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -102,6 +102,16 @@ export class LandlordService implements OnModuleInit, OnModuleDestroy {
       .run();
 
     return this.findTenantById(id);
+  }
+
+  async updateTenantSettings(id: string, settings: Partial<TenantSettingsJson>): Promise<void> {
+    const tenant = await this.findTenantById(id);
+    if (!tenant) {
+      throw new Error(`Tenant not found: ${id}`);
+    }
+    await this.updateTenant(id, {
+      settings: { ...tenant.settings, ...settings },
+    });
   }
 
   async listTenants(): Promise<TenantRecord[]> {

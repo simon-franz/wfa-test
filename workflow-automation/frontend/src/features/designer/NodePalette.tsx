@@ -145,6 +145,15 @@ const nodeDefinitions: { category: string; nodes: NodeDefinition[] }[] = [
         defaultConfig: { endpoint: '', parameters: {} },
       },
       {
+        type: 'data-transform',
+        flowType: 'dataTransformNode',
+        name: 'Daten-Transformation',
+        description: 'Daten zählen, filtern, transformieren',
+        icon: '🔄',
+        color: '#8b5cf6',
+        defaultConfig: { operation: '', inputPath: '' },
+      },
+      {
         type: 'http-request',
         flowType: 'actionNode',
         name: 'HTTP Anfrage',

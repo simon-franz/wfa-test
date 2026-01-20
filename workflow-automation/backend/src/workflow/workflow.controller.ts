@@ -70,4 +70,12 @@ export class WorkflowController {
   ) {
     return this.workflowService.deactivate(tenantId, id, user.id);
   }
+
+  @Post('test-node')
+  async testNode(
+    @TenantId() tenantId: string,
+    @Body() body: { nodeType: string; config: any; context: Record<string, any> },
+  ) {
+    return this.workflowService.testNode(tenantId, body.nodeType, body.config, body.context);
+  }
 }

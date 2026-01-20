@@ -6,9 +6,9 @@ import { NodePlayButton } from '../components/NodePlayButton';
 
 const NodeContainer = styled.div<{ $selected: boolean }>`
   position: relative;
-  min-width: 180px;
+  min-width: 200px;
   background-color: var(--color-bg-secondary);
-  border: 2px solid ${(props) => (props.$selected ? 'var(--color-primary)' : 'var(--color-border)')};
+  border: 2px solid ${(props) => (props.$selected ? 'var(--color-primary)' : '#8b5cf6')};
   border-radius: var(--radius-lg);
   box-shadow: ${(props) => (props.$selected ? 'var(--shadow-lg)' : 'var(--shadow-md)')};
   overflow: hidden;
@@ -20,7 +20,7 @@ const NodeHeader = styled.div`
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-3);
-  background-color: var(--color-bg-tertiary);
+  background-color: rgba(139, 92, 246, 0.15);
   border-bottom: 1px solid var(--color-border);
 `;
 
@@ -30,10 +30,11 @@ const NodeIcon = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--color-secondary);
-  color: var(--color-bg);
+  background-color: #8b5cf6;
+  color: white;
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
+  font-weight: bold;
 `;
 
 const NodeTitle = styled.div`
@@ -46,50 +47,43 @@ const NodeBody = styled.div`
   padding: var(--spacing-3);
 `;
 
-const NodeType = styled.div`
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-`;
-
 const ConfigPreview = styled.div`
-  margin-top: var(--spacing-2);
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   background-color: var(--color-bg-tertiary);
   padding: var(--spacing-2);
   border-radius: var(--radius-sm);
   word-break: break-all;
-  max-height: 40px;
+  max-height: 60px;
   overflow: hidden;
 `;
 
 const StyledHandle = styled(Handle)`
   width: 12px;
   height: 12px;
-  background-color: var(--edge-color);
+  background-color: #8b5cf6;
   border: 2px solid var(--color-bg-secondary);
 `;
 
-export const ActionNode = memo(({ data, selected, id }: NodeProps<WorkflowNodeData>) => {
-  const nodeIcons: Record<string, string> = {
-    'http-request': '🌐',
-    delay: '⏳',
-  };
-
-  const nodeTypeLabels: Record<string, string> = {
-    'http-request': 'HTTP Anfrage',
-    delay: 'Verzögerung',
-  };
-
+export const DataTransformNode = memo(({ data, selected, id }: NodeProps<WorkflowNodeData>) => {
   const getConfigPreview = () => {
     const config = data.config;
-    if (data.nodeType === 'http-request' && config.url) {
-      return `${config.method || 'GET'} ${config.url}`;
+    const operation = config.operation as string;
+    
+    if (!operation) return 'Nicht konfiguriert';
+    
+    switch (operation) {
+      case 'count':
+        return `Anzahl von ${config.inputPath || '...'}`;
+      case 'extract':
+        return `Extrahiere ${config.fieldPath || '...'}`;
+      case 'filter':
+        return `Filtere ${config.inputPath || '...'}`;
+      case 'map':
+        return `Mappe ${config.inputPath || '...'}`;
+      default:
+        return operation;
     }
-    if (data.nodeType === 'delay' && config.duration) {
-      return `${config.duration} ${config.unit || 'seconds'}`;
-    }
-    return null;
   };
 
   const preview = getConfigPreview();
@@ -99,16 +93,15 @@ export const ActionNode = memo(({ data, selected, id }: NodeProps<WorkflowNodeDa
       <NodePlayButton nodeId={id} executionState={data.executionState} />
       <StyledHandle type="target" position={Position.Left} />
       <NodeHeader>
-        <NodeIcon>{nodeIcons[data.nodeType] || '⚡'}</NodeIcon>
+        <NodeIcon>🔄</NodeIcon>
         <NodeTitle>{data.label}</NodeTitle>
       </NodeHeader>
       <NodeBody>
-        <NodeType>{nodeTypeLabels[data.nodeType] || data.nodeType}</NodeType>
-        {preview && <ConfigPreview>{preview}</ConfigPreview>}
+        <ConfigPreview>{preview}</ConfigPreview>
       </NodeBody>
       <StyledHandle type="source" position={Position.Right} />
     </NodeContainer>
   );
 });
 
-ActionNode.displayName = 'ActionNode';
+DataTransformNode.displayName = 'DataTransformNode';

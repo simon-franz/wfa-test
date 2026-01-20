@@ -3,9 +3,7 @@ import type { ULID, Timestamps } from './common.types';
 // HR WORKS API types
 
 export interface HRWorksAuthResponse {
-  access_token: string;
-  token_type: 'Bearer';
-  expires_in: number;
+  token: string;
 }
 
 export interface HRWorksPerson {

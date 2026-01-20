@@ -7,6 +7,7 @@ import { HrworksModule } from './hrworks/hrworks.module';
 import { SyncModule } from './sync/sync.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { WorkflowModule } from './workflow/workflow.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { WorkflowModule } from './workflow/workflow.module';
     SyncModule,
     WebhooksModule,
     WorkflowModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}

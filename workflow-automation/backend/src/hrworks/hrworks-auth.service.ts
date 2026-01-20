@@ -41,13 +41,13 @@ export class HrworksAuthService {
     // Get new token
     const token = await this.fetchAccessToken(apiKey, apiSecret);
 
-    // Cache token
+    // Cache token (tokens are valid for 15 minutes)
     this.tokenCache.set(tenantId, {
-      accessToken: token.access_token,
-      expiresAt: Date.now() + token.expires_in * 1000,
+      accessToken: token.token,
+      expiresAt: Date.now() + 14 * 60 * 1000, // 14 minutes to be safe
     });
 
-    return token.access_token;
+    return token.token;
   }
 
   private async fetchAccessToken(apiKey: string, apiSecret: string): Promise<HRWorksAuthResponse> {

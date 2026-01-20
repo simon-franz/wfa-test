@@ -1,9 +1,11 @@
 import { memo } from 'react';
+import { NodePlayButton } from '../components/NodePlayButton';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import styled from 'styled-components';
 import type { WorkflowNodeData } from '../../../stores/designer.store';
 
 const NodeContainer = styled.div<{ $selected: boolean }>`
+  position: relative;
   min-width: 180px;
   background-color: var(--color-bg-secondary);
   border: 2px solid ${(props) => (props.$selected ? 'var(--color-primary)' : 'var(--color-warning)')};
@@ -113,6 +115,7 @@ export const ConditionNode = memo(({ data, selected, id }: NodeProps<WorkflowNod
 
   return (
     <NodeContainer $selected={!!selected}>
+      <NodePlayButton nodeId={id} executionState={data.executionState} />
       <TopHandle type="target" position={Position.Left} />
       <NodeHeader>
         <NodeIcon>◇</NodeIcon>

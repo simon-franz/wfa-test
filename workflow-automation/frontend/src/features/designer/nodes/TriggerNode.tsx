@@ -1,9 +1,11 @@
 import { memo } from 'react';
+import { NodePlayButton } from '../components/NodePlayButton';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import styled from 'styled-components';
 import { useDesignerStore, type WorkflowNodeData } from '../../../stores/designer.store';
 
 const NodeContainer = styled.div<{ $selected: boolean }>`
+  position: relative;
   min-width: 180px;
   background-color: var(--color-bg-secondary);
   border: 2px solid ${(props) => (props.$selected ? 'var(--color-primary)' : 'var(--color-primary)')};
@@ -56,7 +58,7 @@ const StyledHandle = styled(Handle)`
   border: 2px solid var(--color-bg-secondary);
 `;
 
-export const TriggerNode = memo(({ data, selected }: NodeProps<WorkflowNodeData>) => {
+export const TriggerNode = memo(({ data, selected, id }: NodeProps<WorkflowNodeData>) => {
   const nodeTypeLabels: Record<string, string> = {
     'manual-trigger': 'Manueller Start',
     'scheduled-trigger': 'Zeitplan',
@@ -64,6 +66,7 @@ export const TriggerNode = memo(({ data, selected }: NodeProps<WorkflowNodeData>
 
   return (
     <NodeContainer $selected={!!selected}>
+      <NodePlayButton nodeId={id} executionState={data.executionState} />
       <NodeHeader>
         <NodeIcon>▶</NodeIcon>
         <NodeTitle>{data.label}</NodeTitle>

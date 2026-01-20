@@ -8,6 +8,7 @@ import { LoginPage } from './pages/LoginPage';
 import { OAuthCallbackPage } from './pages/OAuthCallbackPage';
 import { WorkflowListPage } from './pages/WorkflowListPage';
 import { WorkflowDesignerPage } from './pages/WorkflowDesignerPage';
+import { SettingsPage } from './pages/SettingsPage';
 
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -37,6 +38,7 @@ function App() {
         <Route path="workflows" element={<WorkflowListPage />} />
         <Route path="workflows/:workflowId" element={<WorkflowDesignerPage />} />
         <Route path="workflows/new" element={<WorkflowDesignerPage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
 
       {/* Catch all - redirect to home */}

@@ -148,6 +148,7 @@ Workflow Designer: React Flow (@xyflow/react)
 State Management: **Zustand** (einfacher als Redux, weniger Boilerplate)
 UI Components: SmartFace Component Library
 Styling: Styled-Components (wie in SmartFace verwendet)
+**Authentication**: Alle API-Requests zum Backend müssen Authorization-Header mit JWT-Token enthalten (`Authorization: Bearer <token>`)
 
 **SmartFace WorkflowGraph Analyse:**
 
@@ -1146,6 +1147,29 @@ Canvas mit Drag & Drop
 Node Palette (Initial: Start, Action, End)
 Connection Drawing
 Basic Node Configuration Panel
+**Context Panel / Variable Picker**:
+  - Overlay/Sidebar beim Klick in Input-Felder
+  - Zeigt Outputs aller vorherigen Nodes im Workflow-Graph
+  - Expandable JSON-Tree-View der verfügbaren Daten
+  - Syntax-Highlighting für JSON
+  - Klickbar zum Einfügen von Variablen-Referenzen (z.B. `{{node_name.output.field}}`)
+  - Filterfunktion zum Suchen von Feldern
+  - Zeigt auch Trigger-Daten und Workflow-Variablen
+**Node-by-Node Testing (Play-Button)**:
+  - **Play-Button an jedem Node** zum einzelnen Testen
+  - **Sequentielle Abhängigkeit**: Node kann nur ausgeführt werden, wenn alle vorherigen Nodes bereits ausgeführt wurden
+  - **Execution Flow**: A → B → C (B erst nach A, C erst nach B)
+  - **Output Caching**: Ergebnis wird am Node gespeichert und im Context Panel verfügbar
+  - **Visuelles Status-Feedback**:
+    - Grau: Nicht ausführbar (Vorgänger fehlen)
+    - Grün: Bereit zum Ausführen
+    - Blau/Spinner: Läuft gerade
+    - Grün mit Haken: Erfolgreich ausgeführt
+    - Rot: Fehler
+  - **Output-Preview**: Expandable JSON-View direkt am Node
+  - **"Run All"-Button**: Führt alle Nodes in topologischer Reihenfolge aus
+  - **Cache Invalidation**: Outputs werden gelöscht bei Änderung der Node-Konfiguration oder Vorgänger-Outputs
+  - **Mock Trigger Data**: Bei Trigger-Nodes kann Mock-Input definiert werden
 Workflow Speichern/Laden
 
 ### UI-Spezifikationen (Detail)
@@ -1261,6 +1285,8 @@ HTTP Request Node
    - Vorkonfigurierte Endpunkte (Persons, OEs, Absences, etc.)
    - Automatische Authentifizierung (Token-Handling)
    - Dropdown-Auswahl für Operationen (Get Person, Update Person, etc.)
+   - **Async Job Handling**: Write-Operationen (POST/PUT/DELETE) geben jobId zurück, Backend pollt automatisch Job-Status
+   - **UI-Mapping**: Async-Calls werden als synchrone Operationen dargestellt - Node bleibt "running" bis Job fertig
    - Integrierte Fehlerbehandlung für HR WORKS-spezifische Errors
    - Response-Mapping mit vordefinierten Templates
 
@@ -1271,6 +1297,25 @@ HTTP Request Node
 **API-Client Generierung:** → Siehe **[plan-hrworks-integration.md](./plan-hrworks-integration.md)**
 
 > ℹ️ Im finalen `workflow-automation` Projekt wird diese Datei nach `docs/` verschoben.
+
+**Async Job Handling (Write-Operationen):**
+
+HR WORKS API verwendet Job-basierte asynchrone Verarbeitung:
+
+1. **Write-Request** (POST/PUT/DELETE) → Response: `{ jobId: "..." }`
+2. **Backend pollt** `/jobs/{jobId}` bis Status = "finished" oder "failed"
+3. **Polling-Strategie**:
+   - Intervall: 500ms initial, dann exponentiell bis max. 2s
+   - Timeout: 60 Sekunden
+   - Max. Retries bei Netzwerkfehlern: 3x
+4. **Frontend-Darstellung**:
+   - Node zeigt "running" Status während Polling
+   - Bei Success: Node wird grün mit Job-Result als Output
+   - Bei Failure: Node wird rot mit Error-Details
+5. **Job-Result Mapping**:
+   - Success: Node-Output = `data` Objekt aus Job-Response (ohne Wrapper)
+   - Error: `{ error: "...", jobId: "..." }`
+   - Beispiel: Job-Response `{ status: "finished", result: { data: { id: "123", name: "..." } } }` → Node-Output = `{ id: "123", name: "..." }`
 
 #### Node-Konfiguration im Designer
 
@@ -2245,6 +2290,21 @@ SharePoint/OneDrive
 SAP/Datev (optional)
 
 4.9 Testing & Quality Assurance
+
+**Node-by-Node Testing (bereits in Phase 1)**
+Play-Button an jedem Node für einzelne Ausführung
+Sequentielle Abhängigkeiten: Node nur ausführbar wenn alle Vorgänger ausgeführt
+Output Caching: Ergebnisse werden gespeichert und im Context Panel verfügbar
+Mock Trigger Data: Trigger-Nodes können mit Test-Daten ausgeführt werden
+Visuelles Status-Feedback:
+  - Grau: Nicht ausführbar (Vorgänger fehlen)
+  - Grün: Bereit zum Ausführen
+  - Blau/Spinner: Läuft gerade
+  - Grün mit Haken: Erfolgreich
+  - Rot: Fehler
+Output-Preview: Expandable JSON-View direkt am Node
+"Run All"-Button: Führt alle Nodes in topologischer Reihenfolge aus
+Cache Invalidation: Outputs werden gelöscht bei Config-Änderungen
 
 Workflow Testing
 Test Mode (Dry-Run)

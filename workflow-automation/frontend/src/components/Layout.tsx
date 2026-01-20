@@ -99,6 +99,9 @@ export function Layout() {
           <NavLink to="/workflows" $active={location.pathname.startsWith('/workflows')}>
             Workflows
           </NavLink>
+          <NavLink to="/settings" $active={location.pathname.startsWith('/settings')}>
+            Einstellungen
+          </NavLink>
         </Nav>
 
         <UserSection>
