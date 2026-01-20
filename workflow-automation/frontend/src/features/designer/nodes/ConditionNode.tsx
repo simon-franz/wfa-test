@@ -5,11 +5,12 @@ import type { WorkflowNodeData } from '../../../stores/designer.store';
 
 const NodeContainer = styled.div<{ $selected: boolean }>`
   min-width: 180px;
-  background-color: var(--color-white);
-  border: 2px solid ${(props) => (props.$selected ? 'var(--color-primary)' : '#ffc107')};
+  background-color: var(--color-bg-secondary);
+  border: 2px solid ${(props) => (props.$selected ? 'var(--color-primary)' : 'var(--color-warning)')};
   border-radius: var(--radius-lg);
   box-shadow: ${(props) => (props.$selected ? 'var(--shadow-lg)' : 'var(--shadow-md)')};
   overflow: hidden;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
 `;
 
 const NodeHeader = styled.div`
@@ -17,8 +18,8 @@ const NodeHeader = styled.div`
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-3);
-  background-color: #fff8e6;
-  border-bottom: 1px solid var(--color-gray-200);
+  background-color: rgba(252, 196, 25, 0.15);
+  border-bottom: 1px solid var(--color-border);
 `;
 
 const NodeIcon = styled.div`
@@ -27,8 +28,8 @@ const NodeIcon = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #ffc107;
-  color: var(--color-gray-900);
+  background-color: var(--color-warning);
+  color: var(--color-bg);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   font-weight: bold;
@@ -37,7 +38,7 @@ const NodeIcon = styled.div`
 const NodeTitle = styled.div`
   font-size: var(--font-size-sm);
   font-weight: 600;
-  color: var(--color-gray-900);
+  color: var(--color-text);
 `;
 
 const NodeBody = styled.div`
@@ -46,8 +47,8 @@ const NodeBody = styled.div`
 
 const ExpressionPreview = styled.div`
   font-size: var(--font-size-xs);
-  color: var(--color-gray-600);
-  background-color: var(--color-gray-50);
+  color: var(--color-text-muted);
+  background-color: var(--color-bg-tertiary);
   padding: var(--spacing-2);
   border-radius: var(--radius-sm);
   font-family: monospace;
@@ -57,31 +58,35 @@ const ExpressionPreview = styled.div`
 `;
 
 const HandleContainer = styled.div`
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
-  justify-content: space-around;
-  padding: var(--spacing-2) var(--spacing-3);
-  background-color: var(--color-gray-50);
-  border-top: 1px solid var(--color-gray-200);
+  flex-direction: column;
+  gap: var(--spacing-4);
 `;
 
 const HandleLabel = styled.div<{ $type: 'true' | 'false' }>`
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: var(--spacing-1);
+  gap: var(--spacing-2);
   position: relative;
 
   span {
     font-size: var(--font-size-xs);
     color: ${(props) => (props.$type === 'true' ? 'var(--color-success)' : 'var(--color-danger)')};
     font-weight: 500;
+    background: var(--color-bg-secondary);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
   }
 `;
 
 const StyledHandle = styled(Handle)`
   width: 12px;
   height: 12px;
-  border: 2px solid var(--color-white);
+  border: 2px solid var(--color-bg-secondary);
   position: relative !important;
   transform: none !important;
   left: auto !important;
@@ -99,8 +104,8 @@ const FalseHandle = styled(StyledHandle)`
 const TopHandle = styled(Handle)`
   width: 12px;
   height: 12px;
-  background-color: #ffc107;
-  border: 2px solid var(--color-white);
+  background-color: var(--color-warning);
+  border: 2px solid var(--color-bg-secondary);
 `;
 
 export const ConditionNode = memo(({ data, selected, id }: NodeProps<WorkflowNodeData>) => {
@@ -108,7 +113,7 @@ export const ConditionNode = memo(({ data, selected, id }: NodeProps<WorkflowNod
 
   return (
     <NodeContainer $selected={!!selected}>
-      <TopHandle type="target" position={Position.Top} />
+      <TopHandle type="target" position={Position.Left} />
       <NodeHeader>
         <NodeIcon>◇</NodeIcon>
         <NodeTitle>{data.label}</NodeTitle>
@@ -118,12 +123,12 @@ export const ConditionNode = memo(({ data, selected, id }: NodeProps<WorkflowNod
       </NodeBody>
       <HandleContainer>
         <HandleLabel $type="true">
-          <TrueHandle type="source" position={Position.Bottom} id="true" />
           <span>Ja</span>
+          <TrueHandle type="source" position={Position.Right} id="true" />
         </HandleLabel>
         <HandleLabel $type="false">
-          <FalseHandle type="source" position={Position.Bottom} id="false" />
           <span>Nein</span>
+          <FalseHandle type="source" position={Position.Right} id="false" />
         </HandleLabel>
       </HandleContainer>
     </NodeContainer>

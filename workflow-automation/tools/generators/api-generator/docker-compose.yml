@@ -1,0 +1,13 @@
+version: "3"
+services:
+  openapi-generator:
+    image: openapitools/openapi-generator-cli:latest
+    user: "${UID:-1000}:${GID:-1000}"
+    volumes:
+      - ./input:/local/input
+      - ../../packages/hrworks-api-client/auto-client:/local/output
+    command: generate
+      -i /local/input/hrworks-api.yaml
+      -g typescript-fetch
+      -o /local/output
+      --additional-properties=supportsES6=true,npmName=@hrworks/auto-client,npmVersion=1.0.0,withInterfaces=true,nullSafeAdditionalProps=true,modelPropertyNaming=original,stringEnums=true

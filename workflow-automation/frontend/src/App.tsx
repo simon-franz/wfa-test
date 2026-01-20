@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth.store';
+import { useThemeStore } from './stores/theme.store';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
@@ -9,6 +11,12 @@ import { WorkflowDesignerPage } from './pages/WorkflowDesignerPage';
 
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const theme = useThemeStore((state) => state.theme);
+
+  // Apply theme to document root
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   return (
     <Routes>

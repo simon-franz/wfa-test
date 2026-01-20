@@ -129,6 +129,33 @@ const SectionTitle = styled.h4`
   margin: 0 0 var(--spacing-3) 0;
 `;
 
+// HR WORKS Endpoint Parameter Definitions
+const HRWORKS_ENDPOINT_PARAMS: Record<string, Array<{ name: string; label: string; type: string; required?: boolean }>> = {
+  'persons.getById': [
+    { name: 'id', label: 'Person ID', type: 'text', required: true },
+  ],
+  'persons.create': [
+    { name: 'firstName', label: 'Vorname', type: 'text', required: true },
+    { name: 'lastName', label: 'Nachname', type: 'text', required: true },
+    { name: 'email', label: 'E-Mail', type: 'email', required: true },
+  ],
+  'persons.update': [
+    { name: 'id', label: 'Person ID', type: 'text', required: true },
+    { name: 'firstName', label: 'Vorname', type: 'text' },
+    { name: 'lastName', label: 'Nachname', type: 'text' },
+    { name: 'email', label: 'E-Mail', type: 'email' },
+  ],
+  'absences.create': [
+    { name: 'personId', label: 'Person ID', type: 'text', required: true },
+    { name: 'startDate', label: 'Startdatum', type: 'date', required: true },
+    { name: 'endDate', label: 'Enddatum', type: 'date', required: true },
+    { name: 'type', label: 'Typ', type: 'text', required: true },
+  ],
+  'organizationUnits.getById': [
+    { name: 'id', label: 'OE ID', type: 'text', required: true },
+  ],
+};
+
 export function ConfigPanel() {
   const { nodes, selectedNodeId, selectNode, updateNodeName, updateNodeConfig, deleteNode } =
     useDesignerStore();
@@ -289,6 +316,66 @@ export function ConfigPanel() {
                 <option value="days">Tage</option>
               </Select>
             </FormGroup>
+          </>
+        );
+
+      case 'hrworks':
+        const currentParams = HRWORKS_ENDPOINT_PARAMS[config.endpoint as string] || [];
+        const parameters = (config.parameters as Record<string, string>) || {};
+
+        return (
+          <>
+            <FormGroup>
+              <Label>API Endpoint</Label>
+              <Select
+                value={(config.endpoint as string) || ''}
+                onChange={(e) => {
+                  handleConfigChange('endpoint', e.target.value);
+                  handleConfigChange('parameters', {});
+                }}
+              >
+                <option value="">-- Wählen --</option>
+                <optgroup label="Personen">
+                  <option value="persons.getAll">Alle Personen abrufen</option>
+                  <option value="persons.getById">Person nach ID abrufen</option>
+                  <option value="persons.create">Person erstellen</option>
+                  <option value="persons.update">Person aktualisieren</option>
+                </optgroup>
+                <optgroup label="Abwesenheiten">
+                  <option value="absences.getAll">Alle Abwesenheiten abrufen</option>
+                  <option value="absences.create">Abwesenheit erstellen</option>
+                </optgroup>
+                <optgroup label="Organisation">
+                  <option value="organizationUnits.getAll">Alle OEs abrufen</option>
+                  <option value="organizationUnits.getById">OE nach ID abrufen</option>
+                </optgroup>
+              </Select>
+            </FormGroup>
+            {currentParams.length > 0 && (
+              <>
+                <Divider />
+                <SectionTitle>Parameter</SectionTitle>
+                {currentParams.map((param) => (
+                  <FormGroup key={param.name}>
+                    <Label>
+                      {param.label}
+                      {param.required && ' *'}
+                    </Label>
+                    <Input
+                      type={param.type}
+                      value={parameters[param.name] || ''}
+                      onChange={(e) =>
+                        handleConfigChange('parameters', {
+                          ...parameters,
+                          [param.name]: e.target.value,
+                        })
+                      }
+                      placeholder={`z.B. {{trigger.${param.name}}}`}
+                    />
+                  </FormGroup>
+                ))}
+              </>
+            )}
           </>
         );
 

@@ -5,11 +5,12 @@ import { useDesignerStore, type WorkflowNodeData } from '../../../stores/designe
 
 const NodeContainer = styled.div<{ $selected: boolean }>`
   min-width: 180px;
-  background-color: var(--color-white);
+  background-color: var(--color-bg-secondary);
   border: 2px solid ${(props) => (props.$selected ? 'var(--color-primary)' : 'var(--color-primary)')};
   border-radius: var(--radius-lg);
   box-shadow: ${(props) => (props.$selected ? 'var(--shadow-lg)' : 'var(--shadow-md)')};
   overflow: hidden;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
 `;
 
 const NodeHeader = styled.div`
@@ -18,7 +19,7 @@ const NodeHeader = styled.div`
   gap: var(--spacing-2);
   padding: var(--spacing-3);
   background-color: var(--color-primary-light);
-  border-bottom: 1px solid var(--color-gray-200);
+  border-bottom: 1px solid var(--color-border);
 `;
 
 const NodeIcon = styled.div`
@@ -28,7 +29,7 @@ const NodeIcon = styled.div`
   align-items: center;
   justify-content: center;
   background-color: var(--color-primary);
-  color: var(--color-white);
+  color: var(--color-bg);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
 `;
@@ -36,7 +37,7 @@ const NodeIcon = styled.div`
 const NodeTitle = styled.div`
   font-size: var(--font-size-sm);
   font-weight: 600;
-  color: var(--color-gray-900);
+  color: var(--color-text);
 `;
 
 const NodeBody = styled.div`
@@ -45,14 +46,14 @@ const NodeBody = styled.div`
 
 const NodeType = styled.div`
   font-size: var(--font-size-xs);
-  color: var(--color-gray-500);
+  color: var(--color-text-secondary);
 `;
 
 const StyledHandle = styled(Handle)`
   width: 12px;
   height: 12px;
   background-color: var(--color-primary);
-  border: 2px solid var(--color-white);
+  border: 2px solid var(--color-bg-secondary);
 `;
 
 export const TriggerNode = memo(({ data, selected }: NodeProps<WorkflowNodeData>) => {
@@ -70,7 +71,7 @@ export const TriggerNode = memo(({ data, selected }: NodeProps<WorkflowNodeData>
       <NodeBody>
         <NodeType>{nodeTypeLabels[data.nodeType] || data.nodeType}</NodeType>
       </NodeBody>
-      <StyledHandle type="source" position={Position.Bottom} />
+      <StyledHandle type="source" position={Position.Right} />
     </NodeContainer>
   );
 });

@@ -5,11 +5,12 @@ import type { WorkflowNodeData } from '../../../stores/designer.store';
 
 const NodeContainer = styled.div<{ $selected: boolean }>`
   min-width: 180px;
-  background-color: var(--color-white);
-  border: 2px solid ${(props) => (props.$selected ? 'var(--color-primary)' : 'var(--color-gray-300)')};
+  background-color: var(--color-bg-secondary);
+  border: 2px solid ${(props) => (props.$selected ? 'var(--color-primary)' : 'var(--color-border)')};
   border-radius: var(--radius-lg);
   box-shadow: ${(props) => (props.$selected ? 'var(--shadow-lg)' : 'var(--shadow-md)')};
   overflow: hidden;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
 `;
 
 const NodeHeader = styled.div`
@@ -17,8 +18,8 @@ const NodeHeader = styled.div`
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-3);
-  background-color: var(--color-gray-100);
-  border-bottom: 1px solid var(--color-gray-200);
+  background-color: var(--color-bg-tertiary);
+  border-bottom: 1px solid var(--color-border);
 `;
 
 const NodeIcon = styled.div`
@@ -27,8 +28,8 @@ const NodeIcon = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--color-gray-600);
-  color: var(--color-white);
+  background-color: var(--color-secondary);
+  color: var(--color-bg);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
 `;
@@ -36,7 +37,7 @@ const NodeIcon = styled.div`
 const NodeTitle = styled.div`
   font-size: var(--font-size-sm);
   font-weight: 600;
-  color: var(--color-gray-900);
+  color: var(--color-text);
 `;
 
 const NodeBody = styled.div`
@@ -45,14 +46,14 @@ const NodeBody = styled.div`
 
 const NodeType = styled.div`
   font-size: var(--font-size-xs);
-  color: var(--color-gray-500);
+  color: var(--color-text-secondary);
 `;
 
 const ConfigPreview = styled.div`
   margin-top: var(--spacing-2);
   font-size: var(--font-size-xs);
-  color: var(--color-gray-600);
-  background-color: var(--color-gray-50);
+  color: var(--color-text-muted);
+  background-color: var(--color-bg-tertiary);
   padding: var(--spacing-2);
   border-radius: var(--radius-sm);
   word-break: break-all;
@@ -63,8 +64,8 @@ const ConfigPreview = styled.div`
 const StyledHandle = styled(Handle)`
   width: 12px;
   height: 12px;
-  background-color: var(--color-gray-400);
-  border: 2px solid var(--color-white);
+  background-color: var(--edge-color);
+  border: 2px solid var(--color-bg-secondary);
 `;
 
 export const ActionNode = memo(({ data, selected }: NodeProps<WorkflowNodeData>) => {
@@ -93,7 +94,7 @@ export const ActionNode = memo(({ data, selected }: NodeProps<WorkflowNodeData>)
 
   return (
     <NodeContainer $selected={!!selected}>
-      <StyledHandle type="target" position={Position.Top} />
+      <StyledHandle type="target" position={Position.Left} />
       <NodeHeader>
         <NodeIcon>{nodeIcons[data.nodeType] || '⚡'}</NodeIcon>
         <NodeTitle>{data.label}</NodeTitle>
@@ -102,7 +103,7 @@ export const ActionNode = memo(({ data, selected }: NodeProps<WorkflowNodeData>)
         <NodeType>{nodeTypeLabels[data.nodeType] || data.nodeType}</NodeType>
         {preview && <ConfigPreview>{preview}</ConfigPreview>}
       </NodeBody>
-      <StyledHandle type="source" position={Position.Bottom} />
+      <StyledHandle type="source" position={Position.Right} />
     </NodeContainer>
   );
 });

@@ -4,21 +4,21 @@ import { useDesignerStore, type WorkflowNode } from '../../stores/designer.store
 
 const PaletteContainer = styled.div`
   width: 240px;
-  background-color: var(--color-white);
-  border-right: 1px solid var(--color-gray-200);
+  background-color: var(--color-bg-secondary);
+  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
 `;
 
 const PaletteHeader = styled.div`
   padding: var(--spacing-4);
-  border-bottom: 1px solid var(--color-gray-200);
+  border-bottom: 1px solid var(--color-border);
 `;
 
 const PaletteTitle = styled.h3`
   font-size: var(--font-size-sm);
   font-weight: 600;
-  color: var(--color-gray-700);
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin: 0;
@@ -37,7 +37,7 @@ const NodeCategory = styled.div`
 const CategoryTitle = styled.h4`
   font-size: var(--font-size-xs);
   font-weight: 500;
-  color: var(--color-gray-500);
+  color: var(--color-text-muted);
   text-transform: uppercase;
   margin: 0 0 var(--spacing-2) 0;
   padding: 0 var(--spacing-2);
@@ -49,8 +49,8 @@ const NodeItem = styled.button<{ $color: string }>`
   gap: var(--spacing-3);
   width: 100%;
   padding: var(--spacing-3);
-  background-color: var(--color-white);
-  border: 1px solid var(--color-gray-200);
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   cursor: grab;
   transition: all var(--transition-fast);
@@ -59,7 +59,7 @@ const NodeItem = styled.button<{ $color: string }>`
 
   &:hover {
     border-color: ${(props) => props.$color};
-    background-color: ${(props) => props.$color}10;
+    background-color: ${(props) => props.$color}20;
   }
 
   &:active {
@@ -73,7 +73,7 @@ const NodeIcon = styled.div<{ $color: string }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: ${(props) => props.$color}20;
+  background-color: ${(props) => props.$color}30;
   color: ${(props) => props.$color};
   border-radius: var(--radius-md);
   font-size: var(--font-size-lg);
@@ -87,12 +87,12 @@ const NodeInfo = styled.div`
 const NodeName = styled.div`
   font-size: var(--font-size-sm);
   font-weight: 500;
-  color: var(--color-gray-900);
+  color: var(--color-text);
 `;
 
 const NodeDescription = styled.div`
   font-size: var(--font-size-xs);
-  color: var(--color-gray-500);
+  color: var(--color-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -136,6 +136,15 @@ const nodeDefinitions: { category: string; nodes: NodeDefinition[] }[] = [
     category: 'Aktionen',
     nodes: [
       {
+        type: 'hrworks',
+        flowType: 'hrworksNode',
+        name: 'HR WORKS',
+        description: 'HR WORKS API aufrufen',
+        icon: 'HR',
+        color: '#ff6b35',
+        defaultConfig: { endpoint: '', parameters: {} },
+      },
+      {
         type: 'http-request',
         flowType: 'actionNode',
         name: 'HTTP Anfrage',
@@ -178,6 +187,19 @@ export function NodePalette() {
 
   const handleAddNode = useCallback(
     (def: NodeDefinition) => {
+      // Validate: Only one trigger allowed - replace existing one
+      if (def.flowType === 'triggerNode') {
+        const existingTrigger = nodes.find((n) => n.type === 'triggerNode');
+        if (existingTrigger) {
+          if (confirm('Es darf nur ein Trigger pro Workflow geben. Möchten Sie den bestehenden Trigger ersetzen?')) {
+            // Remove old trigger
+            useDesignerStore.getState().deleteNode(existingTrigger.id);
+          } else {
+            return;
+          }
+        }
+      }
+
       // Calculate position based on existing nodes
       const lastNode = nodes[nodes.length - 1];
       const x = lastNode ? lastNode.position.x : 250;
@@ -199,6 +221,14 @@ export function NodePalette() {
     [addNode, nodes],
   );
 
+  const handleDragStart = useCallback(
+    (event: React.DragEvent, def: NodeDefinition) => {
+      event.dataTransfer.setData('application/reactflow', JSON.stringify(def));
+      event.dataTransfer.effectAllowed = 'move';
+    },
+    [],
+  );
+
   return (
     <PaletteContainer>
       <PaletteHeader>
@@ -214,6 +244,8 @@ export function NodePalette() {
                 key={node.type}
                 $color={node.color}
                 onClick={() => handleAddNode(node)}
+                draggable
+                onDragStart={(e) => handleDragStart(e, node)}
               >
                 <NodeIcon $color={node.color}>{node.icon}</NodeIcon>
                 <NodeInfo>
