@@ -138,14 +138,134 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
 - Node Configuration Panel
 - Workflow Speichern/Laden
 
+### UI-Spezifikationen (Detail)
+
+#### Workflow-Übersicht
+- **Darstellung als Tabelle** mit Spalten für Name, Status, Version, letzte Änderung, Ersteller
+- Pro Workflow darf es **nur einen Trigger-Knoten** geben (Validierung im Designer)
+
+#### Workflow-Designer Layout (oberer Bereich, ~60% der Höhe)
+
+**Visueller Graph-Editor:**
+- Knoten-basierter Editor mit Drag-and-Drop-Funktionalität
+- **Drag & Drop aus Library**: Komponenten können aus einer seitlichen "Library" in den Designer gezogen werden
+- Knoten werden durch Verbindungslinien (Edges) verknüpft
+- Unterstützung für verschiedene Knotentypen (z.B. Jira, HR WORKS, Condition, API-Calls)
+- Jeder Knoten zeigt eine Vorschau seines Inhalts/Konfiguration
+- **Horizontale Anordnung** des Workflows von links nach rechts (immer!)
+
+**Verbindungslinien (Edges):**
+- **Orthogonale/rechteckige Linien** (keine kurvigen Linien!)
+- **Hover-Icon zum Löschen**: Kanten zeigen bei Hover ein Icon, mit dem sie gelöscht werden können
+- **Datenfluss-Animation**: Animierte Linien, die visualisieren wohin die Daten fließen
+- **Verbindungspunkte bei Multi-Output-Knoten**: Bei Bedingungen, Switches oder ähnlichen Knoten mit mehreren Ausgängen liegen die Verbindungsstücke immer auf dem Rahmen der Box
+
+**Header-Leiste:**
+- Workflow-Name mit Dropdown zur Bearbeitung
+- Versionsnummer (z.B. "0.0.14")
+- Toggle für Aktivierung/Deaktivierung
+
+**Canvas-Controls:**
+- Zoom-Steuerung (-, Prozentanzeige, +)
+- Undo/Redo-Buttons
+- Vollbild-Toggle
+- Hilfe-Button
+- Grüner "+" FAB-Button zum Hinzufügen neuer Knoten
+
+#### Verlauf/Historie (linker unterer Bereich)
+
+**Statistik-Dashboard:**
+- Gesamte Ausführungen (Anzahl)
+- Ausgeführte Nodes (Anzahl)
+
+**Filter-Optionen:**
+- "Alle Ausführungen" / gefilterte Ansicht
+- Datumsfilter
+- Statusfilter
+
+**Ausführungsliste:**
+- Scrollbare Liste aller Workflow-Durchläufe
+- Pro Eintrag:
+  - Status-Icon (grüner Haken = erfolgreich, rot = fehlgeschlagen)
+  - Ausführungs-ID (z.B. "Ausführung #1047")
+  - Zeitstempel (Datum + Uhrzeit)
+- Klick auf Eintrag öffnet Details im rechten Panel
+
+#### Ausführungsdetails (rechter unterer Bereich)
+
+**Header:**
+- Ausführungs-ID mit Status-Icon
+- Gesamtdauer
+- Schließen-Button (X)
+
+**Knoten-Liste (chronologisch):**
+- Für jeden ausgeführten Knoten:
+  - Icon des Knotentyps
+  - Knotenname (z.B. "Jira", "Condition", "Get Issue")
+  - Ausführungsdauer
+  - Zeitstempel
+  - Aufklappbare Sections:
+    - **Eingabe**: JSON-Darstellung der Input-Daten
+    - **Ausgabe**: JSON-Darstellung der Output-Daten (syntax-highlighted)
+
+#### Workflow-Versionierung & Historie
+- **Zeitstempel-basierte Historisierung** für jeden Speichervorgang
+- **Personenzuordnung**: Wer hat wann gespeichert
+- **Versions-Wiederherstellung**: Alte Versionen können als neue Version wiederhergestellt werden
+- **Audit-Trail**: Vollständige Nachverfolgbarkeit aller Änderungen
+
+#### Design-Vorgaben
+- **Dunkles Theme** (Dark Mode)
+- Farbcodierung: Grün für Erfolg, Orange für Hinweise, Rot für Fehler
+- Syntax-Highlighting für JSON (Keys in einer Farbe, Strings in einer anderen)
+- Responsive Split-Panels zwischen den drei Bereichen
+
 ### Trigger Nodes (Phase 1)
 - Manual Trigger: Workflow manuell starten, Input-Parameter definierbar, für Testing & Debugging
 - Scheduled Trigger: Cron-basierte Ausführung, Zeitzone-Handling, einfache Intervalle (täglich, wöchentlich)
 
 ### Action Nodes (Phase 1)
 - HTTP Request Node: GET/POST/PUT/DELETE zu HR WORKS API, Header Configuration, Body Template (Handlebars), Response Mapping
+- **HR WORKS Node**: Dedizierter Knoten für HR WORKS Integration (Details siehe unten)
 - Delay Node: Zeitverzögerung (Minuten, Stunden, Tage), Pause & Resume
 - Condition Node: If/Else Logic, Simple Expressions (==, !=, >, <), Boolean Operations (AND, OR)
+
+### HR WORKS Integration Node (Phase 1)
+
+**API-Client Generierung:** → Siehe **[plan-hrworks-integration.md](./plan-hrworks-integration.md)**
+
+**Node-Konfiguration im Designer:**
+1. **Dropdown: API-Endpoint auswählen**
+   - Persons (Get All, Get by ID, Create, Update)
+   - Organization Units (Get All, Get by ID)
+   - Absences (Get, Create)
+   - etc. (aus OpenAPI Spec generiert)
+
+2. **Dynamisches Formular für Parameter**
+   - Je nach gewähltem Endpoint werden die benötigten Parameter angezeigt
+   - Required-Felder markiert
+   - Typ-Validierung (string, number, date, etc.)
+   - Autocomplete für Person-IDs, OE-IDs aus synchronisierten Daten
+
+3. **Response-Mapping**
+   - Ausgabe-Felder für Verwendung in nachfolgenden Nodes
+   - JSON-Path Zugriff auf Response-Daten
+
+**Beispiel UI-Flow:**
+```
+┌─────────────────────────────────────────────────┐
+│  HR WORKS Node                                  │
+├─────────────────────────────────────────────────┤
+│  Endpoint:  [Get Person by ID        ▼]        │
+├─────────────────────────────────────────────────┤
+│  Parameter:                                     │
+│  ┌─────────────────────────────────────────┐   │
+│  │ Person ID*:  [{{trigger.personId}}    ] │   │
+│  └─────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────┤
+│  Output-Variable:  [personData              ]   │
+└─────────────────────────────────────────────────┘
+```
 
 ### Expression Language (JSONata + Platzhalter)
 

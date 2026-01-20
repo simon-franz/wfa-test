@@ -174,13 +174,92 @@ nodesDraggable={false}
 │  ├── nodesDraggable={true}, nodesConnectable={true}        │
 │  ├── Custom Node Types:                                     │
 │  │   ├── TriggerNode (Manual, Scheduled, Webhook)          │
-│  │   ├── ActionNode (HTTP, Delay, Email)                   │
+│  │   ├── ActionNode (HTTP, HR WORKS, Delay, Email)         │
 │  │   ├── ConditionNode (If/Else)                           │
 │  │   ├── ApprovalNode                                       │
 │  │   └── PersonTaskNode                                     │
 │  ├── Node Configuration Panel                               │
 │  └── Zustand Store für Editor State                        │
 └─────────────────────────────────────────────────────────────┘
+```
+
+**React Flow Konfiguration (wichtige Constraints):**
+```typescript
+// Wichtige Editor-Einstellungen
+const editorConfig = {
+  // Layout
+  direction: 'LR',  // Immer Links-nach-Rechts!
+
+  // Edge-Typ: Orthogonal (Step-Edge)
+  defaultEdgeOptions: {
+    type: 'smoothstep',  // Rechteckige Linien, keine Kurven
+    animated: true,      // Animation für Datenfluss-Visualisierung
+    style: { strokeWidth: 2 },
+  },
+
+  // Validierung: Nur ein Trigger pro Workflow
+  onConnect: (connection) => {
+    const triggerNodes = nodes.filter(n => n.type === 'trigger');
+    if (triggerNodes.length > 1) {
+      throw new Error('Nur ein Trigger-Knoten pro Workflow erlaubt!');
+    }
+  },
+};
+
+// Custom Edge mit Lösch-Button bei Hover
+const CustomEdge = ({ id, ...props }) => {
+  const [showDelete, setShowDelete] = useState(false);
+  return (
+    <g onMouseEnter={() => setShowDelete(true)}
+       onMouseLeave={() => setShowDelete(false)}>
+      <SmoothStepEdge {...props} />
+      {showDelete && (
+        <DeleteButton onClick={() => deleteEdge(id)} />
+      )}
+    </g>
+  );
+};
+
+// Multi-Output Nodes: Handles auf dem Rahmen
+const ConditionNode = () => (
+  <div className="condition-node">
+    <Handle type="target" position={Position.Left} />
+    {/* Outputs auf dem rechten Rahmen */}
+    <Handle type="source" position={Position.Right} id="yes"
+            style={{ top: '30%' }} />
+    <Handle type="source" position={Position.Right} id="no"
+            style={{ top: '70%' }} />
+  </div>
+);
+```
+
+**Node Library (Drag & Drop Sidebar):**
+```typescript
+// Sidebar mit draggable Node-Typen
+const NodeLibrary = () => (
+  <aside className="node-library">
+    <h3>Trigger</h3>
+    <DraggableNode type="manual-trigger" label="Manual" />
+    <DraggableNode type="scheduled-trigger" label="Scheduled" />
+
+    <h3>Actions</h3>
+    <DraggableNode type="hrworks" label="HR WORKS" />
+    <DraggableNode type="http-request" label="HTTP Request" />
+    <DraggableNode type="delay" label="Delay" />
+    <DraggableNode type="email" label="Email" />
+
+    <h3>Logic</h3>
+    <DraggableNode type="condition" label="Condition" />
+    <DraggableNode type="switch" label="Switch" />
+  </aside>
+);
+
+// onDrop Handler für Canvas
+const onDrop = (event) => {
+  const type = event.dataTransfer.getData('nodeType');
+  const position = screenToFlowPosition(event);
+  addNode({ type, position });
+};
 ```
 
 Hosting & Infrastruktur
@@ -1065,6 +1144,88 @@ Connection Drawing
 Basic Node Configuration Panel
 Workflow Speichern/Laden
 
+### UI-Spezifikationen (Detail)
+
+#### Workflow-Übersicht
+- **Darstellung als Tabelle** mit Spalten für Name, Status, Version, letzte Änderung, Ersteller
+- Pro Workflow darf es **nur einen Trigger-Knoten** geben (Validierung im Designer)
+
+#### Workflow-Designer Layout (oberer Bereich, ~60% der Höhe)
+
+**Visueller Graph-Editor:**
+- Knoten-basierter Editor mit Drag-and-Drop-Funktionalität
+- **Drag & Drop aus Library**: Komponenten können aus einer seitlichen "Library" in den Designer gezogen werden
+- Knoten werden durch Verbindungslinien (Edges) verknüpft
+- Unterstützung für verschiedene Knotentypen (z.B. Jira, HR WORKS, Condition, API-Calls)
+- Jeder Knoten zeigt eine Vorschau seines Inhalts/Konfiguration
+- **Horizontale Anordnung** des Workflows von links nach rechts (immer!)
+
+**Verbindungslinien (Edges):**
+- **Orthogonale/rechteckige Linien** (keine kurvigen Linien!)
+- **Hover-Icon zum Löschen**: Kanten zeigen bei Hover ein Icon, mit dem sie gelöscht werden können
+- **Datenfluss-Animation**: Animierte Linien, die visualisieren wohin die Daten fließen
+- **Verbindungspunkte bei Multi-Output-Knoten**: Bei Bedingungen, Switches oder ähnlichen Knoten mit mehreren Ausgängen liegen die Verbindungsstücke immer auf dem Rahmen der Box
+
+**Header-Leiste:**
+- Workflow-Name mit Dropdown zur Bearbeitung
+- Versionsnummer (z.B. "0.0.14")
+- Toggle für Aktivierung/Deaktivierung
+
+**Canvas-Controls:**
+- Zoom-Steuerung (-, Prozentanzeige, +)
+- Undo/Redo-Buttons
+- Vollbild-Toggle
+- Hilfe-Button
+- Grüner "+" FAB-Button zum Hinzufügen neuer Knoten
+
+#### Verlauf/Historie (linker unterer Bereich)
+
+**Statistik-Dashboard:**
+- Gesamte Ausführungen (Anzahl)
+- Ausgeführte Nodes (Anzahl)
+
+**Filter-Optionen:**
+- "Alle Ausführungen" / gefilterte Ansicht
+- Datumsfilter
+- Statusfilter
+
+**Ausführungsliste:**
+- Scrollbare Liste aller Workflow-Durchläufe
+- Pro Eintrag:
+  - Status-Icon (grüner Haken = erfolgreich, rot = fehlgeschlagen)
+  - Ausführungs-ID (z.B. "Ausführung #1047")
+  - Zeitstempel (Datum + Uhrzeit)
+- Klick auf Eintrag öffnet Details im rechten Panel
+
+#### Ausführungsdetails (rechter unterer Bereich)
+
+**Header:**
+- Ausführungs-ID mit Status-Icon
+- Gesamtdauer
+- Schließen-Button (X)
+
+**Knoten-Liste (chronologisch):**
+- Für jeden ausgeführten Knoten:
+  - Icon des Knotentyps
+  - Knotenname (z.B. "Jira", "Condition", "Get Issue")
+  - Ausführungsdauer
+  - Zeitstempel
+  - Aufklappbare Sections:
+    - **Eingabe**: JSON-Darstellung der Input-Daten
+    - **Ausgabe**: JSON-Darstellung der Output-Daten (syntax-highlighted)
+
+#### Workflow-Versionierung & Historie
+- **Zeitstempel-basierte Historisierung** für jeden Speichervorgang
+- **Personenzuordnung**: Wer hat wann gespeichert
+- **Versions-Wiederherstellung**: Alte Versionen können als neue Version wiederhergestellt werden
+- **Audit-Trail**: Vollständige Nachverfolgbarkeit aller Änderungen
+
+#### Design-Vorgaben
+- **Dunkles Theme** (Dark Mode)
+- Farbcodierung: Grün für Erfolg, Orange für Hinweise, Rot für Fehler
+- Syntax-Highlighting für JSON (Keys in einer Farbe, Strings in einer anderen)
+- Responsive Split-Panels zwischen den drei Bereichen
+
 Smartface Integration
 Navigation Structure
 Workflow List View
@@ -1090,6 +1251,342 @@ HTTP Request Node
    - Header Configuration
    - Body Template (Handlebars)
    - Response Mapping
+
+**HR WORKS Node** (NEU - bereits in Phase 1)
+   - Dedizierter Knoten für HR WORKS Integration
+   - Vorkonfigurierte Endpunkte (Persons, OEs, Absences, etc.)
+   - Automatische Authentifizierung (Token-Handling)
+   - Dropdown-Auswahl für Operationen (Get Person, Update Person, etc.)
+   - Integrierte Fehlerbehandlung für HR WORKS-spezifische Errors
+   - Response-Mapping mit vordefinierten Templates
+
+---
+
+### HR WORKS Integration Node - Detailspezifikation (Phase 1)
+
+**API-Client Generierung:** → Siehe **[plan-hrworks-integration.md](./plan-hrworks-integration.md)**
+
+#### Node-Konfiguration im Designer
+
+**1. Dropdown: API-Endpoint auswählen**
+
+Die verfügbaren Endpoints werden aus der OpenAPI Spec generiert und gruppiert:
+
+```typescript
+// Endpoint-Gruppen (aus OpenAPI generiert)
+const hrworksEndpoints = {
+  persons: [
+    { id: 'getPersons', label: 'Get All Persons', method: 'GET', path: '/v2/persons' },
+    { id: 'getPersonById', label: 'Get Person by ID', method: 'GET', path: '/v2/persons/{id}' },
+    { id: 'createPerson', label: 'Create Person', method: 'POST', path: '/v2/persons' },
+    { id: 'updatePerson', label: 'Update Person', method: 'PUT', path: '/v2/persons/{id}' },
+  ],
+  organizationUnits: [
+    { id: 'getOUs', label: 'Get All Organization Units', method: 'GET', path: '/v2/organization-units' },
+    { id: 'getOUById', label: 'Get Organization Unit by ID', method: 'GET', path: '/v2/organization-units/{id}' },
+  ],
+  absences: [
+    { id: 'getAbsences', label: 'Get Absences', method: 'GET', path: '/v2/absences' },
+    { id: 'createAbsence', label: 'Create Absence', method: 'POST', path: '/v2/absences' },
+  ],
+  // ... weitere Gruppen
+};
+```
+
+**2. Dynamisches Formular für Parameter**
+
+Je nach gewähltem Endpoint werden die benötigten Parameter dynamisch angezeigt:
+
+```typescript
+// Parameter-Definition pro Endpoint (aus OpenAPI generiert)
+interface EndpointParameter {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'date' | 'object' | 'array';
+  required: boolean;
+  description: string;
+  location: 'path' | 'query' | 'body';
+  enum?: string[];  // Falls feste Werte
+  default?: any;
+}
+
+// Beispiel: Get Person by ID
+const getPersonByIdParams: EndpointParameter[] = [
+  {
+    name: 'id',
+    type: 'string',
+    required: true,
+    description: 'Die UUID der Person',
+    location: 'path',
+  }
+];
+
+// Beispiel: Create Person (Body-Parameter)
+const createPersonParams: EndpointParameter[] = [
+  { name: 'firstName', type: 'string', required: true, description: 'Vorname', location: 'body' },
+  { name: 'lastName', type: 'string', required: true, description: 'Nachname', location: 'body' },
+  { name: 'email', type: 'string', required: true, description: 'E-Mail-Adresse', location: 'body' },
+  { name: 'organizationUnitId', type: 'string', required: false, description: 'OE-ID', location: 'body' },
+  // ...
+];
+```
+
+**3. UI-Komponente für den Node**
+
+```tsx
+// HRWorksNodeConfig.tsx
+const HRWorksNodeConfig: React.FC<{ nodeId: string }> = ({ nodeId }) => {
+  const [selectedEndpoint, setSelectedEndpoint] = useState<string | null>(null);
+  const [parameters, setParameters] = useState<Record<string, any>>({});
+
+  // Lade Parameter-Definition für gewählten Endpoint
+  const endpointParams = useMemo(() => {
+    if (!selectedEndpoint) return [];
+    return getEndpointParameters(selectedEndpoint);
+  }, [selectedEndpoint]);
+
+  return (
+    <div className="hrworks-node-config">
+      {/* Endpoint-Auswahl */}
+      <Select
+        label="API-Endpoint"
+        value={selectedEndpoint}
+        onChange={setSelectedEndpoint}
+        options={hrworksEndpointOptions}
+        grouped={true}  // Gruppiert nach Kategorie
+      />
+
+      {/* Dynamisches Parameter-Formular */}
+      {selectedEndpoint && (
+        <div className="parameter-form">
+          <h4>Parameter</h4>
+          {endpointParams.map(param => (
+            <ParameterInput
+              key={param.name}
+              param={param}
+              value={parameters[param.name]}
+              onChange={(val) => setParameters(prev => ({
+                ...prev,
+                [param.name]: val
+              }))}
+              // Autocomplete für IDs aus Sync-Daten
+              autocomplete={
+                param.name.endsWith('Id')
+                  ? getSyncedDataForAutocomplete(param.name)
+                  : undefined
+              }
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Output-Variable */}
+      <Input
+        label="Output-Variable"
+        placeholder="z.B. personData"
+        description="Name unter dem die Response verfügbar ist"
+      />
+    </div>
+  );
+};
+
+// Dynamische Parameter-Eingabe
+const ParameterInput: React.FC<{
+  param: EndpointParameter;
+  value: any;
+  onChange: (val: any) => void;
+  autocomplete?: AutocompleteOption[];
+}> = ({ param, value, onChange, autocomplete }) => {
+  const label = `${param.name}${param.required ? '*' : ''}`;
+
+  // Expression-Support: {{...}} Platzhalter erlauben
+  const supportsExpression = true;
+
+  switch (param.type) {
+    case 'string':
+      return autocomplete ? (
+        <Autocomplete
+          label={label}
+          value={value}
+          onChange={onChange}
+          options={autocomplete}
+          allowCustom={true}  // Erlaubt auch {{expressions}}
+          description={param.description}
+        />
+      ) : (
+        <Input
+          label={label}
+          value={value}
+          onChange={onChange}
+          placeholder={supportsExpression ? '{{variable}} oder Wert' : ''}
+          description={param.description}
+        />
+      );
+
+    case 'number':
+      return (
+        <Input
+          label={label}
+          type="number"
+          value={value}
+          onChange={onChange}
+          description={param.description}
+        />
+      );
+
+    case 'date':
+      return (
+        <DatePicker
+          label={label}
+          value={value}
+          onChange={onChange}
+          allowExpression={true}  // z.B. {{$now()}}
+          description={param.description}
+        />
+      );
+
+    case 'boolean':
+      return (
+        <Switch
+          label={label}
+          checked={value}
+          onChange={onChange}
+          description={param.description}
+        />
+      );
+
+    case 'object':
+    case 'array':
+      return (
+        <JsonEditor
+          label={label}
+          value={value}
+          onChange={onChange}
+          description={param.description}
+        />
+      );
+
+    default:
+      return <Input label={label} value={value} onChange={onChange} />;
+  }
+};
+```
+
+**4. Beispiel UI-Flow im Designer**
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  HR WORKS                                            [x]     │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  API-Endpoint                                                │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ Persons > Get Person by ID                          ▼ │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  ─────────────────────────────────────────────────────────   │
+│  Parameter                                                   │
+│                                                              │
+│  Person ID *                                                 │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ {{trigger.personId}}                                   │  │
+│  └────────────────────────────────────────────────────────┘  │
+│  💡 Die UUID der Person                                      │
+│                                                              │
+│  ─────────────────────────────────────────────────────────   │
+│  Output                                                      │
+│                                                              │
+│  Variable-Name                                               │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ personData                                             │  │
+│  └────────────────────────────────────────────────────────┘  │
+│  💡 Zugriff via {{nodes.hrworks1.output.personData}}        │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**5. Autocomplete für synchronisierte Daten**
+
+```typescript
+// Für Person-IDs: Zeige synchronisierte Personen als Autocomplete
+const getSyncedDataForAutocomplete = (paramName: string): AutocompleteOption[] => {
+  if (paramName === 'personId' || paramName === 'id') {
+    // Lade aus syncedPersons Tabelle
+    return syncedPersons.map(p => ({
+      value: p.hrworksPersonId,
+      label: `${p.firstName} ${p.lastName}`,
+      description: p.email,
+    }));
+  }
+
+  if (paramName === 'organizationUnitId') {
+    // Lade aus syncedOrganizationUnits Tabelle
+    return syncedOUs.map(ou => ({
+      value: ou.hrworksOuId,
+      label: ou.name,
+    }));
+  }
+
+  return [];
+};
+```
+
+**6. Backend: Node-Ausführung**
+
+```typescript
+// backend/src/workflow/nodes/hrworks-node.executor.ts
+import { HRWorksClient } from '@hrworks/hrworks-api-client';
+
+interface HRWorksNodeConfig {
+  endpoint: string;
+  parameters: Record<string, any>;
+  outputVariable: string;
+}
+
+export async function executeHRWorksNode(
+  config: HRWorksNodeConfig,
+  context: WorkflowContext,
+  tenantDB: TenantDB,
+): Promise<NodeOutput> {
+  // 1. HR WORKS Client mit Tenant-Credentials initialisieren
+  const credentials = await getHRWorksCredentials(tenantDB);
+  const client = new HRWorksClient({
+    baseUrl: 'https://api.hrworks.de',
+    accessToken: credentials.accessToken,
+  });
+
+  // 2. Parameter evaluieren (Expressions auflösen)
+  const evaluatedParams: Record<string, any> = {};
+  for (const [key, value] of Object.entries(config.parameters)) {
+    evaluatedParams[key] = evaluateExpression(value, context);
+  }
+
+  // 3. API-Call basierend auf Endpoint ausführen
+  let result: any;
+  switch (config.endpoint) {
+    case 'getPersonById':
+      result = await client.api.getPersonById({ id: evaluatedParams.id });
+      break;
+    case 'getPersons':
+      result = await client.api.getPersons(evaluatedParams);
+      break;
+    case 'createPerson':
+      result = await client.api.createPerson({ body: evaluatedParams });
+      break;
+    // ... weitere Endpoints
+    default:
+      throw new Error(`Unknown endpoint: ${config.endpoint}`);
+  }
+
+  // 4. Output zurückgeben
+  return {
+    [config.outputVariable]: result,
+    _raw: result,
+    _statusCode: 200,
+  };
+}
+```
+
+---
 
 Delay Node
    - Zeitverzögerung (Minuten, Stunden, Tage)
@@ -1288,8 +1785,15 @@ Deliverables Phase 1
 ✅ Lauffähige Workflow Engine
 ✅ OAuth2 Login mit HR WORKS
 ✅ OE & Personen synchronisiert
-✅ React Flow Designer
-✅ 3 Trigger + 3 Action Nodes
+✅ React Flow Designer mit:
+   - Drag & Drop aus Node Library
+   - Orthogonale Kanten mit Lösch-Icon bei Hover
+   - Datenfluss-Animation auf Kanten
+   - Links-nach-Rechts Layout
+   - Workflow-Übersicht als Tabelle
+✅ 2 Trigger-Nodes (Manual, Scheduled) + 4 Action-Nodes (HTTP, **HR WORKS**, Delay, Condition)
+✅ **Workflow-Versionierung** mit Historisierung (Zeitstempel + Person)
+✅ **Ausführungs-Historie** mit Input/Output pro Knoten
 ✅ 1 Demo-Workflow produktiv nutzbar
 
 Phase 2: PersonTask & Advanced Triggers (Wochen 7-12)
@@ -1875,12 +2379,12 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-// Workflow Definitions
+// Workflow Definitions (aktueller Stand)
 export const workflowDefinitions = pgTable('workflow_definitions', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
   description: text('description'),
-  version: integer('version').default(1),
+  currentVersion: integer('current_version').default(1),
   graph: jsonb('graph'), // { nodes: Node[], edges: Edge[] }
   isActive: boolean('is_active').default(true),
   isTemplate: boolean('is_template').default(false),
@@ -1888,6 +2392,22 @@ export const workflowDefinitions = pgTable('workflow_definitions', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+// Workflow Versions (Historisierung)
+export const workflowVersions = pgTable('workflow_versions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  workflowId: uuid('workflow_id').references(() => workflowDefinitions.id).notNull(),
+  version: integer('version').notNull(),
+  graph: jsonb('graph').notNull(), // Snapshot des Graphs zum Zeitpunkt
+  name: text('name'), // Name zum Zeitpunkt (kann sich ändern)
+  description: text('description'),
+  savedBy: uuid('saved_by').notNull(), // Wer hat gespeichert
+  savedAt: timestamp('saved_at').defaultNow().notNull(),
+  changeNote: text('change_note'), // Optionale Änderungsnotiz
+});
+
+// Index für schnelle Abfragen
+// CREATE INDEX idx_workflow_versions_workflow ON workflow_versions(workflow_id, version DESC);
 
 // Workflow Instances (laufende Workflows)
 export const workflowInstances = pgTable('workflow_instances', {
