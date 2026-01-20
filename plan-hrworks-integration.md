@@ -13,9 +13,15 @@ npm Package Manager
 
 Projektstruktur
 
-Erstelle folgende Verzeichnisstruktur in deinem Projekt:
+Diese Anleitung gehört in das `docs/` Verzeichnis des workflow-automation Monorepos.
 
-dein-projekt/
+Erstelle folgende Verzeichnisstruktur:
+
+```
+workflow-automation/
+├── backend/                      # NestJS Backend
+├── frontend/                     # React Frontend
+├── shared/                       # Gemeinsame Types
 ├── tools/
 │   └── generators/
 │       └── api-generator/
@@ -23,12 +29,19 @@ dein-projekt/
 │           ├── generate.js
 │           ├── generate.sh (optional)
 │           └── input/
-│               └── API\_internal-fixed.yml  (deine OpenAPI-Datei)
+│               └── API_internal-fixed.yml  (HR WORKS OpenAPI-Datei)
 ├── packages/
 │   └── hrworks-api-client/
 │       ├── auto-client/         (generierter Code landet hier)
-│       └── package.json
-└── package.json                 (Root package.json)
+│       ├── src/
+│       │   └── index.ts         (Wrapper-Klasse)
+│       ├── package.json
+│       └── tsconfig.json
+├── docs/
+│   └── plan-hrworks-integration.md  (diese Datei!)
+├── package.json                 (Root package.json)
+└── lerna.json                   (optional, für Monorepo)
+```
 
 
 Datei 1: docker-compose.yml

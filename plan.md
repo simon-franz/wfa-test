@@ -10,7 +10,11 @@ workflow-automation/
 ├── backend/          # NestJS Backend
 ├── frontend/         # React Frontend mit SmartFace
 ├── shared/           # Gemeinsame Types, Utils, Schemas
+├── tools/            # Build-Tools, Generatoren
+│   └── generators/
+│       └── api-generator/    # OpenAPI Client Generator
 └── docs/             # Dokumentation
+    └── plan-hrworks-integration.md  # HR WORKS API Generator Setup (aus Root übernehmen)
 ```
 
 ### Technologie-Stack
@@ -233,6 +237,8 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
 ### HR WORKS Integration Node (Phase 1)
 
 **API-Client Generierung:** → Siehe **[plan-hrworks-integration.md](./plan-hrworks-integration.md)**
+
+> ℹ️ Im finalen `workflow-automation` Projekt wird diese Datei nach `docs/` verschoben.
 
 **Node-Konfiguration im Designer:**
 1. **Dropdown: API-Endpoint auswählen**
