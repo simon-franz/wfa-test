@@ -5,6 +5,8 @@ import { ScheduledTriggerNode } from './trigger/scheduled-trigger.node';
 import { HttpRequestNode } from './action/http-request.node';
 import { ConditionNode } from './action/condition.node';
 import { DelayNode } from './action/delay.node';
+import { HrworksNode } from './action/hrworks.node';
+import { DataTransformNode } from './action/data-transform.node';
 
 @Injectable()
 export class NodeRegistry {
@@ -16,12 +18,16 @@ export class NodeRegistry {
     httpRequest: HttpRequestNode,
     condition: ConditionNode,
     delay: DelayNode,
+    hrworks: HrworksNode,
+    dataTransform: DataTransformNode,
   ) {
     this.registerNode(manualTrigger);
     this.registerNode(scheduledTrigger);
     this.registerNode(httpRequest);
     this.registerNode(condition);
     this.registerNode(delay);
+    this.registerNode(hrworks);
+    this.registerNode(dataTransform);
   }
 
   private registerNode(node: BaseNode) {

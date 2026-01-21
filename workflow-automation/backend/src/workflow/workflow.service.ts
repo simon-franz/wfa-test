@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, BadRequestException } from '@nestjs/common';
 import { eq, desc } from 'drizzle-orm';
 import { workflows, type WorkflowDefinitionJson } from 'shared/db';
 import { ulid } from 'shared/utils';
@@ -164,14 +164,15 @@ export class WorkflowService {
         case 'persons.create':
         case 'createPerson':
           this.logger.log(`persons.create params: ${JSON.stringify(actualParams)}`);
+          this.logger.log(`context keys: ${JSON.stringify(Object.keys(context))}`);
+          this.logger.log(`context: ${JSON.stringify(context, null, 2)}`);
           const personData = actualParams?.personData || actualParams;
           this.logger.log(`personData after extraction: ${JSON.stringify(personData)}`);
           if (!personData || Object.keys(personData).length === 0) {
             throw new Error('personData parameter required for persons.create');
           }
-          const resolvedPersonData = typeof personData === 'string' 
-            ? this.resolveTemplatePath(personData, context) 
-            : personData;
+          // Resolve all template expressions in the personData object
+          const resolvedPersonData = this.resolveTemplatesInObject(personData, context);
           this.logger.log(`resolvedPersonData: ${JSON.stringify(resolvedPersonData)}`);
           result = { person: await this.hrworksApi.createPerson(tenantId, resolvedPersonData) };
           break;
@@ -201,8 +202,9 @@ export class WorkflowService {
         output: result,
       };
     } catch (error) {
-      this.logger.error(`HR WORKS API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`HR WORKS API error: ${errorMessage}`);
+      throw new BadRequestException(errorMessage);
     }
   }
 
@@ -253,41 +255,120 @@ export class WorkflowService {
     };
   }
 
+  /**
+   * Recursively resolve all template expressions in an object
+   */
+  private resolveTemplatesInObject(obj: any, context: Record<string, any>): any {
+    if (obj === null || obj === undefined) {
+      return obj;
+    }
+
+    if (typeof obj === 'string') {
+      return this.resolveTemplatePath(obj, context);
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map((item) => this.resolveTemplatesInObject(item, context));
+    }
+
+    if (typeof obj === 'object') {
+      const resolved: Record<string, any> = {};
+      for (const [key, value] of Object.entries(obj)) {
+        resolved[key] = this.resolveTemplatesInObject(value, context);
+      }
+      return resolved;
+    }
+
+    return obj;
+  }
+
   private resolveTemplatePath(path: string, context: Record<string, any>): any {
     if (!path) return undefined;
 
-    // Check if it's a template expression like {{NodeName.field.path}}
-    const templateMatch = path.match(/^\{\{(.+)\}\}$/);
-    if (templateMatch) {
-      let fullPath = templateMatch[1].trim();
+    // If it's not a string, return as-is
+    if (typeof path !== 'string') return path;
+
+    // Check if it's a pure template expression like {{NodeName.field.path}}
+    const pureTemplateMatch = path.match(/^\{\{(.+)\}\}$/);
+    if (pureTemplateMatch) {
+      let fullPath = pureTemplateMatch[1].trim();
 
       // Handle the case where users include ".output." in the path
-      // The context stores values directly under the node name, not under "output"
-      // So {{NodeName.output.field}} should be treated as {{NodeName.field}}
       fullPath = fullPath.replace(/\.output\./g, '.');
       fullPath = fullPath.replace(/\.output$/g, '');
 
       return this.getValueByPath(context, fullPath);
     }
 
-    // Otherwise treat as a direct path
-    return this.getValueByPath(context, path);
+    // Check if it contains any template expressions (mixed strings like "test{{Node.field}}")
+    if (path.includes('{{') && path.includes('}}')) {
+      return path.replace(/\{\{(.+?)\}\}/g, (match, expression) => {
+        let fullPath = expression.trim();
+
+        // Handle the case where users include ".output." in the path
+        fullPath = fullPath.replace(/\.output\./g, '.');
+        fullPath = fullPath.replace(/\.output$/g, '');
+
+        const value = this.getValueByPath(context, fullPath);
+        return value !== undefined ? String(value) : match;
+      });
+    }
+
+    // No template syntax - return the string as-is
+    return path;
   }
 
   private getValueByPath(obj: any, path: string): any {
     if (!obj || !path) return undefined;
 
     const parts = path.split('.');
+    
+    // Try direct path first
     let current = obj;
-
     for (const part of parts) {
       if (current === null || current === undefined) {
-        return undefined;
+        break;
       }
       current = current[part];
     }
 
-    return current;
+    if (current !== undefined) {
+      return current;
+    }
+
+    // Strategy 1: Search in nodeResults (workflow execution context)
+    // Structure: { "node-id": { output: { ... } } }
+    const remainingParts = parts.slice(1);
+    
+    for (const [nodeId, nodeResult] of Object.entries(obj)) {
+      if (nodeResult && typeof nodeResult === 'object' && 'output' in nodeResult) {
+        let current = (nodeResult as any).output;
+        
+        for (const part of remainingParts) {
+          if (current === null || current === undefined) {
+            break;
+          }
+          current = current[part];
+        }
+        
+        if (current !== undefined) {
+          return current;
+        }
+      }
+    }
+
+    // Strategy 2: Search in nested context objects (manual test context)
+    // Structure: { "NodeName": { context: { "OtherNode": { ... } } } }
+    for (const key of Object.keys(obj)) {
+      if (obj[key]?.context) {
+        const result = this.getValueByPath(obj[key].context, path);
+        if (result !== undefined) {
+          return result;
+        }
+      }
+    }
+
+    return undefined;
   }
 
   private extractField(input: any, fieldPath: string): any {

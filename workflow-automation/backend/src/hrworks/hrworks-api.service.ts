@@ -19,6 +19,23 @@ interface PaginatedResponse<T> {
   };
 }
 
+interface JobStatusResponse {
+  status: string;
+  responseType?: string;
+  apiResponse?: {
+    status?: string;
+    result?: any[];
+    generalErrors?: { code: string; message: string }[];
+    dataErrors?: { recordId: number; code: string; message: string }[];
+  };
+}
+
+interface PollingOptions {
+  maxAttempts?: number;
+  initialDelay?: number;
+  maxDelay?: number;
+}
+
 @Injectable()
 export class HrworksApiService {
   private readonly logger = new Logger(HrworksApiService.name);
@@ -126,7 +143,126 @@ export class HrworksApiService {
   }
 
   async createPerson(tenantId: string, personData: Partial<HRWorksPerson>): Promise<HRWorksPerson> {
-    return this.request<HRWorksPerson>(tenantId, 'POST', '/v2/persons', personData);
+    // HR WORKS API handles POST /persons asynchronously - returns a jobId
+    // The API expects { data: [PersonData] } format
+    const jobResponse = await this.request<{ jobId: string }>(
+      tenantId,
+      'POST',
+      '/v2/persons',
+      { data: [personData] },
+    );
+
+    if (!jobResponse.jobId) {
+      throw new Error('HR WORKS API did not return a jobId for createPerson');
+    }
+
+    this.logger.log(`createPerson: Job started with ID ${jobResponse.jobId}, polling for completion...`);
+
+    // Poll until the job is complete
+    const result = await this.pollJobUntilComplete(
+      tenantId,
+      '/v2/persons/jobs',
+      jobResponse.jobId,
+    );
+
+    // Extract the created person from the result
+    if (result.apiResponse?.result?.[0]) {
+      return result.apiResponse.result[0] as HRWorksPerson;
+    }
+
+    throw new Error('HR WORKS API did not return the created person data');
+  }
+
+  /**
+   * Poll a HR WORKS job endpoint until the job is complete
+   * HR WORKS async operations return a jobId, and we need to poll /jobs/{jobId} until done
+   */
+  private async pollJobUntilComplete(
+    tenantId: string,
+    jobsBasePath: string,
+    jobId: string,
+    options: PollingOptions = {},
+  ): Promise<JobStatusResponse> {
+    const {
+      maxAttempts = 60, // Max 60 attempts (about 5 minutes with exponential backoff)
+      initialDelay = 500, // Start with 500ms
+      maxDelay = 5000, // Cap at 5 seconds between polls
+    } = options;
+
+    let attempt = 0;
+    let delay = initialDelay;
+
+    while (attempt < maxAttempts) {
+      attempt++;
+
+      const response = await this.request<JobStatusResponse>(
+        tenantId,
+        'GET',
+        `${jobsBasePath}/${jobId}`,
+      );
+
+      this.logger.log(`Job ${jobId} status: ${response.status} (attempt ${attempt}/${maxAttempts})`);
+
+      // Check if job is complete
+      if (response.status === 'completed' || response.status === 'done' || response.status === 'finished') {
+
+        // Check for errors in the response - check multiple possible error locations
+        const generalErrors = response.apiResponse?.generalErrors || (response as any).generalErrors;
+        const dataErrors = response.apiResponse?.dataErrors || (response as any).dataErrors;
+
+        // If there are any errors, log the full response for debugging
+        if (generalErrors?.length || dataErrors?.length) {
+          this.logger.error(`Job ${jobId} FULL RESPONSE: ${JSON.stringify(response, null, 2)}`);
+        }
+
+        // Collect all error messages from both generalErrors and dataErrors
+        const allErrors: string[] = [];
+
+        if (dataErrors?.length) {
+          for (const dataError of dataErrors) {
+            // Extract errors from the nested errors array (HR WORKS format: { errors: [{ number, text }], recordId })
+            if (dataError.errors && Array.isArray(dataError.errors)) {
+              for (const err of dataError.errors) {
+                const errorText = err.text || err.message || err.errorMessage || JSON.stringify(err);
+                allErrors.push(`[Record ${dataError.recordId || 'N/A'}] ${errorText}`);
+              }
+            } else if (dataError.message || dataError.errorMessage || dataError.text) {
+              allErrors.push(`[Record ${dataError.recordId || 'N/A'}] ${dataError.message || dataError.errorMessage || dataError.text}`);
+            }
+          }
+        }
+
+        if (generalErrors?.length && allErrors.length === 0) {
+          // Only use generalErrors if no specific dataErrors were found
+          for (const err of generalErrors) {
+            allErrors.push(err.message || err.errorMessage || JSON.stringify(err));
+          }
+        }
+
+        if (allErrors.length > 0) {
+          const errorMessage = allErrors.join('; ');
+          throw new Error(`HR WORKS job failed: ${errorMessage}`);
+        }
+
+        this.logger.log(`Job ${jobId} completed successfully after ${attempt} attempts`);
+        return response;
+      }
+
+      // Job failed
+      if (response.status === 'failed' || response.status === 'error') {
+        const errorMessages =
+          response.apiResponse?.generalErrors?.map((e) => e.message).join(', ') ||
+          response.apiResponse?.dataErrors?.map((e) => e.message).join(', ') ||
+          'Unknown error';
+        throw new Error(`HR WORKS job ${jobId} failed: ${errorMessages}`);
+      }
+
+      // Job still pending - wait and retry with exponential backoff
+      await this.delay(delay);
+      delay = Math.min(delay * 1.5, maxDelay);
+    }
+
+    throw new Error(`HR WORKS job ${jobId} did not complete within ${maxAttempts} attempts`);
   }
 
   // Organization Units API

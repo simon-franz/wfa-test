@@ -474,7 +474,15 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
       });
 
       if (!response.ok) {
-        throw new Error(`Execution failed: ${response.statusText}`);
+        // Try to get the error message from the response body
+        let errorMessage = response.statusText;
+        try {
+          const errorBody = await response.json();
+          errorMessage = errorBody.message || errorBody.error || response.statusText;
+        } catch {
+          // If parsing fails, use status text
+        }
+        throw new Error(`Execution failed: ${errorMessage}`);
       }
 
       const result = await response.json();

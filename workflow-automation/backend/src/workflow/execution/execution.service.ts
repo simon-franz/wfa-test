@@ -72,6 +72,9 @@ export class ExecutionService {
       },
       {
         jobId: executionId,
+        attempts: 1, // No retries
+        removeOnComplete: true,
+        removeOnFail: false,
       },
     );
 

@@ -104,6 +104,8 @@ export declare const tenants: import("drizzle-orm/sqlite-core").SQLiteTableWithC
 export interface TenantSettingsJson {
     hrworksApiKey?: string;
     hrworksApiSecret?: string;
+    hrworksApiBaseUrl?: string;
+    hrworksTenant?: string;
     webhookSecret?: string;
     syncEnabled: boolean;
     lastSyncAt?: string;

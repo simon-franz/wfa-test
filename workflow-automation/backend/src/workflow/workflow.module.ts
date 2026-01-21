@@ -17,6 +17,8 @@ import { ScheduledTriggerNode } from './nodes/trigger/scheduled-trigger.node';
 import { HttpRequestNode } from './nodes/action/http-request.node';
 import { ConditionNode } from './nodes/action/condition.node';
 import { DelayNode } from './nodes/action/delay.node';
+import { HrworksNode } from './nodes/action/hrworks.node';
+import { DataTransformNode } from './nodes/action/data-transform.node';
 
 @Module({
   imports: [QueueModule, HrworksModule],
@@ -35,6 +37,8 @@ import { DelayNode } from './nodes/action/delay.node';
     HttpRequestNode,
     ConditionNode,
     DelayNode,
+    HrworksNode,
+    DataTransformNode,
   ],
   exports: [WorkflowService, WorkflowEngineService, ExecutionService],
 })

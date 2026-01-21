@@ -19,6 +19,7 @@ interface WorkflowState {
   deactivateWorkflow: (id: string) => Promise<void>;
   triggerWorkflow: (id: string, payload?: Record<string, unknown>) => Promise<WorkflowExecution>;
   fetchExecutions: (workflowId: string) => Promise<void>;
+  fetchExecution: (workflowId: string, executionId: string) => Promise<WorkflowExecution>;
   clearCurrentWorkflow: () => void;
   clearError: () => void;
 }
@@ -147,6 +148,18 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       set({ executions });
     } catch (error) {
       set({ error: (error as Error).message });
+    }
+  },
+
+  fetchExecution: async (workflowId: string, executionId: string) => {
+    try {
+      const execution = await apiClient.get<WorkflowExecution>(
+        `/workflows/${workflowId}/executions/${executionId}`,
+      );
+      return execution;
+    } catch (error) {
+      set({ error: (error as Error).message });
+      throw error;
     }
   },
 

@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+import styled, { keyframes, css } from 'styled-components';
 import { useWorkflowStore } from '../stores/workflow.store';
 import { useDesignerStore } from '../stores/designer.store';
 import { WorkflowDesigner } from '../features/designer/WorkflowDesigner';
@@ -144,6 +144,57 @@ const LoadingContainer = styled.div`
   color: var(--color-gray-600);
 `;
 
+const spin = keyframes`
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+`;
+
+const RunButton = styled.button<{ $isRunning?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-4);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--color-white);
+  background-color: #10b981;
+  border: none;
+
+  &:hover:not(:disabled) {
+    background-color: #059669;
+  }
+
+  &:disabled {
+    background-color: var(--color-gray-400);
+    cursor: not-allowed;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    ${(props) => props.$isRunning && css`animation: ${spin} 1s linear infinite;`}
+  }
+`;
+
+const PlayIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+
+const SpinnerIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+  </svg>
+);
+
 export function WorkflowDesignerPage() {
   const { workflowId } = useParams<{ workflowId: string }>();
   const navigate = useNavigate();
@@ -157,11 +208,14 @@ export function WorkflowDesignerPage() {
     activateWorkflow,
     deactivateWorkflow,
     clearCurrentWorkflow,
+    triggerWorkflow,
   } = useWorkflowStore();
 
   const { loadFromDefinition, toDefinition, isDirty, resetDirty, reset } = useDesignerStore();
 
   const [workflowName, setWorkflowName] = useState('');
+  const [isRunning, setIsRunning] = useState(false);
+  const [runError, setRunError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isNewWorkflow && workflowId) {
@@ -217,6 +271,92 @@ export function WorkflowDesignerPage() {
     navigate('/workflows');
   }, [isDirty, navigate]);
 
+  const handleRun = useCallback(async () => {
+    if (!currentWorkflow) return;
+
+    // Save first if dirty
+    if (isDirty) {
+      await handleSave();
+    }
+
+    setIsRunning(true);
+    setRunError(null);
+
+    try {
+      const execution = await triggerWorkflow(currentWorkflow.id);
+      console.log('Workflow execution started:', execution);
+
+      let hasShownResult = false;
+
+      // Poll execution status and update node states
+      const pollInterval = setInterval(async () => {
+        try {
+          const updatedExecution = await useWorkflowStore.getState().fetchExecution(
+            currentWorkflow.id,
+            execution.id
+          );
+
+          // Update node states based on execution results
+          if (updatedExecution.context?.nodeResults) {
+            const currentNodes = useDesignerStore.getState().nodes;
+            const updatedNodes = currentNodes.map((node) => {
+              const result = updatedExecution.context.nodeResults[node.id];
+              if (result) {
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    executionState: {
+                      status: result.status === 'completed' ? 'success' : result.status === 'failed' ? 'error' : 'running',
+                      output: result.output,
+                      error: result.error,
+                    },
+                  },
+                };
+              }
+              return node;
+            });
+            
+            useDesignerStore.setState({ nodes: updatedNodes });
+          }
+
+          // Stop polling when execution is complete
+          if ((updatedExecution.status === 'completed' || updatedExecution.status === 'failed') && !hasShownResult) {
+            hasShownResult = true;
+            clearInterval(pollInterval);
+            setIsRunning(false);
+            
+            // Wait a bit to show final node states
+            setTimeout(() => {
+              if (updatedExecution.status === 'completed') {
+                alert('Workflow erfolgreich ausgeführt!');
+              } else {
+                alert(`Workflow fehlgeschlagen: ${updatedExecution.error || 'Unbekannter Fehler'}`);
+              }
+            }, 500);
+          }
+        } catch (pollError) {
+          console.error('Error polling execution:', pollError);
+          if (!hasShownResult) {
+            clearInterval(pollInterval);
+            setIsRunning(false);
+          }
+        }
+      }, 500);
+
+      // Timeout after 5 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        setIsRunning(false);
+      }, 300000);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler';
+      setRunError(errorMessage);
+      alert(`Fehler beim Ausführen: ${errorMessage}`);
+      setIsRunning(false);
+    }
+  }, [currentWorkflow, isDirty, handleSave, triggerWorkflow]);
+
   if (isLoading) {
     return (
       <PageContainer>
@@ -248,6 +388,15 @@ export function WorkflowDesignerPage() {
         </ToolbarLeft>
 
         <ToolbarRight>
+          <RunButton
+            onClick={handleRun}
+            disabled={isRunning || !currentWorkflow}
+            $isRunning={isRunning}
+            title="Workflow ausführen"
+          >
+            {isRunning ? <SpinnerIcon /> : <PlayIcon />}
+            {isRunning ? 'Läuft...' : 'Ausführen'}
+          </RunButton>
           {currentWorkflow?.status === 'active' ? (
             <Button onClick={handleDeactivate}>Deaktivieren</Button>
           ) : (
