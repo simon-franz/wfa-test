@@ -17,6 +17,7 @@ export const tenants = sqliteTable('tenants', {
 export interface TenantSettingsJson {
   hrworksApiKey?: string;
   hrworksApiSecret?: string;
+  hrworksApiBaseUrl?: string;
   hrworksTenant?: string;
   webhookSecret?: string;
   syncEnabled: boolean;

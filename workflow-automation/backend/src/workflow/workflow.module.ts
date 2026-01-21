@@ -9,6 +9,7 @@ import { ExecutionService } from './execution/execution.service';
 import { ExecutionWorker } from './execution/execution.worker';
 import { QueueModule } from './queue/queue.module';
 import { NodeRegistry } from './nodes/node-registry';
+import { HrworksModule } from '../hrworks/hrworks.module';
 
 // Import node types
 import { ManualTriggerNode } from './nodes/trigger/manual-trigger.node';
@@ -18,7 +19,7 @@ import { ConditionNode } from './nodes/action/condition.node';
 import { DelayNode } from './nodes/action/delay.node';
 
 @Module({
-  imports: [QueueModule],
+  imports: [QueueModule, HrworksModule],
   controllers: [WorkflowController, ExecutionController],
   providers: [
     WorkflowService,

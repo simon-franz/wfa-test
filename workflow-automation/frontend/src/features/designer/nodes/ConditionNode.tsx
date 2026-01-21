@@ -1,8 +1,14 @@
 import { memo } from 'react';
 import { NodePlayButton } from '../components/NodePlayButton';
+import { NodeExecutionPanel } from '../components/NodeExecutionPanel';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import styled from 'styled-components';
 import type { WorkflowNodeData } from '../../../stores/designer.store';
+
+const NodeWrapper = styled.div`
+  position: relative;
+  padding-bottom: 32px;
+`;
 
 const NodeContainer = styled.div<{ $selected: boolean }>`
   position: relative;
@@ -114,27 +120,30 @@ export const ConditionNode = memo(({ data, selected, id }: NodeProps<WorkflowNod
   const expression = (data.config?.expression as string) || 'true';
 
   return (
-    <NodeContainer $selected={!!selected}>
-      <NodePlayButton nodeId={id} executionState={data.executionState} />
-      <TopHandle type="target" position={Position.Left} />
-      <NodeHeader>
-        <NodeIcon>◇</NodeIcon>
-        <NodeTitle>{data.label}</NodeTitle>
-      </NodeHeader>
-      <NodeBody>
-        <ExpressionPreview>{expression}</ExpressionPreview>
-      </NodeBody>
-      <HandleContainer>
-        <HandleLabel $type="true">
-          <span>Ja</span>
-          <TrueHandle type="source" position={Position.Right} id="true" />
-        </HandleLabel>
-        <HandleLabel $type="false">
-          <span>Nein</span>
-          <FalseHandle type="source" position={Position.Right} id="false" />
-        </HandleLabel>
-      </HandleContainer>
-    </NodeContainer>
+    <NodeWrapper>
+      <NodeContainer $selected={!!selected}>
+        <NodePlayButton nodeId={id} executionState={data.executionState} />
+        <TopHandle type="target" position={Position.Left} />
+        <NodeHeader>
+          <NodeIcon>◇</NodeIcon>
+          <NodeTitle>{data.label}</NodeTitle>
+        </NodeHeader>
+        <NodeBody>
+          <ExpressionPreview>{expression}</ExpressionPreview>
+        </NodeBody>
+        <HandleContainer>
+          <HandleLabel $type="true">
+            <span>Ja</span>
+            <TrueHandle type="source" position={Position.Right} id="true" />
+          </HandleLabel>
+          <HandleLabel $type="false">
+            <span>Nein</span>
+            <FalseHandle type="source" position={Position.Right} id="false" />
+          </HandleLabel>
+        </HandleContainer>
+      </NodeContainer>
+      <NodeExecutionPanel executionState={data.executionState} />
+    </NodeWrapper>
   );
 });
 

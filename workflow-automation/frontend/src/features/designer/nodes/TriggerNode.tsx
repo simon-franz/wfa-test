@@ -1,8 +1,14 @@
 import { memo } from 'react';
 import { NodePlayButton } from '../components/NodePlayButton';
+import { NodeExecutionPanel } from '../components/NodeExecutionPanel';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import styled from 'styled-components';
-import { useDesignerStore, type WorkflowNodeData } from '../../../stores/designer.store';
+import type { WorkflowNodeData } from '../../../stores/designer.store';
+
+const NodeWrapper = styled.div`
+  position: relative;
+  padding-bottom: 32px;
+`;
 
 const NodeContainer = styled.div<{ $selected: boolean }>`
   position: relative;
@@ -65,17 +71,20 @@ export const TriggerNode = memo(({ data, selected, id }: NodeProps<WorkflowNodeD
   };
 
   return (
-    <NodeContainer $selected={!!selected}>
-      <NodePlayButton nodeId={id} executionState={data.executionState} />
-      <NodeHeader>
-        <NodeIcon>▶</NodeIcon>
-        <NodeTitle>{data.label}</NodeTitle>
-      </NodeHeader>
-      <NodeBody>
-        <NodeType>{nodeTypeLabels[data.nodeType] || data.nodeType}</NodeType>
-      </NodeBody>
-      <StyledHandle type="source" position={Position.Right} />
-    </NodeContainer>
+    <NodeWrapper>
+      <NodeContainer $selected={!!selected}>
+        <NodePlayButton nodeId={id} executionState={data.executionState} />
+        <NodeHeader>
+          <NodeIcon>▶</NodeIcon>
+          <NodeTitle>{data.label}</NodeTitle>
+        </NodeHeader>
+        <NodeBody>
+          <NodeType>{nodeTypeLabels[data.nodeType] || data.nodeType}</NodeType>
+        </NodeBody>
+        <StyledHandle type="source" position={Position.Right} />
+      </NodeContainer>
+      <NodeExecutionPanel executionState={data.executionState} />
+    </NodeWrapper>
   );
 });
 

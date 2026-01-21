@@ -22,6 +22,7 @@ export interface WorkflowNodeData {
 
 export interface NodeExecutionState {
   status: 'idle' | 'ready' | 'running' | 'success' | 'error';
+  input?: Record<string, unknown>;
   output?: unknown;
   error?: string;
   executedAt?: Date;
@@ -429,6 +430,17 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
     const node = nodes.find((n) => n.id === nodeId);
     if (!node || !get().canExecuteNode(nodeId)) return;
 
+    // Collect outputs from predecessor nodes (before try block so it's accessible in catch)
+    const predecessorOutputs: Record<string, unknown> = {};
+    edges
+      .filter((e) => e.target === nodeId)
+      .forEach((edge) => {
+        const predNode = nodes.find((n) => n.id === edge.source);
+        if (predNode?.data.executionState?.output) {
+          predecessorOutputs[predNode.data.label] = predNode.data.executionState.output;
+        }
+      });
+
     // Set running state
     set((state) => ({
       nodes: state.nodes.map((n) =>
@@ -445,16 +457,6 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
     }));
 
     try {
-      // Collect outputs from predecessor nodes
-      const predecessorOutputs: Record<string, unknown> = {};
-      edges
-        .filter((e) => e.target === nodeId)
-        .forEach((edge) => {
-          const predNode = nodes.find((n) => n.id === edge.source);
-          if (predNode?.data.executionState?.output) {
-            predecessorOutputs[predNode.data.label] = predNode.data.executionState.output;
-          }
-        });
 
       // Call backend API to execute node
       const token = useAuthStore.getState().accessToken;
@@ -477,7 +479,7 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
 
       const result = await response.json();
 
-      // Set success state with output
+      // Set success state with input and output
       set((state) => ({
         nodes: state.nodes.map((n) =>
           n.id === nodeId
@@ -487,6 +489,7 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
                   ...n.data,
                   executionState: {
                     status: 'success',
+                    input: predecessorOutputs,
                     output: result.output,
                     executedAt: new Date(),
                   },
@@ -496,7 +499,7 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
         ),
       }));
     } catch (error) {
-      // Set error state
+      // Set error state with input for debugging
       set((state) => ({
         nodes: state.nodes.map((n) =>
           n.id === nodeId
@@ -506,6 +509,7 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
                   ...n.data,
                   executionState: {
                     status: 'error',
+                    input: predecessorOutputs,
                     error: error instanceof Error ? error.message : 'Unknown error',
                     executedAt: new Date(),
                   },

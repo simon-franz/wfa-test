@@ -3,6 +3,12 @@ import { Handle, Position, type NodeProps } from '@xyflow/react';
 import styled from 'styled-components';
 import type { WorkflowNodeData } from '../../../stores/designer.store';
 import { NodePlayButton } from '../components/NodePlayButton';
+import { NodeExecutionPanel } from '../components/NodeExecutionPanel';
+
+const NodeWrapper = styled.div`
+  position: relative;
+  padding-bottom: 32px;
+`;
 
 const NodeContainer = styled.div<{ $selected: boolean }>`
   position: relative;
@@ -95,19 +101,22 @@ export const ActionNode = memo(({ data, selected, id }: NodeProps<WorkflowNodeDa
   const preview = getConfigPreview();
 
   return (
-    <NodeContainer $selected={!!selected}>
-      <NodePlayButton nodeId={id} executionState={data.executionState} />
-      <StyledHandle type="target" position={Position.Left} />
-      <NodeHeader>
-        <NodeIcon>{nodeIcons[data.nodeType] || '⚡'}</NodeIcon>
-        <NodeTitle>{data.label}</NodeTitle>
-      </NodeHeader>
-      <NodeBody>
-        <NodeType>{nodeTypeLabels[data.nodeType] || data.nodeType}</NodeType>
-        {preview && <ConfigPreview>{preview}</ConfigPreview>}
-      </NodeBody>
-      <StyledHandle type="source" position={Position.Right} />
-    </NodeContainer>
+    <NodeWrapper>
+      <NodeContainer $selected={!!selected}>
+        <NodePlayButton nodeId={id} executionState={data.executionState} />
+        <StyledHandle type="target" position={Position.Left} />
+        <NodeHeader>
+          <NodeIcon>{nodeIcons[data.nodeType] || '⚡'}</NodeIcon>
+          <NodeTitle>{data.label}</NodeTitle>
+        </NodeHeader>
+        <NodeBody>
+          <NodeType>{nodeTypeLabels[data.nodeType] || data.nodeType}</NodeType>
+          {preview && <ConfigPreview>{preview}</ConfigPreview>}
+        </NodeBody>
+        <StyledHandle type="source" position={Position.Right} />
+      </NodeContainer>
+      <NodeExecutionPanel executionState={data.executionState} />
+    </NodeWrapper>
   );
 });
 

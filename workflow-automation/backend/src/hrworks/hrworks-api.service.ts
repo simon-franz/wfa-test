@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HrworksAuthService } from './hrworks-auth.service';
+import { LandlordService } from '../db/landlord.service';
 import type { HRWorksPerson, HRWorksOrganizationUnit } from 'shared/types';
 
 interface RequestOptions {
@@ -21,16 +22,14 @@ interface PaginatedResponse<T> {
 @Injectable()
 export class HrworksApiService {
   private readonly logger = new Logger(HrworksApiService.name);
-  private readonly baseUrl: string;
   private readonly defaultRetries = 3;
   private readonly defaultRetryDelay = 1000;
 
   constructor(
     private configService: ConfigService,
     private hrworksAuth: HrworksAuthService,
-  ) {
-    this.baseUrl = this.configService.get<string>('HRWORKS_API_BASE_URL') || 'https://api.hrworks.de';
-  }
+    private landlordService: LandlordService,
+  ) {}
 
   private async request<T>(
     tenantId: string,
@@ -41,13 +40,20 @@ export class HrworksApiService {
   ): Promise<T> {
     const { retries = this.defaultRetries, retryDelay = this.defaultRetryDelay } = options;
 
+    // Get base URL from tenant settings (support both new and legacy field names)
+    const tenant = await this.landlordService.findTenantById(tenantId);
+    const baseUrl = tenant?.settings.hrworksApiBaseUrl
+      || tenant?.settings.hrworksTenant
+      || this.configService.get<string>('HRWORKS_API_BASE_URL')
+      || 'https://api.hrworks.de';
+
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const accessToken = await this.hrworksAuth.getAccessToken(tenantId);
 
-        const response = await fetch(`${this.baseUrl}${path}`, {
+        const response = await fetch(`${baseUrl}${path}`, {
           method,
           headers: {
             'Content-Type': 'application/json',
@@ -88,36 +94,39 @@ export class HrworksApiService {
   }
 
   // Persons API
-  async getPersons(tenantId: string, page = 1, pageSize = 100): Promise<PaginatedResponse<HRWorksPerson>> {
-    return this.request<PaginatedResponse<HRWorksPerson>>(
+  async getPersons(tenantId: string, page = 1, pageSize = 100): Promise<HRWorksPerson[]> {
+    const response = await this.request<any>(
       tenantId,
       'GET',
       `/v2/persons?page=${page}&pageSize=${pageSize}`,
     );
+
+    if (Array.isArray(response)) {
+      return response;
+    }
+    
+    // HR Works API returns dictionary: { "property1": [...], "property2": [...] }
+    // Flatten all arrays from all keys
+    const allPersons: HRWorksPerson[] = [];
+    for (const value of Object.values(response)) {
+      if (Array.isArray(value)) {
+        allPersons.push(...value);
+      }
+    }
+    return allPersons;
   }
 
   async getAllPersons(tenantId: string): Promise<HRWorksPerson[]> {
-    const allPersons: HRWorksPerson[] = [];
-    let page = 1;
-    let hasMore = true;
-
-    while (hasMore) {
-      const response = await this.getPersons(tenantId, page, 100);
-      allPersons.push(...response.data);
-
-      if (response.pagination) {
-        hasMore = page < response.pagination.totalPages;
-        page++;
-      } else {
-        hasMore = false;
-      }
-    }
-
-    return allPersons;
+    // For now, just get the first page - HR Works API might not use pagination
+    return this.getPersons(tenantId, 1, 1000);
   }
 
   async getPerson(tenantId: string, personnelNumber: string): Promise<HRWorksPerson> {
     return this.request<HRWorksPerson>(tenantId, 'GET', `/v2/persons/${personnelNumber}`);
+  }
+
+  async createPerson(tenantId: string, personData: Partial<HRWorksPerson>): Promise<HRWorksPerson> {
+    return this.request<HRWorksPerson>(tenantId, 'POST', '/v2/persons', personData);
   }
 
   // Organization Units API
@@ -125,32 +134,30 @@ export class HrworksApiService {
     tenantId: string,
     page = 1,
     pageSize = 100,
-  ): Promise<PaginatedResponse<HRWorksOrganizationUnit>> {
-    return this.request<PaginatedResponse<HRWorksOrganizationUnit>>(
+  ): Promise<HRWorksOrganizationUnit[]> {
+    const response = await this.request<any>(
       tenantId,
       'GET',
       `/v2/organization-units?page=${page}&pageSize=${pageSize}`,
     );
+
+    if (Array.isArray(response)) {
+      return response;
+    }
+    
+    // HR Works API returns dictionary: { "property1": [...], "property2": [...] }
+    // Flatten all arrays from all keys
+    const allUnits: HRWorksOrganizationUnit[] = [];
+    for (const value of Object.values(response)) {
+      if (Array.isArray(value)) {
+        allUnits.push(...value);
+      }
+    }
+    return allUnits;
   }
 
   async getAllOrganizationUnits(tenantId: string): Promise<HRWorksOrganizationUnit[]> {
-    const allUnits: HRWorksOrganizationUnit[] = [];
-    let page = 1;
-    let hasMore = true;
-
-    while (hasMore) {
-      const response = await this.getOrganizationUnits(tenantId, page, 100);
-      allUnits.push(...response.data);
-
-      if (response.pagination) {
-        hasMore = page < response.pagination.totalPages;
-        page++;
-      } else {
-        hasMore = false;
-      }
-    }
-
-    return allUnits;
+    return this.getOrganizationUnits(tenantId, 1, 1000);
   }
 
   async getOrganizationUnit(tenantId: string, orgUnitId: string): Promise<HRWorksOrganizationUnit> {
