@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useDesignerStore } from '../../stores/designer.store';
 import { ContextPanel } from './ContextPanel';
@@ -10,6 +10,7 @@ const PanelContainer = styled.div`
   border-left: 1px solid var(--color-gray-200);
   display: flex;
   flex-direction: column;
+  height: 100%;
 `;
 
 const PanelHeader = styled.div`
@@ -18,6 +19,7 @@ const PanelHeader = styled.div`
   justify-content: space-between;
   padding: var(--spacing-4);
   border-bottom: 1px solid var(--color-gray-200);
+  flex-shrink: 0;
 `;
 
 const PanelTitle = styled.h3`
@@ -44,6 +46,7 @@ const PanelBody = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: var(--spacing-4);
+  min-height: 0;
 `;
 
 const FormGroup = styled.div`
@@ -183,9 +186,15 @@ export function ConfigPanel() {
     useDesignerStore();
 
   const [contextPanelVisible, setContextPanelVisible] = useState(false);
+  const [contextPanelPosition, setContextPanelPosition] = useState<{ top: number }>({ top: 60 });
   const [activeInputKey, setActiveInputKey] = useState<string>('');
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
+
+  // Close context panel when node selection changes
+  useEffect(() => {
+    setContextPanelVisible(false);
+  }, [selectedNodeId]);
 
   const handleNameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -214,9 +223,14 @@ export function ConfigPanel() {
     }
   }, [selectedNodeId, deleteNode]);
 
-  const openContextPanel = useCallback((inputKey: string) => {
+  const handleInputFocus = useCallback((inputKey: string, rect: DOMRect) => {
     setActiveInputKey(inputKey);
+    setContextPanelPosition({ top: rect.top });
     setContextPanelVisible(true);
+  }, []);
+
+  const handleCloseContextPanel = useCallback(() => {
+    setContextPanelVisible(false);
   }, []);
 
   const handleSelectVariable = useCallback(
@@ -259,7 +273,7 @@ export function ConfigPanel() {
               multiline
               value={(config.description as string) || ''}
               onChange={(e) => handleConfigChange('description', e.target.value)}
-              onOpenContext={() => openContextPanel('description')}
+              onFocus={(rect) => handleInputFocus('description', rect)} 
               placeholder="Optionale Beschreibung..."
             />
           </FormGroup>
@@ -273,7 +287,7 @@ export function ConfigPanel() {
               <ContextInput
                 value={(config.cronExpression as string) || ''}
                 onChange={(e) => handleConfigChange('cronExpression', e.target.value)}
-                onOpenContext={() => openContextPanel('cronExpression')}
+                onFocus={(rect) => handleInputFocus('cronExpression', rect)} 
                 placeholder="0 9 * * 1-5"
               />
             </FormGroup>
@@ -313,7 +327,7 @@ export function ConfigPanel() {
               <ContextInput
                 value={(config.url as string) || ''}
                 onChange={(e) => handleConfigChange('url', e.target.value)}
-                onOpenContext={() => openContextPanel('url')}
+                onFocus={(rect) => handleInputFocus('url', rect)} 
                 placeholder="https://api.example.com/endpoint"
               />
             </FormGroup>
@@ -323,7 +337,7 @@ export function ConfigPanel() {
                 multiline
                 value={(config.body as string) || ''}
                 onChange={(e) => handleConfigChange('body', e.target.value)}
-                onOpenContext={() => openContextPanel('body')}
+                onFocus={(rect) => handleInputFocus('body', rect)} 
                 placeholder='{"key": "value"}'
               />
             </FormGroup>
@@ -346,7 +360,7 @@ export function ConfigPanel() {
               multiline
               value={(config.expression as string) || ''}
               onChange={(e) => handleConfigChange('expression', e.target.value)}
-              onOpenContext={() => openContextPanel('expression')}
+              onFocus={(rect) => handleInputFocus('expression', rect)} 
               placeholder='$nodes.getData.output.role = "Developer"'
             />
           </FormGroup>
@@ -410,7 +424,7 @@ export function ConfigPanel() {
                   <ContextInput
                     value={(config.inputPath as string) || ''}
                     onChange={(e) => handleConfigChange('inputPath', e.target.value)}
-                    onOpenContext={() => openContextPanel('inputPath')}
+                    onFocus={(rect) => handleInputFocus('inputPath', rect)} 
                     placeholder="z.B. {{hrworks.output.data}}"
                   />
                 </FormGroup>
@@ -421,7 +435,7 @@ export function ConfigPanel() {
                     <ContextInput
                       value={(config.fieldPath as string) || ''}
                       onChange={(e) => handleConfigChange('fieldPath', e.target.value)}
-                      onOpenContext={() => openContextPanel('fieldPath')}
+                      onFocus={(rect) => handleInputFocus('fieldPath', rect)} 
                       placeholder="z.B. id oder person.name"
                     />
                   </FormGroup>
@@ -434,7 +448,7 @@ export function ConfigPanel() {
                       multiline
                       value={(config.filterExpression as string) || ''}
                       onChange={(e) => handleConfigChange('filterExpression', e.target.value)}
-                      onOpenContext={() => openContextPanel('filterExpression')}
+                      onFocus={(rect) => handleInputFocus('filterExpression', rect)} 
                       placeholder='status = "active"'
                     />
                   </FormGroup>
@@ -447,7 +461,7 @@ export function ConfigPanel() {
                       multiline
                       value={(config.mapExpression as string) || ''}
                       onChange={(e) => handleConfigChange('mapExpression', e.target.value)}
-                      onOpenContext={() => openContextPanel('mapExpression')}
+                      onFocus={(rect) => handleInputFocus('mapExpression', rect)} 
                       placeholder='{ "name": firstName & " " & lastName }'
                     />
                   </FormGroup>
@@ -459,7 +473,7 @@ export function ConfigPanel() {
                     <ContextInput
                       value={(config.fieldPath as string) || ''}
                       onChange={(e) => handleConfigChange('fieldPath', e.target.value)}
-                      onOpenContext={() => openContextPanel('fieldPath')}
+                      onFocus={(rect) => handleInputFocus('fieldPath', rect)} 
                       placeholder="z.B. amount oder salary"
                     />
                   </FormGroup>
@@ -543,7 +557,7 @@ export function ConfigPanel() {
                             [param.name]: e.target.value,
                           })
                         }
-                        onOpenContext={() => openContextPanel(`parameters.${param.name}`)}
+                        onFocus={(rect) => handleInputFocus(`parameters.${param.name}`, rect)} 
                         placeholder={`z.B. {{trigger.${param.name}}}`}
                       />
                     )}
@@ -589,9 +603,10 @@ export function ConfigPanel() {
 
       <ContextPanel
         visible={contextPanelVisible}
-        onClose={() => setContextPanelVisible(false)}
+        onClose={handleCloseContextPanel}
         onSelectVariable={handleSelectVariable}
         currentNodeId={selectedNodeId || undefined}
+        position={contextPanelPosition}
       />
     </PanelContainer>
   );

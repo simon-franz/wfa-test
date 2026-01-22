@@ -135,6 +135,8 @@ const DesignerContainer = styled.div`
   flex: 1;
   display: flex;
   background-color: var(--color-gray-100);
+  overflow: hidden;
+  min-height: 0;
 `;
 
 const LoadingContainer = styled.div`

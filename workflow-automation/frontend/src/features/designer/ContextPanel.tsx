@@ -2,25 +2,28 @@ import { useState, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
 import { useDesignerStore } from '../../stores/designer.store';
 
-const Overlay = styled.div<{ $visible: boolean }>`
+const Overlay = styled.div<{ $visible: boolean; $top?: number }>`
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  top: ${(props) => {
+    const top = props.$top || 60;
+    const maxTop = window.innerHeight - 520; // 500px height + 20px margin
+    return Math.min(Math.max(top, 60), maxTop);
+  }}px;
+  right: 340px;
+  width: 350px;
+  max-height: 500px;
+  background-color: var(--color-gray-900);
   display: ${(props) => (props.$visible ? 'flex' : 'none')};
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+  flex-direction: column;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-gray-700);
 `;
 
 const Panel = styled.div`
-  width: 600px;
-  max-height: 80vh;
-  background-color: var(--color-white);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xl);
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -30,53 +33,60 @@ const Header = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-4);
-  border-bottom: 1px solid var(--color-gray-200);
+  padding: var(--spacing-3);
+  border-bottom: 1px solid var(--color-gray-700);
+  flex-shrink: 0;
 `;
 
 const Title = styled.h3`
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-sm);
   font-weight: 600;
-  color: var(--color-gray-900);
+  color: var(--color-gray-100);
   margin: 0;
 `;
 
 const CloseButton = styled.button`
   padding: var(--spacing-1);
-  color: var(--color-gray-500);
+  color: var(--color-gray-400);
   background: none;
   border: none;
   cursor: pointer;
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-lg);
 
   &:hover {
-    color: var(--color-gray-700);
+    color: var(--color-gray-200);
   }
 `;
 
 const SearchBox = styled.input`
-  width: 100%;
-  padding: var(--spacing-2) var(--spacing-3);
-  font-size: var(--font-size-sm);
-  border: 1px solid var(--color-gray-300);
-  border-radius: var(--radius-md);
-  margin: var(--spacing-3) var(--spacing-4);
-  width: calc(100% - var(--spacing-8));
+  width: calc(100% - var(--spacing-6));
+  padding: var(--spacing-2);
+  font-size: var(--font-size-xs);
+  border: 1px solid var(--color-gray-700);
+  border-radius: var(--radius-sm);
+  margin: var(--spacing-2) var(--spacing-3);
+  background-color: var(--color-gray-800);
+  color: var(--color-gray-100);
 
   &:focus {
     outline: none;
     border-color: var(--color-primary);
+  }
+
+  &::placeholder {
+    color: var(--color-gray-500);
   }
 `;
 
 const Content = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: var(--spacing-4);
+  padding: var(--spacing-2) var(--spacing-3);
+  min-height: 0;
 `;
 
 const NodeSection = styled.div`
-  margin-bottom: var(--spacing-4);
+  margin-bottom: var(--spacing-2);
 `;
 
 const NodeHeader = styled.div`
@@ -84,62 +94,63 @@ const NodeHeader = styled.div`
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-2);
-  background-color: var(--color-gray-50);
-  border-radius: var(--radius-md);
+  background-color: var(--color-gray-800);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   user-select: none;
 
   &:hover {
-    background-color: var(--color-gray-100);
+    background-color: var(--color-gray-700);
   }
 `;
 
 const NodeIcon = styled.div<{ $color: string }>`
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   border-radius: var(--radius-sm);
   background-color: ${(props) => props.$color};
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   font-weight: bold;
+  flex-shrink: 0;
 `;
 
 const NodeName = styled.span`
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: 500;
-  color: var(--color-gray-900);
+  color: var(--color-gray-100);
   flex: 1;
 `;
 
 const NodeExpandIcon = styled.span<{ $expanded: boolean }>`
-  font-size: var(--font-size-sm);
+  font-size: 10px;
   color: var(--color-gray-500);
   transform: ${(props) => (props.$expanded ? 'rotate(90deg)' : 'rotate(0deg)')};
   transition: transform 0.2s;
 `;
 
 const FieldList = styled.div`
-  margin-top: var(--spacing-2);
-  margin-left: var(--spacing-6);
+  margin-top: var(--spacing-1);
+  margin-left: var(--spacing-4);
 `;
 
 const Field = styled.div<{ $indent?: number }>`
-  padding: var(--spacing-2);
-  padding-left: ${(props) => (props.$indent || 0) * 16 + 8}px;
-  font-size: var(--font-size-sm);
+  padding: var(--spacing-1) var(--spacing-2);
+  padding-left: ${(props) => (props.$indent || 0) * 12 + 8}px;
+  font-size: 11px;
   font-family: monospace;
-  color: var(--color-gray-700);
+  color: var(--color-gray-300);
   cursor: pointer;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: var(--spacing-1);
 
   &:hover {
-    background-color: var(--color-primary-50);
+    background-color: var(--color-gray-800);
     color: var(--color-primary);
   }
 `;
@@ -150,41 +161,45 @@ const ExpandableField = styled(Field)`
 `;
 
 const ExpandIcon = styled.span<{ $expanded: boolean }>`
-  font-size: 10px;
+  font-size: 8px;
   color: var(--color-gray-500);
   transform: ${(props) => (props.$expanded ? 'rotate(90deg)' : 'rotate(0deg)')};
   transition: transform 0.2s;
-  width: 12px;
+  width: 10px;
   display: inline-block;
+  flex-shrink: 0;
 `;
 
 const FieldPath = styled.span`
   color: var(--color-primary);
   font-weight: 500;
   flex: 1;
+  min-width: 0;
 `;
 
 const FieldValue = styled.span`
-  color: var(--color-gray-600);
-  font-size: var(--font-size-xs);
-  margin-left: var(--spacing-2);
-  max-width: 200px;
+  color: var(--color-gray-500);
+  font-size: 10px;
+  margin-left: var(--spacing-1);
+  max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex-shrink: 0;
 `;
 
 const FieldType = styled.span`
-  color: var(--color-gray-500);
-  font-size: var(--font-size-xs);
-  margin-left: var(--spacing-2);
+  color: var(--color-gray-600);
+  font-size: 10px;
+  margin-left: var(--spacing-1);
+  flex-shrink: 0;
 `;
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: var(--spacing-8);
+  padding: var(--spacing-6);
   color: var(--color-gray-500);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
 `;
 
 interface TreeNode {
@@ -244,11 +259,13 @@ interface TreeNodeComponentProps {
   onSelect: (path: string) => void;
   expandedPaths: Set<string>;
   onToggle: (path: string) => void;
+  nodePrefix?: string;
 }
 
-function TreeNodeComponent({ node, nodeName, indent, onSelect, expandedPaths, onToggle }: TreeNodeComponentProps) {
+function TreeNodeComponent({ node, nodeName, indent, onSelect, expandedPaths, onToggle, nodePrefix = '' }: TreeNodeComponentProps) {
   const hasChildren = node.children && node.children.length > 0;
-  const isExpanded = expandedPaths.has(node.path);
+  const fullPath = nodePrefix ? `${nodePrefix}:${node.path}` : node.path;
+  const isExpanded = expandedPaths.has(fullPath);
 
   const handleClick = () => {
     if (hasChildren) {
@@ -277,7 +294,7 @@ function TreeNodeComponent({ node, nodeName, indent, onSelect, expandedPaths, on
         </ExpandableField>
       ) : (
         <Field $indent={indent} onClick={handleClick}>
-          <span style={{ width: '12px' }} />
+          <span style={{ width: '10px' }} />
           <FieldPath>{node.key}</FieldPath>
           {displayValue && <FieldValue>{displayValue}</FieldValue>}
           <FieldType>{displayType}</FieldType>
@@ -292,6 +309,7 @@ function TreeNodeComponent({ node, nodeName, indent, onSelect, expandedPaths, on
           onSelect={onSelect}
           expandedPaths={expandedPaths}
           onToggle={onToggle}
+          nodePrefix={nodePrefix}
         />
       ))}
     </>
@@ -303,6 +321,7 @@ interface ContextPanelProps {
   onClose: () => void;
   onSelectVariable: (variable: string) => void;
   currentNodeId?: string;
+  position?: { top: number };
 }
 
 interface NodeOutput {
@@ -312,7 +331,7 @@ interface NodeOutput {
   tree?: TreeNode;
 }
 
-export function ContextPanel({ visible, onClose, onSelectVariable, currentNodeId }: ContextPanelProps) {
+export function ContextPanel({ visible, onClose, onSelectVariable, currentNodeId, position }: ContextPanelProps) {
   const { nodes, edges } = useDesignerStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -421,8 +440,8 @@ export function ContextPanel({ visible, onClose, onSelectVariable, currentNodeId
   };
 
   return (
-    <Overlay $visible={visible} onClick={onClose}>
-      <Panel onClick={(e) => e.stopPropagation()}>
+    <Overlay $visible={visible} $top={position?.top}>
+      <Panel>
         <Header>
           <Title>Kontext einfügen</Title>
           <CloseButton onClick={onClose}>×</CloseButton>
@@ -430,14 +449,14 @@ export function ContextPanel({ visible, onClose, onSelectVariable, currentNodeId
 
         <SearchBox
           type="text"
-          placeholder="Suche nach Feldern..."
+          placeholder="Suche..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
 
         <Content>
           {nodeOutputs.length === 0 ? (
-            <EmptyState>Keine vorherigen Knoten verfügbar</EmptyState>
+            <EmptyState>Keine vorherigen Knoten</EmptyState>
           ) : (
             nodeOutputs.map((output) => (
               <NodeSection key={output.nodeId}>
@@ -457,7 +476,8 @@ export function ContextPanel({ visible, onClose, onSelectVariable, currentNodeId
                       indent={0}
                       onSelect={(path) => handleSelectField(output.nodeName, path)}
                       expandedPaths={expandedPaths}
-                      onToggle={togglePath}
+                      onToggle={(path) => togglePath(`${output.nodeId}:${path}`)}
+                      nodePrefix={output.nodeId}
                     />
                   </FieldList>
                 )}

@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import styled from 'styled-components';
 
 const InputWrapper = styled.div`
@@ -35,28 +36,12 @@ const StyledTextarea = styled.textarea`
   }
 `;
 
-const ContextButton = styled.button`
-  padding: var(--spacing-2);
-  background-color: var(--color-gray-100);
-  border: 1px solid var(--color-gray-300);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: var(--font-size-sm);
-  color: var(--color-gray-700);
-  white-space: nowrap;
-  flex-shrink: 0;
-  height: fit-content;
-
-  &:hover {
-    background-color: var(--color-gray-200);
-  }
-`;
-
 interface ContextInputProps {
   type?: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onOpenContext: () => void;
+  onFocus?: (rect: DOMRect) => void;
+  onBlur?: () => void;
   placeholder?: string;
   multiline?: boolean;
 }
@@ -65,20 +50,42 @@ export function ContextInput({
   type = 'text',
   value,
   onChange,
-  onOpenContext,
+  onFocus,
+  onBlur,
   placeholder,
   multiline = false,
 }: ContextInputProps) {
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+
+  const handleFocus = () => {
+    if (onFocus && inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      onFocus(rect);
+    }
+  };
+
   return (
     <InputWrapper>
       {multiline ? (
-        <StyledTextarea value={value} onChange={onChange} placeholder={placeholder} />
+        <StyledTextarea
+          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+          value={value}
+          onChange={onChange}
+          onFocus={handleFocus}
+          onBlur={onBlur}
+          placeholder={placeholder}
+        />
       ) : (
-        <StyledInput type={type} value={value} onChange={onChange} placeholder={placeholder} />
+        <StyledInput
+          ref={inputRef as React.RefObject<HTMLInputElement>}
+          type={type}
+          value={value}
+          onChange={onChange}
+          onFocus={handleFocus}
+          onBlur={onBlur}
+          placeholder={placeholder}
+        />
       )}
-      <ContextButton type="button" onClick={onOpenContext} title="Kontext einfügen">
-        {'{ }'}
-      </ContextButton>
     </InputWrapper>
   );
 }
