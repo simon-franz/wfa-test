@@ -190,10 +190,66 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
   - Bestätigungsdialog bei kritischen Verbindungen
 - Workflow Speichern/Laden
 
+### Workflow-Übersicht & Navigation
+- **Workflow-Liste als Tabelle** (statt Karten):
+  - Spalten: Name, Beschreibung, Status (Badge), Aktualisiert (Datum/Zeit), Aktionen
+  - Status-Badges mit Farben: Aktiv (grün), Inaktiv (gelb), Entwurf (grau)
+  - Action-Buttons pro Zeile: Historie, Ausführen, Löschen
+  - Klick auf Zeile öffnet Workflow-Designer
+- **Workflow-Designer Toolbar**:
+  - Buttons: Historie, Ausführen (mit Play-Icon), Aktivieren/Deaktivieren, Speichern
+  - Historie-Button navigiert zur Ausführungshistorie
+  - Zurück-Navigation von Historie zum Designer
+- **Ausführungshistorie-Seite** (`/workflows/:id/executions`):
+  - **Split-Layout**: Liste links (350px), Details rechts
+  - **Ausführungsliste (Sidebar)**:
+    - Zurück-Button zum Designer (← Zurück)
+    - Nummerierte Einträge (#1, #2, #3) mit Badge
+    - Datum/Zeit, Status-Badge (Erfolgreich/Fehlgeschlagen/Läuft)
+    - Execution-ID (monospace)
+    - Klick lädt Details rechts
+  - **Detail-Panel (rechts)**:
+    - Header: Status, Start-/Endzeit, Fehlermeldung
+    - **Node-Liste** (aufklappbar):
+      - Node-Header: Expand-Icon (▶/▼), Node-Icon (Emoji), Node-Name (lesbar), Startzeit, Status-Badge
+      - Node-Content (ausgeklappt):
+        - **Output**: Interaktiver JSON-Viewer mit ein-/ausklappbaren Objekten/Arrays
+        - **Fehler**: Fehlermeldung (falls vorhanden)
+        - **Metadaten**: Timestamps, Dauer
+    - **JSON-Viewer Features**:
+      - Syntax-Highlighting (Keys blau, Strings rot, Numbers grün, Booleans/Null blau)
+      - Ein-/Ausklappbare Objekte und Arrays (▶/▼ Icons)
+      - Item/Key-Zähler bei eingeklappten Elementen ("3 items", "5 keys")
+      - Einrückung für Hierarchie
+      - Hover-Effekte auf Toggle-Icons
+  - **Node-Namen-Mapping**:
+    - `condition-123456` → "Bedingung"
+    - `hrworks-1` → "HR WORKS"
+    - `data-transform-123` → "Daten-Transformation"
+    - `manual-trigger` → "Manueller Trigger"
+  - **Node-Icons**:
+    - ▶️ Trigger/Manueller Trigger
+    - ⏰ Geplanter Trigger
+    - 🔀 Bedingung
+    - 👤 HR WORKS
+    - 🔄 Daten-Transformation
+    - 🌐 HTTP Request
+    - ⏱️ Verzögerung
+    - ⚙️ Standard (unbekannt)
+- **Workflow-Ausführung**:
+  - Polling alle 500ms für Status-Updates
+  - Node-Status-Updates in Echtzeit (completed → success, failed → error)
+  - Keine automatischen Retries (attempts: 1)
+  - Checkmarks/Error-Icons während Ausführung
+  - Alert nach Abschluss (Erfolg/Fehler)
+
 ### UI-Spezifikationen (Detail)
 
 #### Workflow-Übersicht
-- **Darstellung als Tabelle** mit Spalten für Name, Status, Version, letzte Änderung, Ersteller
+- **Darstellung als Tabelle** mit Spalten für Name, Beschreibung, Status (Badge), Aktualisiert (Datum/Zeit), Aktionen
+- Status-Badges: Aktiv (grün), Inaktiv (gelb), Entwurf (grau)
+- Action-Buttons: Historie, Ausführen, Löschen
+- Klick auf Zeile öffnet Workflow-Designer
 - Pro Workflow darf es **nur einen Trigger-Knoten** geben (Validierung im Designer)
 
 #### Workflow-Designer Layout (oberer Bereich, ~60% der Höhe)
@@ -207,7 +263,7 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
 - **Horizontale Anordnung** des Workflows von links nach rechts (immer!)
 
 **Verbindungslinien (Edges):**
-- **Orthogonale/rechteckige Linien** (keine kurvigen Linien!)
+- **Bezier-Kurven** für natürliche, geschwungene Verbindungen
 - **Hover-Icon zum Löschen**: Kanten zeigen bei Hover ein Icon, mit dem sie gelöscht werden können
 - **Datenfluss-Animation**: Animierte Linien, die visualisieren wohin die Daten fließen
 - **Verbindungspunkte bei Multi-Output-Knoten**: Bei Bedingungen, Switches oder ähnlichen Knoten mit mehreren Ausgängen liegen die Verbindungsstücke immer auf dem Rahmen der Box

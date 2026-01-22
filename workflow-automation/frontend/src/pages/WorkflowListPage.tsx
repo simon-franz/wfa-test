@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useWorkflowStore } from '../stores/workflow.store';
-import { WorkflowCard } from '../components/WorkflowCard';
 import { CreateWorkflowModal } from '../components/CreateWorkflowModal';
 import type { Workflow } from 'shared/types';
 
@@ -43,10 +42,111 @@ const CreateButton = styled.button`
   }
 `;
 
-const WorkflowGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--spacing-5);
+const TableContainer = styled.div`
+  background-color: var(--color-white);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+`;
+
+const Thead = styled.thead`
+  background-color: var(--color-gray-50);
+  border-bottom: 1px solid var(--color-gray-200);
+`;
+
+const Th = styled.th`
+  padding: var(--spacing-3) var(--spacing-4);
+  text-align: left;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-gray-700);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+`;
+
+const Tbody = styled.tbody``;
+
+const Tr = styled.tr`
+  border-bottom: 1px solid var(--color-gray-200);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+
+  &:hover {
+    background-color: var(--color-gray-50);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const Td = styled.td`
+  padding: var(--spacing-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-900);
+`;
+
+const StatusBadge = styled.span<{ $status: string }>`
+  display: inline-block;
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  border-radius: var(--radius-full);
+  ${(props) => {
+    switch (props.$status) {
+      case 'active':
+        return `
+          color: #065f46;
+          background-color: #d1fae5;
+        `;
+      case 'inactive':
+        return `
+          color: #92400e;
+          background-color: #fef3c7;
+        `;
+      default:
+        return `
+          color: #374151;
+          background-color: #e5e7eb;
+        `;
+    }
+  }}
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: var(--spacing-2);
+`;
+
+const ActionButton = styled.button`
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  background-color: var(--color-white);
+  color: var(--color-gray-700);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background-color: var(--color-gray-50);
+    border-color: var(--color-gray-400);
+  }
+`;
+
+const DeleteButton = styled(ActionButton)`
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+
+  &:hover {
+    background-color: #fce8e8;
+  }
 `;
 
 const EmptyState = styled.div`
@@ -103,13 +203,15 @@ export function WorkflowListPage() {
     navigate(`/workflows/${workflow.id}`);
   };
 
-  const handleDeleteWorkflow = async (id: string) => {
+  const handleDeleteWorkflow = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
     if (window.confirm('Möchten Sie diesen Workflow wirklich löschen?')) {
       await deleteWorkflow(id);
     }
   };
 
-  const handleTriggerWorkflow = async (id: string) => {
+  const handleTriggerWorkflow = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
     await triggerWorkflow(id);
     alert('Workflow wurde gestartet');
   };
@@ -117,6 +219,16 @@ export function WorkflowListPage() {
   const handleCreateSuccess = (workflow: Workflow) => {
     setShowCreateModal(false);
     navigate(`/workflows/${workflow.id}`);
+  };
+
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   if (isLoading && workflows.length === 0) {
@@ -147,17 +259,49 @@ export function WorkflowListPage() {
           </CreateButton>
         </EmptyState>
       ) : (
-        <WorkflowGrid>
-          {workflows.map((workflow) => (
-            <WorkflowCard
-              key={workflow.id}
-              workflow={workflow}
-              onClick={() => handleWorkflowClick(workflow)}
-              onDelete={() => handleDeleteWorkflow(workflow.id)}
-              onTrigger={() => handleTriggerWorkflow(workflow.id)}
-            />
-          ))}
-        </WorkflowGrid>
+        <TableContainer>
+          <Table>
+            <Thead>
+              <Tr>
+                <Th>Name</Th>
+                <Th>Beschreibung</Th>
+                <Th>Status</Th>
+                <Th>Aktualisiert</Th>
+                <Th>Aktionen</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {workflows.map((workflow) => (
+                <Tr key={workflow.id} onClick={() => handleWorkflowClick(workflow)}>
+                  <Td>{workflow.name}</Td>
+                  <Td>{workflow.description || '-'}</Td>
+                  <Td>
+                    <StatusBadge $status={workflow.status}>
+                      {workflow.status === 'active' ? 'Aktiv' : workflow.status === 'inactive' ? 'Inaktiv' : 'Entwurf'}
+                    </StatusBadge>
+                  </Td>
+                  <Td>{formatDate(workflow.updatedAt)}</Td>
+                  <Td>
+                    <ActionButtons>
+                      <ActionButton onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/workflows/${workflow.id}/executions`);
+                      }}>
+                        Historie
+                      </ActionButton>
+                      <ActionButton onClick={(e) => handleTriggerWorkflow(e, workflow.id)}>
+                        Ausführen
+                      </ActionButton>
+                      <DeleteButton onClick={(e) => handleDeleteWorkflow(e, workflow.id)}>
+                        Löschen
+                      </DeleteButton>
+                    </ActionButtons>
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </TableContainer>
       )}
 
       {showCreateModal && (

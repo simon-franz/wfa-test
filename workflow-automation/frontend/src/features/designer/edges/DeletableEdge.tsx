@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import {
-  BaseEdge,
   EdgeLabelRenderer,
-  getStraightPath,
+  getBezierPath,
   type EdgeProps,
 } from '@xyflow/react';
 import styled from 'styled-components';
@@ -54,19 +53,6 @@ const EdgeHitArea = styled.path`
   cursor: pointer;
 `;
 
-// Helper function to create orthogonal path (step-like)
-function getOrthogonalPath(
-  sourceX: number,
-  sourceY: number,
-  targetX: number,
-  targetY: number,
-): string {
-  const midX = (sourceX + targetX) / 2;
-  
-  // Create orthogonal path: horizontal -> vertical -> horizontal
-  return `M ${sourceX},${sourceY} L ${midX},${sourceY} L ${midX},${targetY} L ${targetX},${targetY}`;
-}
-
 export function DeletableEdge({
   id,
   sourceX,
@@ -82,12 +68,14 @@ export function DeletableEdge({
   const [isHovered, setIsHovered] = useState(false);
   const deleteEdge = useDesignerStore((state) => state.deleteEdge);
 
-  // Use orthogonal path instead of smooth step
-  const edgePath = getOrthogonalPath(sourceX, sourceY, targetX, targetY);
-  
-  // Calculate label position (middle of the path)
-  const labelX = (sourceX + targetX) / 2;
-  const labelY = (sourceY + targetY) / 2;
+  const [edgePath, labelX, labelY] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
 
   const handleDelete = (event: React.MouseEvent) => {
     event.stopPropagation();

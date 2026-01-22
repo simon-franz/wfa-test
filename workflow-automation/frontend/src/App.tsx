@@ -8,6 +8,7 @@ import { LoginPage } from './pages/LoginPage';
 import { OAuthCallbackPage } from './pages/OAuthCallbackPage';
 import { WorkflowListPage } from './pages/WorkflowListPage';
 import { WorkflowDesignerPage } from './pages/WorkflowDesignerPage';
+import { WorkflowExecutionsPage } from './pages/WorkflowExecutionsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
       >
         <Route index element={<Navigate to="/workflows" replace />} />
         <Route path="workflows" element={<WorkflowListPage />} />
+        <Route path="workflows/:id/executions" element={<WorkflowExecutionsPage />} />
         <Route path="workflows/:workflowId" element={<WorkflowDesignerPage />} />
         <Route path="workflows/new" element={<WorkflowDesignerPage />} />
         <Route path="settings" element={<SettingsPage />} />

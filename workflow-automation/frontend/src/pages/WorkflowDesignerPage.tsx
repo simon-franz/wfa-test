@@ -5,6 +5,7 @@ import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { useWorkflowStore } from '../stores/workflow.store';
 import { useDesignerStore } from '../stores/designer.store';
 import { WorkflowDesigner } from '../features/designer/WorkflowDesigner';
+import { WorkflowInfoSidebar } from '../features/designer/WorkflowInfoSidebar';
 import type { WorkflowDefinition } from 'shared/types';
 
 const PageContainer = styled.div`
@@ -42,20 +43,17 @@ const BackButton = styled.button`
   }
 `;
 
-const WorkflowName = styled.input`
+const WorkflowName = styled.div`
   font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-gray-900);
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
   padding: var(--spacing-1) var(--spacing-2);
-  transition: border-color var(--transition-fast);
+  cursor: pointer;
+  border-radius: var(--border-radius-md);
+  transition: background-color var(--transition-fast);
 
-  &:hover,
-  &:focus {
-    border-bottom-color: var(--color-primary);
-    outline: none;
+  &:hover {
+    background-color: var(--color-gray-100);
   }
 `;
 
@@ -212,6 +210,8 @@ export function WorkflowDesignerPage() {
     deactivateWorkflow,
     clearCurrentWorkflow,
     triggerWorkflow,
+    executions,
+    fetchExecutions,
   } = useWorkflowStore();
 
   const { loadFromDefinition, toDefinition, isDirty, resetDirty, reset } = useDesignerStore();
@@ -219,6 +219,7 @@ export function WorkflowDesignerPage() {
   const [workflowName, setWorkflowName] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
+  const [showInfoSidebar, setShowInfoSidebar] = useState(false);
 
   useEffect(() => {
     if (!isNewWorkflow && workflowId) {
@@ -235,8 +236,9 @@ export function WorkflowDesignerPage() {
     if (currentWorkflow) {
       setWorkflowName(currentWorkflow.name);
       loadFromDefinition(currentWorkflow.definition as WorkflowDefinition);
+      fetchExecutions(currentWorkflow.id);
     }
-  }, [currentWorkflow, loadFromDefinition]);
+  }, [currentWorkflow, loadFromDefinition, fetchExecutions]);
 
   const handleSave = useCallback(async () => {
     if (!currentWorkflow) return;
@@ -388,16 +390,17 @@ export function WorkflowDesignerPage() {
       <Toolbar>
         <ToolbarLeft>
           <BackButton onClick={handleBack}>← Zurück</BackButton>
-          <WorkflowName
-            value={workflowName}
-            onChange={(e) => setWorkflowName(e.target.value)}
-            placeholder="Workflow-Name"
-          />
+          <WorkflowName onClick={() => setShowInfoSidebar(true)}>
+            {workflowName || 'Unbenannter Workflow'}
+          </WorkflowName>
           {currentWorkflow && <StatusBadge $status={currentWorkflow.status}>{currentWorkflow.status}</StatusBadge>}
           {isDirty && <DirtyIndicator>• Ungespeichert</DirtyIndicator>}
         </ToolbarLeft>
 
         <ToolbarRight>
+          <Button onClick={() => navigate(`/workflows/${currentWorkflow?.id}/executions`)} disabled={!currentWorkflow}>
+            Historie
+          </Button>
           <RunButton
             onClick={handleRun}
             disabled={isRunning || !currentWorkflow}
@@ -423,6 +426,18 @@ export function WorkflowDesignerPage() {
       <DesignerContainer>
         <WorkflowDesigner />
       </DesignerContainer>
+
+      {showInfoSidebar && currentWorkflow && (
+        <WorkflowInfoSidebar
+          workflow={currentWorkflow}
+          executions={executions}
+          onClose={() => setShowInfoSidebar(false)}
+          onUpdate={async (updates) => {
+            await updateWorkflow(currentWorkflow.id, updates);
+            if (updates.name) setWorkflowName(updates.name);
+          }}
+        />
+      )}
     </PageContainer>
   );
 }

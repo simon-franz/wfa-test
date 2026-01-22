@@ -197,10 +197,10 @@ const editorConfig = {
   // Layout
   direction: 'LR',  // Immer Links-nach-Rechts!
 
-  // Edge-Typ: Orthogonal (Step-Edge)
+  // Edge-Typ: Bezier-Kurven
   defaultEdgeOptions: {
-    type: 'smoothstep',  // Rechteckige Linien, keine Kurven
-    animated: true,      // Animation für Datenfluss-Visualisierung
+    type: 'default',  // Bezier-Kurven für natürliche Verbindungen
+    animated: true,   // Animation für Datenfluss-Visualisierung
     style: { strokeWidth: 2 },
   },
 
@@ -219,7 +219,7 @@ const CustomEdge = ({ id, ...props }) => {
   return (
     <g onMouseEnter={() => setShowDelete(true)}
        onMouseLeave={() => setShowDelete(false)}>
-      <SmoothStepEdge {...props} />
+      <BezierEdge {...props} />
       {showDelete && (
         <DeleteButton onClick={() => deleteEdge(id)} />
       )}
@@ -1241,7 +1241,7 @@ Workflow Speichern/Laden
 - **Horizontale Anordnung** des Workflows von links nach rechts (immer!)
 
 **Verbindungslinien (Edges):**
-- **Orthogonale/rechteckige Linien** (keine kurvigen Linien!)
+- **Bezier-Kurven** für natürliche, geschwungene Verbindungen
 - **Hover-Icon zum Löschen**: Kanten zeigen bei Hover ein Icon, mit dem sie gelöscht werden können
 - **Datenfluss-Animation**: Animierte Linien, die visualisieren wohin die Daten fließen
 - **Verbindungspunkte bei Multi-Output-Knoten**: Bei Bedingungen, Switches oder ähnlichen Knoten mit mehreren Ausgängen liegen die Verbindungsstücke immer auf dem Rahmen der Box

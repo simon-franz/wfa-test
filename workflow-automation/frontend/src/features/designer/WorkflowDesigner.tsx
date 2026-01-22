@@ -12,9 +12,9 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { useDesignerStore } from '../../stores/designer.store';
-import { NodePalette } from './NodePalette';
 import { ConfigPanel } from './ConfigPanel';
 import { CanvasControls } from './CanvasControls';
+import { AddNodeMenu } from './AddNodeMenu';
 import { TriggerNode } from './nodes/TriggerNode';
 import { ActionNode } from './nodes/ActionNode';
 import { ConditionNode } from './nodes/ConditionNode';
@@ -112,6 +112,11 @@ function WorkflowDesignerInner() {
     nodeId?: string;
     flowPosition?: { x: number; y: number };
   } | null>(null);
+  const [addNodeMenu, setAddNodeMenu] = useState<{
+    x: number;
+    y: number;
+    flowPosition: { x: number; y: number };
+  } | null>(null);
   const { screenToFlowPosition } = useReactFlow();
 
   const handleConnect: OnConnect = useCallback(
@@ -131,7 +136,18 @@ function WorkflowDesignerInner() {
   const handlePaneClick = useCallback(() => {
     selectNode(null);
     setContextMenu(null);
+    setAddNodeMenu(null);
   }, [selectNode]);
+
+  const handleAddNode = useCallback(
+    (nodeType: string) => {
+      if (!addNodeMenu) return;
+
+      addNode(nodeType, addNodeMenu.flowPosition);
+      setAddNodeMenu(null);
+    },
+    [addNodeMenu, addNode]
+  );
 
   const handleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -197,7 +213,7 @@ function WorkflowDesignerInner() {
         x: event.clientX,
         y: event.clientY,
       });
-      setContextMenu({
+      setAddNodeMenu({
         x: event.clientX,
         y: event.clientY,
         flowPosition,
@@ -220,8 +236,6 @@ function WorkflowDesignerInner() {
 
   return (
     <DesignerLayout>
-      <NodePalette />
-
       <CanvasContainer>
         <StyledReactFlow
           nodes={nodes}
@@ -243,10 +257,10 @@ function WorkflowDesignerInner() {
           deleteKeyCode={['Backspace', 'Delete']}
           defaultEdgeOptions={{
             type: 'deletable',
-            animated: true, // Enable animation for data flow visualization
+            animated: true,
           }}
           connectionLineStyle={{ stroke: 'var(--color-primary)', strokeWidth: 2 }}
-          connectionLineType="straight"
+          connectionLineType="default"
         >
           <Background
             variant={BackgroundVariant.Dots}
@@ -273,6 +287,15 @@ function WorkflowDesignerInner() {
 
       {selectedNodeId && <ConfigPanel />}
       
+      {addNodeMenu && (
+        <AddNodeMenu
+          x={addNodeMenu.x}
+          y={addNodeMenu.y}
+          onClose={() => setAddNodeMenu(null)}
+          onAddNode={handleAddNode}
+        />
+      )}
+
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}
