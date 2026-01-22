@@ -15,22 +15,18 @@ export class DelayNode extends BaseNode {
     const config = input.config.config as unknown as DelayConfig;
 
     const durationMs = this.calculateDurationMs(config.duration, config.unit);
-    const startTime = Date.now();
 
-    // Actually wait for the duration
-    await new Promise((resolve) => setTimeout(resolve, durationMs));
-
-    const endTime = Date.now();
-
+    // Return delay info instead of blocking
+    // Engine will handle creating delayed job
     return {
       output: {
         duration: config.duration,
         unit: config.unit,
         durationMs,
-        startTime: new Date(startTime).toISOString(),
-        endTime: new Date(endTime).toISOString(),
-        actualDurationMs: endTime - startTime,
+        scheduledFor: new Date(Date.now() + durationMs).toISOString(),
       },
+      // Signal to engine: pause workflow and resume after delay
+      waitUntil: Date.now() + durationMs,
     };
   }
 

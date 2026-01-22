@@ -42,6 +42,37 @@ export class WorkflowEngineService {
     return context;
   }
 
+  async resumeWorkflow(
+    definition: WorkflowDefinition,
+    context: ExecutionContext,
+    fromNodeId: string,
+  ): Promise<ExecutionContext> {
+    this.logger.log(`Resuming workflow execution: ${context.executionId} from node: ${fromNodeId}`);
+
+    // Build adjacency list
+    const adjacencyList = this.buildAdjacencyList(definition);
+
+    // Track already executed nodes from context
+    const executedNodes = new Set<string>(
+      Object.keys(context.nodeResults).filter(
+        (nodeId) => context.nodeResults[nodeId].status === 'completed',
+      ),
+    );
+
+    // Get next nodes after the waiting node
+    const connections = adjacencyList.get(fromNodeId) || [];
+    const nextNodeIds = connections.map((c) => c.nodeId);
+    const nextNodes = definition.nodes.filter((n) => nextNodeIds.includes(n.id));
+
+    // Execute next nodes
+    for (const nextNode of nextNodes) {
+      await this.executeNode(nextNode, definition, adjacencyList, context, executedNodes);
+    }
+
+    this.logger.log(`Workflow resumed and completed: ${context.executionId}`);
+    return context;
+  }
+
   private buildAdjacencyList(
     definition: WorkflowDefinition,
   ): Map<string, { nodeId: string; sourceHandle?: string }[]> {
@@ -154,6 +185,43 @@ export class WorkflowEngineService {
       });
 
       const endTime = Date.now();
+
+      // Check if node wants to wait (delay/approval)
+      if (output.waitUntil) {
+        const result: NodeExecutionResult = {
+          nodeId,
+          status: 'waiting',
+          output: output.output,
+          startedAt: new Date(startTime),
+          duration: endTime - startTime,
+        };
+
+        context.nodeResults[nodeId] = result;
+
+        this.logger.log(`Node waiting: ${nodeId} until ${new Date(output.waitUntil).toISOString()}`);
+
+        // Save state to DB
+        if (context.tenantId && context.executionId) {
+          await this.executionService.updateStatus(
+            context.tenantId,
+            context.executionId,
+            'waiting',
+            context,
+          );
+
+          // Create delayed job to resume workflow
+          const delayMs = output.waitUntil - Date.now();
+          await this.executionService.resumeWorkflowAfterDelay(
+            context.tenantId,
+            context.executionId,
+            nodeId,
+            delayMs,
+          );
+        }
+
+        // Stop execution here - will be resumed by delayed job
+        return;
+      }
 
       // Update result
       const result: NodeExecutionResult = {

@@ -14,6 +14,12 @@ interface ExecutionJobData {
   workflowId: string;
 }
 
+interface ResumeJobData {
+  tenantId: string;
+  executionId: string;
+  nodeId: string;
+}
+
 @Injectable()
 export class ExecutionWorker implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ExecutionWorker.name);
@@ -28,9 +34,16 @@ export class ExecutionWorker implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit() {
-    this.worker = new Worker<ExecutionJobData>(
+    this.worker = new Worker<ExecutionJobData | ResumeJobData>(
       WORKFLOW_QUEUE,
-      async (job) => this.processJob(job),
+      async (job) => {
+        if (job.name === 'execute') {
+          return this.processExecuteJob(job as Job<ExecutionJobData>);
+        } else if (job.name === 'resume') {
+          return this.processResumeJob(job as Job<ResumeJobData>);
+        }
+        throw new Error(`Unknown job type: ${job.name}`);
+      },
       {
         connection: {
           host: this.configService.get<string>('REDIS_HOST') || 'localhost',
@@ -57,7 +70,7 @@ export class ExecutionWorker implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async processJob(job: Job<ExecutionJobData>) {
+  private async processExecuteJob(job: Job<ExecutionJobData>) {
     const { tenantId, executionId, workflowId } = job.data;
 
     this.logger.log(`Processing execution: ${executionId} for workflow: ${workflowId}`);
@@ -80,8 +93,10 @@ export class ExecutionWorker implements OnModuleInit, OnModuleDestroy {
       // Execute workflow
       const resultContext = await this.workflowEngine.executeWorkflow(definition, context);
 
-      // Update status to completed
-      await this.executionService.updateStatus(tenantId, executionId, 'completed', resultContext);
+      // Update status to completed (only if not waiting)
+      if (execution.status !== 'waiting') {
+        await this.executionService.updateStatus(tenantId, executionId, 'completed', resultContext);
+      }
 
       this.logger.log(`Execution completed: ${executionId}`);
 
@@ -90,6 +105,66 @@ export class ExecutionWorker implements OnModuleInit, OnModuleDestroy {
       this.logger.error(`Execution failed: ${executionId}`, error);
 
       // Update status to failed
+      await this.executionService.updateStatus(
+        tenantId,
+        executionId,
+        'failed',
+        undefined,
+        (error as Error).message,
+      );
+
+      throw error;
+    }
+  }
+
+  private async processResumeJob(job: Job<ResumeJobData>) {
+    const { tenantId, executionId, nodeId } = job.data;
+
+    this.logger.log(`Resuming execution: ${executionId} from node: ${nodeId}`);
+
+    try {
+      // Get execution
+      const execution = await this.executionService.findById(tenantId, executionId);
+      
+      if (execution.status !== 'waiting') {
+        this.logger.warn(`Execution ${executionId} is not waiting, skipping resume`);
+        return;
+      }
+
+      // Get workflow definition
+      const workflow = await this.workflowService.findById(tenantId, execution.workflowId);
+      const definition = workflow.definition as WorkflowDefinition;
+
+      // Mark waiting node as completed
+      const context: ExecutionContext = {
+        ...execution.context,
+        tenantId,
+      };
+
+      if (context.nodeResults[nodeId]) {
+        context.nodeResults[nodeId].status = 'completed';
+        context.nodeResults[nodeId].completedAt = new Date();
+      }
+
+      // Update status to running
+      await this.executionService.updateStatus(tenantId, executionId, 'running', context);
+
+      // Continue workflow execution from next nodes
+      const resultContext = await this.workflowEngine.resumeWorkflow(
+        definition,
+        context,
+        nodeId,
+      );
+
+      // Update status to completed
+      await this.executionService.updateStatus(tenantId, executionId, 'completed', resultContext);
+
+      this.logger.log(`Execution resumed and completed: ${executionId}`);
+
+      return resultContext;
+    } catch (error) {
+      this.logger.error(`Resume failed: ${executionId}`, error);
+
       await this.executionService.updateStatus(
         tenantId,
         executionId,

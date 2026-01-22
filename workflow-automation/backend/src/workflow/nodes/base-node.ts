@@ -8,6 +8,7 @@ export interface NodeExecutionInput {
 export interface NodeExecutionOutput {
   output?: unknown;
   nextNodes?: string[]; // For conditional nodes to specify which paths to take
+  waitUntil?: number; // Timestamp when to resume (for delay/approval nodes)
 }
 
 export abstract class BaseNode {

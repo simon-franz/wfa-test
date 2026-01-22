@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException, MessageEvent } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, MessageEvent, Logger } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { eq, desc } from 'drizzle-orm';
 import { Observable, Subject, interval } from 'rxjs';
@@ -18,6 +18,7 @@ export interface TriggerWorkflowOptions {
 
 @Injectable()
 export class ExecutionService {
+  private readonly logger = new Logger(ExecutionService.name);
   private executionStreams = new Map<string, Subject<WorkflowExecution>>();
 
   constructor(
@@ -175,6 +176,34 @@ export class ExecutionService {
     await this.updateStatus(tenantId, executionId, 'cancelled');
 
     return this.findById(tenantId, executionId);
+  }
+
+  async resumeWorkflowAfterDelay(
+    tenantId: string,
+    executionId: string,
+    nodeId: string,
+    delayMs: number,
+  ) {
+    // Create delayed job to resume workflow
+    await this.workflowQueue.add(
+      'resume',
+      {
+        tenantId,
+        executionId,
+        nodeId,
+      },
+      {
+        jobId: `${executionId}-resume-${nodeId}`,
+        delay: Math.max(0, delayMs), // Ensure non-negative
+        attempts: 1,
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    );
+
+    this.logger.log(
+      `Scheduled workflow resume: ${executionId} after ${delayMs}ms (node: ${nodeId})`,
+    );
   }
 
   streamExecution(tenantId: string, executionId: string): Observable<MessageEvent> {

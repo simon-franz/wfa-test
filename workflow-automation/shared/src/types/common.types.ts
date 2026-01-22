@@ -18,11 +18,11 @@ export interface ApiResponse<T> {
   };
 }
 
-export type NodeStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+export type NodeStatus = 'pending' | 'running' | 'waiting' | 'completed' | 'failed' | 'skipped';
 
 export type WorkflowStatus = 'draft' | 'active' | 'inactive' | 'archived';
 
-export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+export type ExecutionStatus = 'pending' | 'running' | 'waiting' | 'completed' | 'failed' | 'cancelled';
 
 export interface Timestamps {
   createdAt: Date;
