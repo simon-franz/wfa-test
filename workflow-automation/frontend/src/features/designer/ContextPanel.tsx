@@ -114,7 +114,7 @@ const NodeName = styled.span`
   flex: 1;
 `;
 
-const ExpandIcon = styled.span<{ $expanded: boolean }>`
+const NodeExpandIcon = styled.span<{ $expanded: boolean }>`
   font-size: var(--font-size-sm);
   color: var(--color-gray-500);
   transform: ${(props) => (props.$expanded ? 'rotate(90deg)' : 'rotate(0deg)')};
@@ -126,13 +126,17 @@ const FieldList = styled.div`
   margin-left: var(--spacing-6);
 `;
 
-const Field = styled.div`
+const Field = styled.div<{ $indent?: number }>`
   padding: var(--spacing-2);
+  padding-left: ${(props) => (props.$indent || 0) * 16 + 8}px;
   font-size: var(--font-size-sm);
   font-family: monospace;
   color: var(--color-gray-700);
   cursor: pointer;
   border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
 
   &:hover {
     background-color: var(--color-primary-50);
@@ -140,15 +144,40 @@ const Field = styled.div`
   }
 `;
 
+const ExpandableField = styled(Field)`
+  cursor: pointer;
+  user-select: none;
+`;
+
+const ExpandIcon = styled.span<{ $expanded: boolean }>`
+  font-size: 10px;
+  color: var(--color-gray-500);
+  transform: ${(props) => (props.$expanded ? 'rotate(90deg)' : 'rotate(0deg)')};
+  transition: transform 0.2s;
+  width: 12px;
+  display: inline-block;
+`;
+
 const FieldPath = styled.span`
   color: var(--color-primary);
   font-weight: 500;
+  flex: 1;
+`;
+
+const FieldValue = styled.span`
+  color: var(--color-gray-600);
+  font-size: var(--font-size-xs);
+  margin-left: var(--spacing-2);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const FieldType = styled.span`
   color: var(--color-gray-500);
-  margin-left: var(--spacing-2);
   font-size: var(--font-size-xs);
+  margin-left: var(--spacing-2);
 `;
 
 const EmptyState = styled.div`
@@ -157,6 +186,117 @@ const EmptyState = styled.div`
   color: var(--color-gray-500);
   font-size: var(--font-size-sm);
 `;
+
+interface TreeNode {
+  path: string;
+  key: string;
+  type: string;
+  value?: unknown;
+  children?: TreeNode[];
+  isArray?: boolean;
+  arrayLength?: number;
+}
+
+// Build tree structure from object
+function buildTree(obj: unknown, prefix = '', key = 'output'): TreeNode | null {
+  if (obj === null || obj === undefined) {
+    return { path: prefix || key, key, type: 'null', value: obj };
+  }
+
+  if (Array.isArray(obj)) {
+    const children = obj.map((item, index) => buildTree(item, `${prefix || key}[${index}]`, `[${index}]`)).filter(Boolean) as TreeNode[];
+    return {
+      path: prefix || key,
+      key,
+      type: 'array',
+      isArray: true,
+      arrayLength: obj.length,
+      children,
+    };
+  }
+
+  if (typeof obj === 'object') {
+    const children = Object.entries(obj).map(([k, v]) => {
+      const childPath = prefix ? `${prefix}.${k}` : k;
+      return buildTree(v, childPath, k);
+    }).filter(Boolean) as TreeNode[];
+
+    return {
+      path: prefix || key,
+      key,
+      type: 'object',
+      children,
+    };
+  }
+
+  return {
+    path: prefix || key,
+    key,
+    type: typeof obj,
+    value: obj,
+  };
+}
+
+interface TreeNodeComponentProps {
+  node: TreeNode;
+  nodeName: string;
+  indent: number;
+  onSelect: (path: string) => void;
+  expandedPaths: Set<string>;
+  onToggle: (path: string) => void;
+}
+
+function TreeNodeComponent({ node, nodeName, indent, onSelect, expandedPaths, onToggle }: TreeNodeComponentProps) {
+  const hasChildren = node.children && node.children.length > 0;
+  const isExpanded = expandedPaths.has(node.path);
+
+  const handleClick = () => {
+    if (hasChildren) {
+      onToggle(node.path);
+    } else {
+      onSelect(node.path);
+    }
+  };
+
+  const displayType = node.isArray ? `array[${node.arrayLength}]` : node.type;
+  
+  // Format value for display
+  const displayValue = node.value !== undefined && !hasChildren
+    ? typeof node.value === 'string'
+      ? node.value
+      : JSON.stringify(node.value)
+    : undefined;
+
+  return (
+    <>
+      {hasChildren ? (
+        <ExpandableField $indent={indent} onClick={handleClick}>
+          <ExpandIcon $expanded={isExpanded}>▶</ExpandIcon>
+          <FieldPath>{node.key}</FieldPath>
+          <FieldType>{displayType}</FieldType>
+        </ExpandableField>
+      ) : (
+        <Field $indent={indent} onClick={handleClick}>
+          <span style={{ width: '12px' }} />
+          <FieldPath>{node.key}</FieldPath>
+          {displayValue && <FieldValue>{displayValue}</FieldValue>}
+          <FieldType>{displayType}</FieldType>
+        </Field>
+      )}
+      {hasChildren && isExpanded && node.children?.map((child) => (
+        <TreeNodeComponent
+          key={child.path}
+          node={child}
+          nodeName={nodeName}
+          indent={indent + 1}
+          onSelect={onSelect}
+          expandedPaths={expandedPaths}
+          onToggle={onToggle}
+        />
+      ))}
+    </>
+  );
+}
 
 interface ContextPanelProps {
   visible: boolean;
@@ -169,40 +309,14 @@ interface NodeOutput {
   nodeId: string;
   nodeName: string;
   nodeType: string;
-  fields: Array<{ path: string; type: string; value?: unknown }>;
-}
-
-// Helper to extract fields from an object recursively
-function extractFieldsFromObject(
-  obj: unknown,
-  prefix = '',
-  maxDepth = 3,
-  currentDepth = 0,
-): Array<{ path: string; type: string }> {
-  if (currentDepth >= maxDepth) return [];
-
-  const fields: Array<{ path: string; type: string }> = [];
-
-  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-    Object.entries(obj).forEach(([key, value]) => {
-      const path = prefix ? `${prefix}.${key}` : key;
-      const type = Array.isArray(value) ? 'array' : typeof value;
-
-      fields.push({ path, type });
-
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        fields.push(...extractFieldsFromObject(value, path, maxDepth, currentDepth + 1));
-      }
-    });
-  }
-
-  return fields;
+  tree?: TreeNode;
 }
 
 export function ContextPanel({ visible, onClose, onSelectVariable, currentNodeId }: ContextPanelProps) {
   const { nodes, edges } = useDesignerStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
   // Get all nodes that come before the current node in the workflow
   const availableNodes = useMemo(() => {
@@ -228,72 +342,25 @@ export function ContextPanel({ visible, onClose, onSelectVariable, currentNodeId
     return nodes.filter((n) => visited.has(n.id));
   }, [nodes, edges, currentNodeId]);
 
-  // Extract fields from node config (mock data for now)
+  // Build tree from node output
   const getNodeOutputs = useCallback((node: typeof nodes[0]): NodeOutput => {
     const { nodeType, label, executionState } = node.data;
 
     // If node has been executed, use actual output
     if (executionState?.output) {
-      const output = executionState.output as Record<string, unknown>;
-      const fields = extractFieldsFromObject(output, 'output');
+      const tree = buildTree(executionState.output);
       return {
         nodeId: node.id,
         nodeName: label,
         nodeType,
-        fields,
+        tree: tree || undefined,
       };
-    }
-
-    // Otherwise show expected output structure (mock)
-    let fields: Array<{ path: string; type: string }> = [];
-
-    switch (nodeType) {
-      case 'manual-trigger':
-        fields = [
-          { path: 'input', type: 'object' },
-          { path: 'timestamp', type: 'string' },
-        ];
-        break;
-      case 'scheduled-trigger':
-        fields = [
-          { path: 'timestamp', type: 'string' },
-          { path: 'cronExpression', type: 'string' },
-        ];
-        break;
-      case 'http-request':
-        fields = [
-          { path: 'output.status', type: 'number' },
-          { path: 'output.body', type: 'object' },
-          { path: 'output.headers', type: 'object' },
-        ];
-        break;
-      case 'hrworks':
-        fields = [
-          { path: 'output.data', type: 'object' },
-          { path: 'output.status', type: 'number' },
-        ];
-        break;
-      case 'condition':
-        fields = [
-          { path: 'output.result', type: 'boolean' },
-          { path: 'output.branch', type: 'string' },
-        ];
-        break;
-      case 'delay':
-        fields = [
-          { path: 'output.duration', type: 'number' },
-          { path: 'output.completedAt', type: 'string' },
-        ];
-        break;
-      default:
-        fields = [{ path: 'output', type: 'object' }];
     }
 
     return {
       nodeId: node.id,
       nodeName: label,
       nodeType,
-      fields,
     };
   }, []);
 
@@ -302,22 +369,6 @@ export function ContextPanel({ visible, onClose, onSelectVariable, currentNodeId
     [availableNodes, getNodeOutputs],
   );
 
-  // Filter by search term
-  const filteredOutputs = useMemo(() => {
-    if (!searchTerm) return nodeOutputs;
-
-    return nodeOutputs
-      .map((output) => ({
-        ...output,
-        fields: output.fields.filter(
-          (field) =>
-            field.path.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            output.nodeName.toLowerCase().includes(searchTerm.toLowerCase()),
-        ),
-      }))
-      .filter((output) => output.fields.length > 0);
-  }, [nodeOutputs, searchTerm]);
-
   const toggleNode = useCallback((nodeId: string) => {
     setExpandedNodes((prev) => {
       const next = new Set(prev);
@@ -325,6 +376,18 @@ export function ContextPanel({ visible, onClose, onSelectVariable, currentNodeId
         next.delete(nodeId);
       } else {
         next.add(nodeId);
+      }
+      return next;
+    });
+  }, []);
+
+  const togglePath = useCallback((path: string) => {
+    setExpandedPaths((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
       }
       return next;
     });
@@ -373,34 +436,29 @@ export function ContextPanel({ visible, onClose, onSelectVariable, currentNodeId
         />
 
         <Content>
-          {filteredOutputs.length === 0 ? (
-            <EmptyState>
-              {availableNodes.length === 0
-                ? 'Keine vorherigen Knoten verfügbar'
-                : 'Keine Felder gefunden'}
-            </EmptyState>
+          {nodeOutputs.length === 0 ? (
+            <EmptyState>Keine vorherigen Knoten verfügbar</EmptyState>
           ) : (
-            filteredOutputs.map((output) => (
+            nodeOutputs.map((output) => (
               <NodeSection key={output.nodeId}>
                 <NodeHeader onClick={() => toggleNode(output.nodeId)}>
                   <NodeIcon $color={getNodeColor(output.nodeType)}>
                     {output.nodeType.charAt(0).toUpperCase()}
                   </NodeIcon>
                   <NodeName>{output.nodeName}</NodeName>
-                  <ExpandIcon $expanded={expandedNodes.has(output.nodeId)}>▶</ExpandIcon>
+                  <NodeExpandIcon $expanded={expandedNodes.has(output.nodeId)}>▶</NodeExpandIcon>
                 </NodeHeader>
 
-                {expandedNodes.has(output.nodeId) && (
+                {expandedNodes.has(output.nodeId) && output.tree && (
                   <FieldList>
-                    {output.fields.map((field) => (
-                      <Field
-                        key={field.path}
-                        onClick={() => handleSelectField(output.nodeName, field.path)}
-                      >
-                        <FieldPath>{field.path}</FieldPath>
-                        <FieldType>{field.type}</FieldType>
-                      </Field>
-                    ))}
+                    <TreeNodeComponent
+                      node={output.tree}
+                      nodeName={output.nodeName}
+                      indent={0}
+                      onSelect={(path) => handleSelectField(output.nodeName, path)}
+                      expandedPaths={expandedPaths}
+                      onToggle={togglePath}
+                    />
                   </FieldList>
                 )}
               </NodeSection>
