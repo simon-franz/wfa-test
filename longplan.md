@@ -897,6 +897,70 @@ Ziel Funktionsfähige Basis mit einfachen Workflows - "Make it work"
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+**Node Execution Logic: Parallel vs. Conditional Branches**
+
+Die Workflow-Engine muss zwischen zwei Arten von Verzweigungen unterscheiden:
+
+```
+Fall 1: Parallel Execution (AND-Join)
+─────────────────────────────────────
+A hat mehrere ausgehende Edges → B1 und B2 laufen parallel
+C wartet auf ALLE eingehenden Nodes (B1 UND B2)
+
+┌───────┐     ┌────┐
+│   A   │────▶│ B1 │────┐
+└───┬───┘     └────┘    │
+    │                   ▼
+    │         ┌────┐  ┌───┐
+    └────────▶│ B2 │─▶│ C │  ← C startet erst wenn B1 UND B2 fertig
+              └────┘  └───┘
+
+
+Fall 2: Conditional Branch (OR-Join)
+─────────────────────────────────────
+A → Condition-Node → nur EIN Pfad wird ausgeführt
+C startet wenn EINER der eingehenden Nodes fertig ist
+
+┌───────┐     ┌──────────┐     ┌────┐
+│   A   │────▶│Condition │Yes─▶│ B1 │────┐
+└───────┘     └────┬─────┘     └────┘    │
+                   │                     ▼
+                   │No         ┌────┐  ┌───┐
+                   └──────────▶│ B2 │─▶│ C │  ← C startet wenn B1 ODER B2 fertig
+                               └────┘  └───┘
+```
+
+**Implementierung in Workflow Engine:**
+```typescript
+// Prüfe ob Node ausführbar ist
+function isNodeReady(nodeId: string, executedNodes: Set<string>): boolean {
+  const node = getNode(nodeId);
+  const incomingEdges = getIncomingEdges(nodeId);
+  
+  // Keine eingehenden Edges → immer bereit (z.B. Trigger)
+  if (incomingEdges.length === 0) return true;
+  
+  // Prüfe ob alle Source-Nodes Condition-Nodes sind
+  const allSourcesAreConditions = incomingEdges.every(edge => {
+    const sourceNode = getNode(edge.source);
+    return sourceNode.type === 'condition';
+  });
+  
+  if (allSourcesAreConditions) {
+    // OR-Join: Mindestens EINE Source muss fertig sein
+    return incomingEdges.some(edge => executedNodes.has(edge.source));
+  } else {
+    // AND-Join: ALLE Sources müssen fertig sein
+    return incomingEdges.every(edge => executedNodes.has(edge.source));
+  }
+}
+```
+
+**Wichtig:**
+- Condition-Nodes haben spezielle `sourceHandle` IDs (z.B. "yes", "no")
+- Engine erkennt automatisch: Wenn eingehende Edge von Condition kommt → OR-Join
+- Bei normalen Nodes: Immer AND-Join (warte auf alle)
+
 **ULIDs für zeitliche Sortierbarkeit:**
 ```typescript
 import { ulid } from 'ulid';

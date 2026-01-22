@@ -32,8 +32,11 @@ export class WorkflowEngineService {
     // Build adjacency list for traversal
     const adjacencyList = this.buildAdjacencyList(definition);
 
+    // Track executed nodes
+    const executedNodes = new Set<string>();
+
     // Execute nodes starting from trigger
-    await this.executeNode(triggerNode, definition, adjacencyList, context);
+    await this.executeNode(triggerNode, definition, adjacencyList, context, executedNodes);
 
     this.logger.log(`Workflow execution completed: ${context.executionId}`);
     return context;
@@ -62,16 +65,59 @@ export class WorkflowEngineService {
     return adjacencyList;
   }
 
+  private getIncomingEdges(
+    nodeId: string,
+    definition: WorkflowDefinition,
+  ): { source: string; sourceHandle?: string }[] {
+    return definition.edges
+      .filter((edge) => edge.target === nodeId)
+      .map((edge) => ({ source: edge.source, sourceHandle: edge.sourceHandle }));
+  }
+
+  private isNodeReady(
+    nodeId: string,
+    definition: WorkflowDefinition,
+    executedNodes: Set<string>,
+  ): boolean {
+    const incomingEdges = this.getIncomingEdges(nodeId, definition);
+
+    // No incoming edges → always ready (e.g., trigger node)
+    if (incomingEdges.length === 0) {
+      return true;
+    }
+
+    // Check if all source nodes are condition nodes
+    const allSourcesAreConditions = incomingEdges.every((edge) => {
+      const sourceNode = definition.nodes.find((n) => n.id === edge.source);
+      return sourceNode?.type === 'condition';
+    });
+
+    if (allSourcesAreConditions) {
+      // OR-Join: At least ONE source must be executed
+      return incomingEdges.some((edge) => executedNodes.has(edge.source));
+    } else {
+      // AND-Join: ALL sources must be executed
+      return incomingEdges.every((edge) => executedNodes.has(edge.source));
+    }
+  }
+
   private async executeNode(
     nodeConfig: BaseNodeConfig,
     definition: WorkflowDefinition,
     adjacencyList: Map<string, { nodeId: string; sourceHandle?: string }[]>,
     context: ExecutionContext,
+    executedNodes: Set<string>,
   ): Promise<void> {
     const nodeId = nodeConfig.id;
 
     // Check if already executed
-    if (context.nodeResults[nodeId]) {
+    if (executedNodes.has(nodeId)) {
+      return;
+    }
+
+    // Check if node is ready (all required predecessors executed)
+    if (!this.isNodeReady(nodeId, definition, executedNodes)) {
+      this.logger.debug(`Node not ready yet: ${nodeId}, skipping`);
       return;
     }
 
@@ -121,6 +167,9 @@ export class WorkflowEngineService {
 
       context.nodeResults[nodeId] = result;
 
+      // Mark node as executed
+      executedNodes.add(nodeId);
+
       this.logger.debug(`Node completed: ${nodeId} in ${result.duration}ms`);
 
       // Send SSE update for completed node
@@ -139,7 +188,7 @@ export class WorkflowEngineService {
 
       // Execute next nodes
       for (const nextNodeConfig of nextNodes) {
-        await this.executeNode(nextNodeConfig, definition, adjacencyList, context);
+        await this.executeNode(nextNodeConfig, definition, adjacencyList, context, executedNodes);
       }
     } catch (error) {
       const result: NodeExecutionResult = {
