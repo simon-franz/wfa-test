@@ -1,13 +1,18 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import type { WorkflowDefinition, ExecutionContext, NodeExecutionResult, BaseNodeConfig } from 'shared/types';
 import { NodeRegistry } from '../nodes/node-registry';
 import { createNodeResult } from '../nodes/base-node';
+import { ExecutionService } from '../execution/execution.service';
 
 @Injectable()
 export class WorkflowEngineService {
   private readonly logger = new Logger(WorkflowEngineService.name);
 
-  constructor(private nodeRegistry: NodeRegistry) {}
+  constructor(
+    private nodeRegistry: NodeRegistry,
+    @Inject(forwardRef(() => ExecutionService))
+    private executionService: ExecutionService,
+  ) {}
 
   async executeWorkflow(
     definition: WorkflowDefinition,
@@ -82,6 +87,16 @@ export class WorkflowEngineService {
 
     // Mark as running
     context.nodeResults[nodeId] = createNodeResult(nodeId, 'running');
+    
+    // Send SSE update for running state
+    if (context.tenantId && context.executionId) {
+      await this.executionService.updateStatus(
+        context.tenantId,
+        context.executionId,
+        'running',
+        context,
+      );
+    }
 
     try {
       const startTime = Date.now();
@@ -107,6 +122,16 @@ export class WorkflowEngineService {
       context.nodeResults[nodeId] = result;
 
       this.logger.debug(`Node completed: ${nodeId} in ${result.duration}ms`);
+
+      // Send SSE update for completed node
+      if (context.tenantId && context.executionId) {
+        await this.executionService.updateStatus(
+          context.tenantId,
+          context.executionId,
+          'running',
+          context,
+        );
+      }
 
       // Get next nodes to execute
       const connections = adjacencyList.get(nodeId) || [];

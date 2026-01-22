@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Query, UseGuards, Sse, MessageEvent } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import { ExecutionService, TriggerWorkflowOptions } from './execution.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { TenantId, CurrentUser } from '../../common/decorators/index';
@@ -46,6 +47,14 @@ export class ExecutionController {
     @Param('executionId') executionId: string,
   ) {
     return this.executionService.findById(tenantId, executionId);
+  }
+
+  @Sse(':executionId/stream')
+  streamExecution(
+    @TenantId() tenantId: string,
+    @Param('executionId') executionId: string,
+  ): Observable<MessageEvent> {
+    return this.executionService.streamExecution(tenantId, executionId);
   }
 
   @Delete(':executionId')

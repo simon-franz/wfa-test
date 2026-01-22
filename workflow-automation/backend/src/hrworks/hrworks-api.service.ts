@@ -75,6 +75,7 @@ export class HrworksApiService {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${accessToken}`,
+            'Cache-Control': 'no-cache',
           },
           body: body ? JSON.stringify(body) : undefined,
         });

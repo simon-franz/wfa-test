@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled, { keyframes, css } from 'styled-components';
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { useWorkflowStore } from '../stores/workflow.store';
 import { useDesignerStore } from '../stores/designer.store';
 import { WorkflowDesigner } from '../features/designer/WorkflowDesigner';
@@ -274,7 +275,6 @@ export function WorkflowDesignerPage() {
   const handleRun = useCallback(async () => {
     if (!currentWorkflow) return;
 
-    // Save first if dirty
     if (isDirty) {
       await handleSave();
     }
@@ -286,69 +286,77 @@ export function WorkflowDesignerPage() {
       const execution = await triggerWorkflow(currentWorkflow.id);
       console.log('Workflow execution started:', execution);
 
-      let hasShownResult = false;
-
-      // Poll execution status and update node states
-      const pollInterval = setInterval(async () => {
+      const stored = localStorage.getItem('auth-storage');
+      let token = '';
+      if (stored) {
         try {
-          const updatedExecution = await useWorkflowStore.getState().fetchExecution(
-            currentWorkflow.id,
-            execution.id
-          );
+          const { state } = JSON.parse(stored);
+          token = state?.accessToken || '';
+        } catch {}
+      }
 
-          // Update node states based on execution results
-          if (updatedExecution.context?.nodeResults) {
-            const currentNodes = useDesignerStore.getState().nodes;
-            const updatedNodes = currentNodes.map((node) => {
-              const result = updatedExecution.context.nodeResults[node.id];
-              if (result) {
-                return {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    executionState: {
-                      status: result.status === 'completed' ? 'success' : result.status === 'failed' ? 'error' : 'running',
-                      output: result.output,
-                      error: result.error,
-                    },
-                  },
-                };
+      const ctrl = new AbortController();
+
+      await fetchEventSource(
+        `/api/workflows/${currentWorkflow.id}/executions/${execution.id}/stream`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: ctrl.signal,
+          onmessage(event) {
+            if (!event.data) return;
+            
+            try {
+              const updatedExecution = typeof event.data === 'string' 
+                ? JSON.parse(event.data) 
+                : event.data;
+
+              if (updatedExecution.context?.nodeResults) {
+                const currentNodes = useDesignerStore.getState().nodes;
+                const updatedNodes = currentNodes.map((node) => {
+                  const result = updatedExecution.context.nodeResults[node.id];
+                  if (result) {
+                    return {
+                      ...node,
+                      data: {
+                        ...node.data,
+                        executionState: {
+                          status: result.status === 'completed' ? 'success' : result.status === 'failed' ? 'error' : 'running',
+                          output: result.output,
+                          error: result.error,
+                        },
+                      },
+                    };
+                  }
+                  return node;
+                });
+                
+                useDesignerStore.setState({ nodes: updatedNodes });
               }
-              return node;
-            });
-            
-            useDesignerStore.setState({ nodes: updatedNodes });
-          }
 
-          // Stop polling when execution is complete
-          if ((updatedExecution.status === 'completed' || updatedExecution.status === 'failed') && !hasShownResult) {
-            hasShownResult = true;
-            clearInterval(pollInterval);
-            setIsRunning(false);
-            
-            // Wait a bit to show final node states
-            setTimeout(() => {
               if (updatedExecution.status === 'completed') {
-                alert('Workflow erfolgreich ausgeführt!');
-              } else {
-                alert(`Workflow fehlgeschlagen: ${updatedExecution.error || 'Unbekannter Fehler'}`);
+                ctrl.abort();
+                setIsRunning(false);
+                setTimeout(() => alert('Workflow erfolgreich ausgeführt!'), 500);
+              } else if (updatedExecution.status === 'failed') {
+                ctrl.abort();
+                setIsRunning(false);
+                setTimeout(() => alert(`Workflow fehlgeschlagen: ${updatedExecution.error || 'Unbekannter Fehler'}`), 500);
               }
-            }, 500);
-          }
-        } catch (pollError) {
-          console.error('Error polling execution:', pollError);
-          if (!hasShownResult) {
-            clearInterval(pollInterval);
+            } catch (parseError) {
+              console.error('Failed to parse SSE message:', event.data, parseError);
+            }
+          },
+          onerror(err) {
+            console.error('SSE error:', err);
+            ctrl.abort();
             setIsRunning(false);
-          }
+            setRunError('Verbindung zum Server verloren');
+            throw err;
+          },
         }
-      }, 500);
-
-      // Timeout after 5 minutes
-      setTimeout(() => {
-        clearInterval(pollInterval);
-        setIsRunning(false);
-      }, 300000);
+      );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler';
       setRunError(errorMessage);
