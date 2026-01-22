@@ -28,6 +28,7 @@ workflow-automation/
 | State-Management | **Zustand** | Einfacher als Redux, weniger Boilerplate |
 | UI-Framework | **SmartFace** | HR WORKS Design-System, shadcn-ähnlich |
 | Workflow-Designer | **React Flow** | Bewährt (n8n, make.com) |
+| Echtzeit-Updates | **Server-Sent Events (SSE)** | Unidirektionale Streams für Execution Updates, geringere Last als Polling. Library: `@microsoft/fetch-event-source` |
 | Hosting | **AWS EKS** | Kubernetes für Skalierung |
 | CI/CD | Später definieren | |
 
@@ -141,10 +142,19 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
 - Connection Drawing zwischen Nodes
 - Node Configuration Panel
 - **JWT Authentication**: Alle API-Requests zum Backend müssen Authorization-Header mit JWT-Token enthalten (`Authorization: Bearer <token>`)
+- **Echtzeit-Execution-Updates via SSE**:
+  - Backend sendet Live-Updates während Workflow-Ausführung über Server-Sent Events
+  - Frontend verwendet `@microsoft/fetch-event-source` mit Authorization-Header
+  - Node-Status-Updates in Echtzeit (running, success, error)
+  - Ersetzt Polling-Mechanismus (reduziert Backend-Load)
+  - Automatische Reconnect-Logik bei Verbindungsabbruch
 - **Context Panel / Variable Picker**: 
-  - Zeigt Outputs aller vorherigen Nodes im Workflow
+  - Zeigt Outputs aller vorherigen Nodes im Workflow als **expandable Tree-View**
+  - **Array-Navigation**: Unterstützt Array-Indexierung ([0], [1], etc.) zum Zugriff auf Array-Elemente
+  - **Wert-Anzeige**: Zeigt tatsächliche Werte für primitive Typen (Strings, Numbers, Booleans)
+  - **Klickbar auf allen Ebenen**: Arrays, Objekte und Leaf-Nodes können angeklickt werden zum Einfügen des Pfads
+  - **Array-Metadaten**: Zeigt Array-Länge und Typ-Informationen
   - Klickbar zum Einfügen von Variablen-Referenzen (z.B. `{{node_name.output.field}}`)
-  - Expandable JSON-Tree-View der verfügbaren Daten
   - Syntax-Highlighting für JSON
   - Filterfunktion zum Suchen von Feldern
   - Wird beim Klick in Input-Felder als Overlay/Sidebar angezeigt
@@ -157,6 +167,27 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
   - Output-Preview direkt am Node (expandable)
   - "Run All"-Button zum Ausführen aller Nodes in Reihenfolge
   - Cached Outputs bleiben erhalten bis Workflow-Definition ändert
+- **Template Placeholder System**:
+  - Syntax: `{{NodeName.output.field}}` für Variablen-Referenzen
+  - Funktioniert in Manual Test und Workflow Execution
+  - Unterstützt verschachtelte Strukturen (nested objects/arrays)
+  - Backend-Methode `getValueByPath()` für Pfad-Auflösung
+  - Context-Button in Input-Feldern öffnet Context Panel
+- **Canvas Controls**:
+  - Zoom-Steuerung (-, Prozentanzeige, +)
+  - Undo/Redo-Buttons
+  - Vollbild-Toggle
+  - Auto-Layout-Funktion für automatische Node-Anordnung
+  - Hilfe-Button
+  - Grüner "+" FAB-Button zum Hinzufügen neuer Knoten
+- **Context Menu für Nodes**:
+  - Rechtsklick auf Node öffnet Context Menu
+  - Optionen: Duplizieren, Löschen, Konfigurieren, Testen
+  - Keyboard-Shortcuts (z.B. Delete-Taste)
+- **Deletable Edges**:
+  - Hover über Edge zeigt Lösch-Icon
+  - Klick auf Icon entfernt die Verbindung
+  - Bestätigungsdialog bei kritischen Verbindungen
 - Workflow Speichern/Laden
 
 ### UI-Spezifikationen (Detail)
@@ -248,6 +279,12 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
 ### Action Nodes (Phase 1)
 - HTTP Request Node: GET/POST/PUT/DELETE zu HR WORKS API, Header Configuration, Body Template (Handlebars), Response Mapping
 - **HR WORKS Node**: Dedizierter Knoten für HR WORKS Integration (Details siehe unten)
+- **Data Transformation Node**: 
+  - Operationen für Datenverarbeitung: count, filter, map, reduce, sort, distinct
+  - JSONPath-Expressions für Daten-Extraktion
+  - Wrapping von Ergebnissen in Objekte für Context-Nutzung
+  - Aggregations-Funktionen
+  - Array-Manipulation
 - Delay Node: Zeitverzögerung (Minuten, Stunden, Tage), Pause & Resume
 - Condition Node: If/Else Logic, Simple Expressions (==, !=, >, <), Boolean Operations (AND, OR)
 
@@ -265,6 +302,18 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
 - Timeout-Handling: Nach 60 Sekunden wird Job als fehlgeschlagen markiert
 - Retry-Logic: Bei Netzwerkfehlern automatische Wiederholung (max. 3x)
 - **Output-Mapping**: Bei Erfolg wird nur das `data` Objekt aus der Job-Response als Node-Output gesetzt (ohne Wrapper)
+- **Dictionary Response Flattening**: HR WORKS API liefert Dictionary-Format - alle Werte werden automatisch flattened für einfacheren Zugriff
+
+**Token-Handling:**
+- JWT-Token von HR WORKS API hat 15 Minuten Gültigkeit
+- Automatische Token-Refresh bei Ablauf
+- Token wird im Response-Feld `token` zurückgegeben (nicht `access_token`)
+- Sichere Speicherung in Tenant-Konfiguration
+
+**Erweiterte Person-Felder:**
+- Unterstützung für alle HR WORKS Person-Felder: personnelNumber, birthday, gender, role, department, etc.
+- Automatische Typ-Validierung basierend auf OpenAPI Spec
+- Select-Felder für Enum-Werte (z.B. Gender, Salutation)
 
 **Node-Konfiguration im Designer:**
 1. **Dropdown: API-Endpoint auswählen**
@@ -278,6 +327,7 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
    - Required-Felder markiert
    - Typ-Validierung (string, number, date, etc.)
    - Autocomplete für Person-IDs, OE-IDs aus synchronisierten Daten
+   - Unterstützt sowohl `params` als auch `parameters` Feldnamen
 
 3. **Response-Mapping**
    - Ausgabe-Felder für Verwendung in nachfolgenden Nodes

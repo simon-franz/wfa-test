@@ -16,6 +16,7 @@ Full-Stack MVP in 2 Wochen: Backend + Frontend + OAuth2 + Designer + 1 Demo-Work
 | Workflow Editor | @xyflow/react (React Flow) |
 | State Mgmt | Zustand |
 | IDs | ULID |
+| Echtzeit-Updates | Server-Sent Events (SSE) mit `@microsoft/fetch-event-source` |
 
 ---
 
@@ -139,12 +140,16 @@ workflow-automation/
 - `backend/src/workflow/engine/workflow-engine.service.ts`
 - `backend/src/workflow/engine/xstate-generator.ts`
 - `backend/src/workflow/execution/execution.worker.ts`
+- `backend/src/workflow/execution/execution.service.ts` (SSE Stream)
 - `backend/src/workflow/expression/expression.service.ts`
+- `backend/src/workflow/workflow.service.ts` (testNode, getValueByPath)
 
 ### 7. Node Types (Phase 1)
 - [ ] Manual Trigger Node
 - [ ] Scheduled Trigger Node (Cron)
 - [ ] HTTP Request Node
+- [ ] **HR WORKS Node** (mit Dictionary Flattening, Token-Handling, erweiterten Person-Feldern)
+- [ ] **Data Transformation Node** (count, filter, map, reduce mit Result Wrapping)
 - [ ] Condition Node
 - [ ] Delay Node
 
@@ -153,12 +158,18 @@ workflow-automation/
 - `backend/src/workflow/nodes/trigger/manual-trigger.node.ts`
 - `backend/src/workflow/nodes/trigger/scheduled-trigger.node.ts`
 - `backend/src/workflow/nodes/action/http-request.node.ts`
+- `backend/src/workflow/nodes/action/hrworks.node.ts` (Dictionary Flattening, Token-Handling)
+- `backend/src/workflow/nodes/action/data-transform.node.ts` (Result Wrapping)
 - `backend/src/workflow/nodes/action/condition.node.ts`
 - `backend/src/workflow/nodes/action/delay.node.ts`
+- `backend/src/workflow/nodes/node-registry.ts` (Registrierung aller Node-Typen)
 
 ### 8. REST API
 - [ ] Workflows CRUD
 - [ ] Workflow Executions
+- [ ] **SSE Endpoint** für Echtzeit-Execution-Updates (`/api/executions/:id/stream`)
+- [ ] **Settings Endpoints** (GET/PUT `/api/settings` für Tenant-Konfiguration)
+- [ ] **Node Testing Endpoint** (`POST /api/workflows/:id/test-node` für Play-Button)
 - [ ] Synced Persons/OEs Endpoints
 
 **Kritische Dateien:**
@@ -204,8 +215,17 @@ workflow-automation/
 - [ ] React Flow Canvas
 - [ ] Custom Node Types (Trigger, Action, Condition)
 - [ ] Node Palette (Drag & Drop)
+- [ ] **Orthogonale Edges** mit Hover-Lösch-Icon
+- [ ] **Datenfluss-Animation** auf Edges
 - [ ] Edge Drawing
-- [ ] Node Configuration Panel
+- [ ] Node Configuration Panel mit **Context-Button** für Variable Picker
+- [ ] **Context Panel** mit expandable Tree-View, Array-Navigation, Wert-Anzeige
+- [ ] **Node-by-Node Testing** (Play-Button, sequentielle Abhängigkeiten, Output Caching)
+- [ ] **Template Placeholder Resolution** (`{{NodeName.output.field}}`)
+- [ ] **Canvas Controls** (Zoom, Undo/Redo, Auto-Layout, Fullscreen)
+- [ ] **Context Menu** für Nodes (Rechtsklick)
+- [ ] **SSE Integration** für Live-Execution-Updates
+- [ ] **Theme Store** für Dark/Light Mode
 - [ ] Save/Load Workflow
 
 **Kritische Dateien:**
@@ -214,9 +234,23 @@ workflow-automation/
 - `frontend/src/features/designer/NodePalette.tsx`
 - `frontend/src/features/designer/nodes/TriggerNode.tsx`
 - `frontend/src/features/designer/nodes/ActionNode.tsx`
+- `frontend/src/features/designer/nodes/HRWorksNode.tsx`
+- `frontend/src/features/designer/nodes/DataTransformNode.tsx`
 - `frontend/src/features/designer/nodes/ConditionNode.tsx`
 - `frontend/src/features/designer/ConfigPanel.tsx`
-- `frontend/src/stores/designer.store.ts`
+- `frontend/src/features/designer/ContextPanel.tsx` (Tree-View, Array-Navigation)
+- `frontend/src/features/designer/components/ContextInput.tsx`
+- `frontend/src/features/designer/components/NodePlayButton.tsx`
+- `frontend/src/features/designer/components/NodeExecutionPanel.tsx`
+- `frontend/src/features/designer/edges/DeletableEdge.tsx`
+- `frontend/src/features/designer/ContextMenu.tsx`
+- `frontend/src/features/designer/CanvasControls.tsx`
+- `frontend/src/features/designer/hooks/useAutoLayout.ts`
+- `frontend/src/features/designer/hooks/useContextInput.ts`
+- `frontend/src/stores/designer.store.ts` (Node Execution Logic, Context Handling)
+- `frontend/src/stores/theme.store.ts`
+- `frontend/src/pages/WorkflowDesignerPage.tsx` (SSE Integration)
+- `frontend/src/pages/SettingsPage.tsx`
 
 ### 13. Demo-Workflow: Onboarding
 - [ ] Workflow Template erstellen
@@ -300,6 +334,7 @@ REDIS_PORT=6379
 - @xyflow/react
 - zustand
 - styled-components
+- @microsoft/fetch-event-source (für SSE)
 
 **Shared:**
 - zod (Schema Validation)

@@ -27,6 +27,7 @@ Datenbank: PostgreSQL (Produktion), SQLite (lokale Entwicklung)
 Queue System: BullMQ (Redis-basiert, für asynchrone Workflow-Ausführung)
 API: REST + Webhooks
 Authentication: OAuth2 (SSO mit HR WORKS - siehe hrworks-api.yml /v2/authentication)
+Echtzeit-Updates: **Server-Sent Events (SSE)** für Live-Workflow-Execution-Updates (Library: `@microsoft/fetch-event-source` im Frontend)
 
 Multi-Tenant Architektur (Landlord-DB Pattern)
 ```
@@ -149,6 +150,7 @@ State Management: **Zustand** (einfacher als Redux, weniger Boilerplate)
 UI Components: SmartFace Component Library
 Styling: Styled-Components (wie in SmartFace verwendet)
 **Authentication**: Alle API-Requests zum Backend müssen Authorization-Header mit JWT-Token enthalten (`Authorization: Bearer <token>`)
+**Echtzeit-Updates**: `@microsoft/fetch-event-source` für SSE-basierte Live-Updates während Workflow-Ausführung
 
 **SmartFace WorkflowGraph Analyse:**
 
@@ -1140,6 +1142,20 @@ Execution Engine (State Machine)
 Event Queue (Bull/BullMQ)
 Logging & Audit Trail
 
+**Settings-Modul (Tenant-Konfiguration)**
+Backend Settings Service
+  - CRUD-Operationen für Tenant-spezifische Einstellungen
+  - Sichere Speicherung von API-Credentials (HR WORKS apiKey, apiSecret, baseUrl)
+  - Verschlüsselung sensibler Daten
+  - Validierung von Konfigurationswerten
+  - updateTenantSettings Methode im Landlord Service
+Frontend Settings Page
+  - Formular für HR WORKS API-Credentials
+  - Tenant-Informationen anzeigen
+  - Sync-Einstellungen (Webhook vs. Polling)
+  - Test-Connection-Button für API-Validierung
+  - Navigation-Link im Layout
+
 1.2 Frontend Grundlagen
 
 Designer UI (React Flow Integration)
@@ -1147,10 +1163,20 @@ Canvas mit Drag & Drop
 Node Palette (Initial: Start, Action, End)
 Connection Drawing
 Basic Node Configuration Panel
+**Echtzeit-Execution-Updates via SSE**:
+  - Backend sendet Live-Updates während Workflow-Ausführung über Server-Sent Events
+  - Frontend verwendet `@microsoft/fetch-event-source` mit Authorization-Header
+  - Node-Status-Updates in Echtzeit (running, success, error)
+  - Ersetzt Polling-Mechanismus (reduziert Backend-Load erheblich)
+  - Automatische Reconnect-Logik bei Verbindungsabbruch
+  - Event-Stream bleibt offen während gesamter Workflow-Ausführung
 **Context Panel / Variable Picker**:
   - Overlay/Sidebar beim Klick in Input-Felder
-  - Zeigt Outputs aller vorherigen Nodes im Workflow-Graph
-  - Expandable JSON-Tree-View der verfügbaren Daten
+  - Zeigt Outputs aller vorherigen Nodes im Workflow-Graph als **expandable Tree-View**
+  - **Array-Navigation**: Unterstützt Array-Indexierung ([0], [1], etc.) zum Zugriff auf Array-Elemente
+  - **Wert-Anzeige**: Zeigt tatsächliche Werte für primitive Typen (Strings, Numbers, Booleans)
+  - **Klickbar auf allen Ebenen**: Arrays, Objekte und Leaf-Nodes können angeklickt werden zum Einfügen des Pfads
+  - **Array-Metadaten**: Zeigt Array-Länge und Typ-Informationen an
   - Syntax-Highlighting für JSON
   - Klickbar zum Einfügen von Variablen-Referenzen (z.B. `{{node_name.output.field}}`)
   - Filterfunktion zum Suchen von Feldern
@@ -1170,6 +1196,32 @@ Basic Node Configuration Panel
   - **"Run All"-Button**: Führt alle Nodes in topologischer Reihenfolge aus
   - **Cache Invalidation**: Outputs werden gelöscht bei Änderung der Node-Konfiguration oder Vorgänger-Outputs
   - **Mock Trigger Data**: Bei Trigger-Nodes kann Mock-Input definiert werden
+**Template Placeholder System**:
+  - Syntax: `{{NodeName.output.field}}` für Variablen-Referenzen
+  - Funktioniert in Manual Test und Workflow Execution
+  - Unterstützt verschachtelte Strukturen (nested objects/arrays)
+  - Backend-Methode `getValueByPath()` für Pfad-Auflösung in verschachtelten Kontexten
+  - Context-Button in Input-Feldern öffnet Context Panel zum Einfügen
+**Canvas Controls**:
+  - Zoom-Steuerung (-, Prozentanzeige, +)
+  - Undo/Redo-Buttons
+  - Vollbild-Toggle
+  - Auto-Layout-Funktion für automatische Node-Anordnung (horizontales Layout)
+  - Hilfe-Button
+  - Grüner "+" FAB-Button zum Hinzufügen neuer Knoten
+**Context Menu für Nodes**:
+  - Rechtsklick auf Node öffnet Context Menu
+  - Optionen: Duplizieren, Löschen, Konfigurieren, Testen
+  - Keyboard-Shortcuts (z.B. Delete-Taste für Löschen)
+**Deletable Edges**:
+  - Hover über Edge zeigt Lösch-Icon
+  - Klick auf Icon entfernt die Verbindung
+  - Orthogonale/rechteckige Linien (keine kurvigen Linien)
+  - Datenfluss-Animation auf Edges
+**Theme Management**:
+  - Dark/Light Mode Support
+  - Persistierung der Theme-Präferenz
+  - Zustand Store für Theme-State
 Workflow Speichern/Laden
 
 ### UI-Spezifikationen (Detail)
@@ -1283,16 +1335,33 @@ HTTP Request Node
 **HR WORKS Node** (NEU - bereits in Phase 1)
    - Dedizierter Knoten für HR WORKS Integration
    - Vorkonfigurierte Endpunkte (Persons, OEs, Absences, etc.)
-   - Automatische Authentifizierung (Token-Handling)
+   - Automatische Authentifizierung (Token-Handling mit 15min Gültigkeit, automatischer Refresh)
+   - **Token-Feld**: Response enthält `token` (nicht `access_token`)
    - Dropdown-Auswahl für Operationen (Get Person, Update Person, etc.)
    - **Async Job Handling**: Write-Operationen (POST/PUT/DELETE) geben jobId zurück, Backend pollt automatisch Job-Status
    - **UI-Mapping**: Async-Calls werden als synchrone Operationen dargestellt - Node bleibt "running" bis Job fertig
+   - **Dictionary Response Flattening**: HR WORKS API liefert Dictionary-Format - alle Werte werden automatisch flattened
+   - **Erweiterte Person-Felder**: Unterstützt alle Felder (personnelNumber, birthday, gender, role, department, etc.)
+   - **Parameter-Flexibilität**: Unterstützt sowohl `params` als auch `parameters` Feldnamen in Node-Config
    - Integrierte Fehlerbehandlung für HR WORKS-spezifische Errors
    - Response-Mapping mit vordefinierten Templates
 
----
+**Data Transformation Node** (NEU - bereits in Phase 1)
+   - Operationen für Datenverarbeitung: count, filter, map, reduce, sort, distinct
+   - JSONPath-Expressions für Daten-Extraktion
+   - **Result Wrapping**: Ergebnisse werden in Objekte gewrappt für Context-Nutzung
+   - Aggregations-Funktionen
+   - Array-Manipulation
+   - Unterstützt komplexe Transformationen
 
-### HR WORKS Integration Node - Detailspezifikation (Phase 1)
+Delay Node
+   - Zeitverzögerung (Minuten, Stunden, Tage)
+   - Pause & Resume
+
+Condition Node
+   - If/Else Logic
+   - Simple Expressions (==, !=, >, <)
+   - Boolean Operations (AND, OR)
 
 **API-Client Generierung:** → Siehe **[plan-hrworks-integration.md](./plan-hrworks-integration.md)**
 
