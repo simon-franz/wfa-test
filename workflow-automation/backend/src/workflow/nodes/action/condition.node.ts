@@ -2,8 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { BaseNode, type NodeExecutionInput, type NodeExecutionOutput } from '../base-node';
 import { ExpressionService } from '../../expression/expression.service';
 
-interface ConditionConfig {
+interface ConditionItem {
+  id: string;
+  label: string;
   expression: string;
+}
+
+interface ConditionConfig {
+  conditions: ConditionItem[];
+  enableDefault: boolean;
 }
 
 @Injectable()
@@ -18,41 +25,102 @@ export class ConditionNode extends BaseNode {
   async execute(input: NodeExecutionInput): Promise<NodeExecutionOutput> {
     const config = input.config.config as unknown as ConditionConfig;
 
-    // Evaluate the condition expression
-    const result = await this.expressionService.evaluateBoolean(config.expression, input.context);
+    // First-Match: Evaluate conditions in order
+    for (const condition of config.conditions) {
+      const result = await this.expressionService.evaluateBoolean(
+        condition.expression,
+        input.context,
+      );
 
+      if (result) {
+        // First matching condition wins
+        return {
+          output: {
+            matchedCondition: condition.id,
+            matchedLabel: condition.label,
+            matchedExpression: condition.expression,
+          },
+          nextNodes: [condition.id], // Use condition ID as handle
+        };
+      }
+    }
+
+    // No condition matched → use default if enabled
+    if (config.enableDefault) {
+      return {
+        output: {
+          matchedCondition: 'default',
+          matchedLabel: 'Default',
+        },
+        nextNodes: ['default'],
+      };
+    }
+
+    // No match and no default → workflow stops here
     return {
       output: {
-        condition: config.expression,
-        result,
+        matchedCondition: null,
+        message: 'No condition matched and no default path configured',
       },
-      // Signal which branch to take
-      // The workflow engine will use this to determine next nodes
-      nextNodes: result ? ['true'] : ['false'],
+      nextNodes: [],
     };
   }
 
   getDefaultConfig(): Record<string, unknown> {
     return {
-      expression: 'true',
+      conditions: [
+        {
+          id: 'condition-1',
+          label: 'Condition 1',
+          expression: 'true',
+        },
+      ],
+      enableDefault: true,
     };
   }
 
   getConfigSchema() {
     return {
       type: 'object',
-      required: ['expression'],
+      required: ['conditions'],
       properties: {
-        expression: {
-          type: 'string',
-          title: 'Condition Expression',
-          description:
-            'JSONata expression that evaluates to true or false. Example: $nodes.getData.output.role = "Developer"',
-          examples: [
-            '$nodes.getData.output.status = "active"',
-            '$vars.count > 10',
-            '$nodes.httpRequest.output.status = 200',
-          ],
+        conditions: {
+          type: 'array',
+          title: 'Conditions',
+          description: 'List of conditions to evaluate (first match wins)',
+          items: {
+            type: 'object',
+            required: ['id', 'label', 'expression'],
+            properties: {
+              id: {
+                type: 'string',
+                title: 'ID',
+                description: 'Unique identifier for this condition',
+              },
+              label: {
+                type: 'string',
+                title: 'Label',
+                description: 'Display name for this condition',
+              },
+              expression: {
+                type: 'string',
+                title: 'Expression',
+                description: 'JSONata expression that evaluates to true or false',
+                examples: [
+                  'amount > 1000',
+                  'status = "approved"',
+                  'role = "manager"',
+                ],
+              },
+            },
+          },
+          minItems: 1,
+        },
+        enableDefault: {
+          type: 'boolean',
+          title: 'Enable Default Path',
+          description: 'Execute default path if no condition matches',
+          default: true,
         },
       },
     };

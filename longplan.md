@@ -1421,11 +1421,40 @@ HTTP Request Node
 Delay Node
    - Zeitverzögerung (Minuten, Stunden, Tage)
    - Pause & Resume
+   - **Persistente Delays mit BullMQ**: Workflows überleben App-Neustarts während Delays
 
-Condition Node
-   - If/Else Logic
-   - Simple Expressions (==, !=, >, <)
-   - Boolean Operations (AND, OR)
+**Condition Node (Multi-Condition Switch)**
+   - Variable Anzahl von Bedingungen pro Node
+   - **First-Match Logik**: Bedingungen werden von oben nach unten evaluiert
+   - Erste zutreffende Bedingung wird ausgeführt, danach stoppt die Prüfung
+   - Jede Bedingung hat:
+     - `id`: Eindeutige ID (wird als Handle-ID verwendet)
+     - `label`: Anzeigename (z.B. "Hoher Betrag", "Mittlerer Betrag")
+     - `expression`: JSONata Expression (z.B. `amount > 1000`)
+   - Optional: **Default-Pfad** wenn keine Bedingung zutrifft
+   - Jede Bedingung hat eigenen Output-Handle für Verknüpfung
+   - **Use Cases**:
+     - Betragsstufen: > 1000 → Manager, > 500 → Team Lead, sonst → Auto
+     - Status-Routing: "urgent" → Sofort, "normal" → Queue, "low" → Batch
+     - Rollen-basiert: Admin → Full Access, Manager → Limited, User → Read-Only
+
+**Beispiel Config:**
+```json
+{
+  "conditions": [
+    { "id": "high", "label": "Hoher Betrag", "expression": "amount > 1000" },
+    { "id": "medium", "label": "Mittlerer Betrag", "expression": "amount > 500" },
+    { "id": "low", "label": "Niedriger Betrag", "expression": "amount > 100" }
+  ],
+  "enableDefault": true
+}
+```
+
+**Output-Handles:**
+- `high` → Verbindung zu Manager-Approval
+- `medium` → Verbindung zu Team-Lead-Approval  
+- `low` → Verbindung zu Auto-Approve
+- `default` → Verbindung zu Error-Handler
 
 **API-Client Generierung:** → Siehe **[plan-hrworks-integration.md](./plan-hrworks-integration.md)**
 
@@ -1775,11 +1804,40 @@ export async function executeHRWorksNode(
 Delay Node
    - Zeitverzögerung (Minuten, Stunden, Tage)
    - Pause & Resume
+   - **Persistente Delays mit BullMQ**: Workflows überleben App-Neustarts während Delays
 
-Condition Node
-   - If/Else Logic
-   - Simple Expressions (==, !=, >, <)
-   - Boolean Operations (AND, OR)
+**Condition Node (Multi-Condition Switch)**
+   - Variable Anzahl von Bedingungen pro Node
+   - **First-Match Logik**: Bedingungen werden von oben nach unten evaluiert
+   - Erste zutreffende Bedingung wird ausgeführt, danach stoppt die Prüfung
+   - Jede Bedingung hat:
+     - `id`: Eindeutige ID (wird als Handle-ID verwendet)
+     - `label`: Anzeigename (z.B. "Hoher Betrag", "Mittlerer Betrag")
+     - `expression`: JSONata Expression (z.B. `amount > 1000`)
+   - Optional: **Default-Pfad** wenn keine Bedingung zutrifft
+   - Jede Bedingung hat eigenen Output-Handle für Verknüpfung
+   - **Use Cases**:
+     - Betragsstufen: > 1000 → Manager, > 500 → Team Lead, sonst → Auto
+     - Status-Routing: "urgent" → Sofort, "normal" → Queue, "low" → Batch
+     - Rollen-basiert: Admin → Full Access, Manager → Limited, User → Read-Only
+
+**Beispiel Config:**
+```json
+{
+  "conditions": [
+    { "id": "high", "label": "Hoher Betrag", "expression": "amount > 1000" },
+    { "id": "medium", "label": "Mittlerer Betrag", "expression": "amount > 500" },
+    { "id": "low", "label": "Niedriger Betrag", "expression": "amount > 100" }
+  ],
+  "enableDefault": true
+}
+```
+
+**Output-Handles:**
+- `high` → Verbindung zu Manager-Approval
+- `medium` → Verbindung zu Team-Lead-Approval  
+- `low` → Verbindung zu Auto-Approve
+- `default` → Verbindung zu Error-Handler
 
 1.4 Expression Language Spezifikation (JSONata + Platzhalter)
 

@@ -341,8 +341,14 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
   - Wrapping von Ergebnissen in Objekte für Context-Nutzung
   - Aggregations-Funktionen
   - Array-Manipulation
-- Delay Node: Zeitverzögerung (Minuten, Stunden, Tage), Pause & Resume
-- Condition Node: If/Else Logic, Simple Expressions (==, !=, >, <), Boolean Operations (AND, OR)
+- Delay Node: Zeitverzögerung (Minuten, Stunden, Tage), Pause & Resume, Persistente Delays mit BullMQ
+- **Condition Node (Multi-Condition Switch)**:
+  - Variable Anzahl von Bedingungen pro Node
+  - **First-Match Logik**: Bedingungen werden von oben nach unten geprüft, erste zutreffende wird ausgeführt
+  - Jede Bedingung hat: ID, Label, Expression (JSONata)
+  - Optional: Default-Pfad wenn keine Bedingung zutrifft
+  - Jede Bedingung hat eigenen Output-Handle für Verknüpfung
+  - **Use Case**: Switch/Case-ähnliche Logik (z.B. Betrag > 1000 → Manager, > 500 → Team Lead, sonst → Auto-Approve)
 
 ### HR WORKS Integration Node (Phase 1)
 
