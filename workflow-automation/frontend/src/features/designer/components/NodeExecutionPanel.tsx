@@ -4,10 +4,10 @@ import type { NodeExecutionState } from '../../../stores/designer.store';
 
 const PanelTrigger = styled.button<{ $hasData: boolean }>`
   position: absolute;
-  bottom: -28px;
+  bottom: -24px;
   left: 50%;
   transform: translateX(-50%);
-  height: 20px;
+  height: 18px;
   padding: 0 var(--spacing-2);
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
@@ -116,6 +116,26 @@ const JsonContainer = styled.pre`
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-word;
+
+  .json-key {
+    color: #0ea5e9;
+  }
+
+  .json-string {
+    color: #10b981;
+  }
+
+  .json-number {
+    color: #f59e0b;
+  }
+
+  .json-boolean {
+    color: #8b5cf6;
+  }
+
+  .json-null {
+    color: #6b7280;
+  }
 `;
 
 const EmptyState = styled.div`
@@ -205,6 +225,39 @@ export function NodeExecutionPanel({ executionState }: NodeExecutionPanelProps) 
     }
   };
 
+  const highlightJson = (json: string): JSX.Element => {
+    // Escape HTML to prevent rendering
+    const escapeHtml = (str: string) => {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    };
+
+    // Simple JSON syntax highlighting
+    const highlighted = escapeHtml(json).replace(
+      /(&quot;(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\&quot;])*&quot;(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      (match) => {
+        let cls = 'json-number';
+        if (/^&quot;/.test(match)) {
+          if (/:$/.test(match)) {
+            cls = 'json-key';
+          } else {
+            cls = 'json-string';
+          }
+        } else if (/true|false/.test(match)) {
+          cls = 'json-boolean';
+        } else if (/null/.test(match)) {
+          cls = 'json-null';
+        }
+        return `<span class="${cls}">${match}</span>`;
+      }
+    );
+    return <div dangerouslySetInnerHTML={{ __html: highlighted }} />;
+  };
+
   const getStatusIcon = () => {
     switch (executionState?.status) {
       case 'success':
@@ -266,7 +319,7 @@ export function NodeExecutionPanel({ executionState }: NodeExecutionPanelProps) 
         <PopoverBody>
           {activeTab === 'input' ? (
             hasInput ? (
-              <JsonContainer>{formatJson(executionState?.input)}</JsonContainer>
+              <JsonContainer>{highlightJson(formatJson(executionState?.input))}</JsonContainer>
             ) : (
               <EmptyState>Keine Input-Daten vorhanden</EmptyState>
             )
@@ -275,7 +328,7 @@ export function NodeExecutionPanel({ executionState }: NodeExecutionPanelProps) 
               {executionState?.error || 'Unbekannter Fehler'}
             </JsonContainer>
           ) : hasOutput ? (
-            <JsonContainer>{formatJson(executionState?.output)}</JsonContainer>
+            <JsonContainer>{highlightJson(formatJson(executionState?.output))}</JsonContainer>
           ) : (
             <EmptyState>Keine Output-Daten vorhanden</EmptyState>
           )}
