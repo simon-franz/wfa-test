@@ -23,6 +23,27 @@ export class WorkflowEngineService {
     // Add workflow definition to context for label-to-id mapping
     context.workflowDefinition = definition;
 
+    // Add global context with system variables
+    const now = new Date();
+    context.globalContext = {
+      currentDate: now.toISOString().split('T')[0],
+      currentTime: now.toTimeString().split(' ')[0],
+      currentDateTime: now.toISOString(),
+      weekday: now.toLocaleDateString('de-DE', { weekday: 'long' }),
+    };
+
+    // Add workflow context
+    context.workflowContext = {
+      name: definition.nodes[0]?.name || 'Unnamed Workflow', // TODO: Get from workflow metadata
+      id: context.workflowId,
+      variables: {}, // TODO: Load from workflow settings
+    };
+
+    // Add execution context
+    context.executionContext = {
+      variables: {},
+    };
+
     // Find trigger node (entry point)
     const triggerNode = definition.nodes.find(
       (n) => n.type === 'manual-trigger' || n.type === 'scheduled-trigger',
@@ -111,30 +132,94 @@ export class WorkflowEngineService {
       .map((edge) => ({ source: edge.source, sourceHandle: edge.sourceHandle }));
   }
 
+  private isPathReachable(nodeId: string, definition: WorkflowDefinition, context: ExecutionContext, visited = new Set<string>()): boolean {
+    if (visited.has(nodeId)) return false;
+    visited.add(nodeId);
+    
+    if (context.nodeResults[nodeId]?.status === 'completed') return true;
+    
+    const incomingEdges = this.getIncomingEdges(nodeId, definition);
+    if (incomingEdges.length === 0) return false;
+    
+    return incomingEdges.some(edge => {
+      const sourceNode = definition.nodes.find(n => n.id === edge.source);
+      if (sourceNode?.type === 'condition' && edge.sourceHandle) {
+        const result = context.nodeResults[edge.source];
+        if (result?.nextNodes && !result.nextNodes.includes(edge.sourceHandle)) {
+          return false;
+        }
+      }
+      return this.isPathReachable(edge.source, definition, context, visited);
+    });
+  }
+
   private isNodeReady(
     nodeId: string,
     definition: WorkflowDefinition,
     executedNodes: Set<string>,
+    context: ExecutionContext,
   ): boolean {
     const incomingEdges = this.getIncomingEdges(nodeId, definition);
 
-    // No incoming edges → always ready (e.g., trigger node)
-    if (incomingEdges.length === 0) {
-      return true;
-    }
+    this.logger.debug(`Node ${nodeId}: Checking readiness, incoming edges: ${incomingEdges.length}`);
 
-    // Check if all source nodes are condition nodes
+    if (incomingEdges.length === 0) return true;
+
     const allSourcesAreConditions = incomingEdges.every((edge) => {
       const sourceNode = definition.nodes.find((n) => n.id === edge.source);
       return sourceNode?.type === 'condition';
     });
 
+    this.logger.debug(`Node ${nodeId}: All sources are conditions: ${allSourcesAreConditions}`);
+
+    const edgeStatus = incomingEdges.map((edge) => {
+      if (!executedNodes.has(edge.source)) {
+        this.logger.debug(`Node ${nodeId}: Source ${edge.source} not executed yet`);
+        
+        if (!this.isPathReachable(edge.source, definition, context)) {
+          this.logger.debug(`Node ${nodeId}: Source ${edge.source} is unreachable (blocked by condition)`);
+          return { edge, ready: false, skip: true };
+        }
+        
+        return { edge, ready: false, skip: false };
+      }
+
+      const sourceNode = definition.nodes.find((n) => n.id === edge.source);
+      const isConditionNode = sourceNode?.type === 'condition';
+
+      if (isConditionNode && edge.sourceHandle) {
+        const sourceResult = context.nodeResults[edge.source];
+        if (!sourceResult) {
+          this.logger.debug(`Node ${nodeId}: Source ${edge.source} has no result`);
+          return { edge, ready: false, skip: false };
+        }
+
+        const nextNodes = sourceResult.nextNodes;
+        const hasNextNodes = nextNodes && Array.isArray(nextNodes);
+        const handleMatches = hasNextNodes && nextNodes.includes(edge.sourceHandle);
+        this.logger.debug(`Node ${nodeId}: Checking handle ${edge.sourceHandle} from ${edge.source}, nextNodes: ${JSON.stringify(nextNodes)}, matches: ${handleMatches}`);
+        
+        if (!handleMatches) {
+          return { edge, ready: false, skip: true };
+        }
+        return { edge, ready: true, skip: false };
+      }
+
+      this.logger.debug(`Node ${nodeId}: Source ${edge.source} ready (executed)`);
+      return { edge, ready: true, skip: false };
+    });
+
+    const activeEdges = edgeStatus.filter(e => !e.skip);
+    const readyEdges = activeEdges.filter(e => e.ready);
+
     if (allSourcesAreConditions) {
-      // OR-Join: At least ONE source must be executed
-      return incomingEdges.some((edge) => executedNodes.has(edge.source));
+      const ready = readyEdges.length > 0;
+      this.logger.debug(`Node ${nodeId}: OR-Join ready = ${ready} (${readyEdges.length}/${activeEdges.length} active edges ready)`);
+      return ready;
     } else {
-      // AND-Join: ALL sources must be executed
-      return incomingEdges.every((edge) => executedNodes.has(edge.source));
+      const ready = readyEdges.length === activeEdges.length && activeEdges.length > 0;
+      this.logger.debug(`Node ${nodeId}: AND-Join ready = ${ready} (${readyEdges.length}/${activeEdges.length} active edges ready, ${edgeStatus.length - activeEdges.length} skipped)`);
+      return ready;
     }
   }
 
@@ -153,7 +238,7 @@ export class WorkflowEngineService {
     }
 
     // Check if node is ready (all required predecessors executed)
-    if (!this.isNodeReady(nodeId, definition, executedNodes)) {
+    if (!this.isNodeReady(nodeId, definition, executedNodes, context)) {
       this.logger.debug(`Node not ready yet: ${nodeId}, skipping`);
       return;
     }
@@ -234,6 +319,7 @@ export class WorkflowEngineService {
         nodeId,
         status: 'completed',
         output: output.output,
+        nextNodes: output.nextNodes, // Store which handles were activated
         startedAt: new Date(startTime),
         completedAt: new Date(endTime),
         duration: endTime - startTime,
