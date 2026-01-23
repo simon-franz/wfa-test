@@ -331,10 +331,17 @@ export function WorkflowExecutionsPage() {
   };
 
   const getNodeName = (nodeId: string) => {
-    // Remove timestamp suffix (e.g., "condition-1768948767051" -> "Condition")
+    // Try to get name from workflow definition in execution context
+    if (selectedExecution?.context?.workflowDefinition?.nodes) {
+      const node = selectedExecution.context.workflowDefinition.nodes.find(
+        (n: any) => n.id === nodeId
+      );
+      if (node?.name) return node.name;
+    }
+
+    // Fallback: Remove timestamp suffix and map to readable names
     const baseName = nodeId.replace(/-\d+$/, '');
     
-    // Map common node types to readable names
     const nameMap: Record<string, string> = {
       'trigger': 'Trigger',
       'manual-trigger': 'Manueller Trigger',
