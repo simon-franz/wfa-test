@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuthStore } from '../stores/auth.store';
+import { NotificationCenter } from './NotificationCenter';
 
 const LayoutContainer = styled.div`
   display: flex;
@@ -105,6 +106,7 @@ export function Layout() {
         </Nav>
 
         <UserSection>
+          <NotificationCenter />
           {user && (
             <UserName>
               {user.firstName} {user.lastName}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useWorkflowStore } from '../stores/workflow.store';
+import { useNotificationStore } from '../stores/notification.store';
 import { CreateWorkflowModal } from '../components/CreateWorkflowModal';
 import type { Workflow } from 'shared/types';
 
@@ -193,6 +194,7 @@ export function WorkflowListPage() {
   const navigate = useNavigate();
   const { workflows, isLoading, error, fetchWorkflows, deleteWorkflow, triggerWorkflow } =
     useWorkflowStore();
+  const { addNotification } = useNotificationStore();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
@@ -213,7 +215,7 @@ export function WorkflowListPage() {
   const handleTriggerWorkflow = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     await triggerWorkflow(id);
-    alert('Workflow wurde gestartet');
+    addNotification('success', 'Workflow wurde gestartet');
   };
 
   const handleCreateSuccess = (workflow: Workflow) => {

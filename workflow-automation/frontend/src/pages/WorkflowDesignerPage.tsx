@@ -4,6 +4,7 @@ import styled, { keyframes, css } from 'styled-components';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { useWorkflowStore } from '../stores/workflow.store';
 import { useDesignerStore } from '../stores/designer.store';
+import { useNotificationStore } from '../stores/notification.store';
 import { WorkflowDesigner } from '../features/designer/WorkflowDesigner';
 import { WorkflowInfoSidebar } from '../features/designer/WorkflowInfoSidebar';
 import type { WorkflowDefinition } from 'shared/types';
@@ -215,6 +216,7 @@ export function WorkflowDesignerPage() {
   } = useWorkflowStore();
 
   const { loadFromDefinition, toDefinition, isDirty, resetDirty, reset } = useDesignerStore();
+  const { addNotification } = useNotificationStore();
 
   const [workflowName, setWorkflowName] = useState('');
   const [isRunning, setIsRunning] = useState(false);
@@ -346,15 +348,19 @@ export function WorkflowDesignerPage() {
               if (updatedExecution.status === 'completed') {
                 ctrl.abort();
                 setIsRunning(false);
-                setTimeout(() => alert('Workflow erfolgreich ausgeführt!'), 500);
+                addNotification('success', 'Workflow erfolgreich ausgeführt!');
               } else if (updatedExecution.status === 'failed') {
                 ctrl.abort();
                 setIsRunning(false);
-                setTimeout(() => alert(`Workflow fehlgeschlagen: ${updatedExecution.error || 'Unbekannter Fehler'}`), 500);
+                addNotification('error', `Workflow fehlgeschlagen: ${updatedExecution.error || 'Unbekannter Fehler'}`);
               }
             } catch (parseError) {
               console.error('Failed to parse SSE message:', event.data, parseError);
             }
+          },
+          onclose() {
+            console.log('SSE connection closed');
+            setIsRunning(false);
           },
           onerror(err) {
             console.error('SSE error:', err);
@@ -368,7 +374,7 @@ export function WorkflowDesignerPage() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler';
       setRunError(errorMessage);
-      alert(`Fehler beim Ausführen: ${errorMessage}`);
+      addNotification('error', `Fehler beim Ausführen: ${errorMessage}`);
       setIsRunning(false);
     }
   }, [currentWorkflow, isDirty, handleSave, triggerWorkflow]);
