@@ -75,7 +75,7 @@ export const workflows = sqliteTable('workflows', {
 export const workflowExecutions = sqliteTable('workflow_executions', {
   id: text('id').primaryKey(), // ULID
   workflowId: text('workflow_id').notNull().references(() => workflows.id),
-  status: text('status', { enum: ['pending', 'running', 'completed', 'failed', 'cancelled'] }).notNull().default('pending'),
+  status: text('status', { enum: ['pending', 'running', 'waiting', 'completed', 'failed', 'cancelled'] }).notNull().default('pending'),
   triggeredBy: text('triggered_by', { enum: ['manual', 'scheduled', 'webhook'] }).notNull(),
   triggeredByUserId: text('triggered_by_user_id').references(() => users.id),
   context: text('context', { mode: 'json' }).$type<ExecutionContextJson>().notNull(),

@@ -171,7 +171,7 @@ const ExpandIcon = styled.span<{ $expanded: boolean }>`
 `;
 
 const FieldPath = styled.span`
-  color: var(--color-primary);
+  color: var(--color-gray-100);
   font-weight: 500;
   flex: 1;
   min-width: 0;
@@ -267,11 +267,14 @@ function TreeNodeComponent({ node, nodeName, indent, onSelect, expandedPaths, on
   const fullPath = nodePrefix ? `${nodePrefix}:${node.path}` : node.path;
   const isExpanded = expandedPaths.has(fullPath);
 
-  const handleClick = () => {
-    if (hasChildren) {
-      onToggle(node.path);
-    } else {
+  const handleClick = (e: React.MouseEvent) => {
+    // Allow selecting both leaf nodes AND parent nodes (arrays/objects)
+    if (e.shiftKey || !hasChildren) {
+      // Shift+Click or leaf node → select
       onSelect(node.path);
+    } else {
+      // Regular click on parent → toggle
+      onToggle(node.path);
     }
   };
 

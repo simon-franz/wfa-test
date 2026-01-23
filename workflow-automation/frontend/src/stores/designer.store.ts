@@ -54,7 +54,7 @@ interface DesignerState {
   onNodesChange: (changes: NodeChange<WorkflowNode>[]) => void;
   onEdgesChange: (changes: EdgeChange<WorkflowEdge>[]) => void;
   onConnect: (connection: Connection) => void;
-  addNode: (node: WorkflowNode) => void;
+  addNode: (nodeType: string, position: { x: number; y: number }) => void;
   updateNodeConfig: (nodeId: string, config: Record<string, unknown>) => void;
   updateNodeName: (nodeId: string, name: string) => void;
   deleteNode: (nodeId: string) => void;
@@ -150,6 +150,37 @@ function getFlowNodeType(nodeType: string): string {
 let nodeIdCounter = 0;
 const generateNodeId = () => `node-${Date.now()}-${++nodeIdCounter}`;
 const generateEdgeId = () => `edge-${Date.now()}-${++nodeIdCounter}`;
+
+function getDefaultNodeLabel(nodeType: string): string {
+  const labels: Record<string, string> = {
+    'manual-trigger': 'Manueller Trigger',
+    'scheduled-trigger': 'Geplanter Trigger',
+    'http-request': 'HTTP Request',
+    'condition': 'Bedingung',
+    'delay': 'Verzögerung',
+    'hrworks': 'HR WORKS',
+    'data-transform': 'Daten-Transformation',
+  };
+  return labels[nodeType] || 'Neuer Knoten';
+}
+
+function getDefaultNodeConfig(nodeType: string): Record<string, unknown> {
+  const configs: Record<string, Record<string, unknown>> = {
+    'manual-trigger': {},
+    'scheduled-trigger': { cronExpression: '0 9 * * 1-5' },
+    'http-request': { method: 'GET', url: '' },
+    'condition': {
+      conditions: [
+        { id: 'condition-1', label: 'Condition 1', expression: 'true' },
+      ],
+      enableDefault: true,
+    },
+    'delay': { duration: 5, unit: 'seconds' },
+    'hrworks': { endpoint: '', parameters: {} },
+    'data-transform': { operation: 'count', inputPath: '' },
+  };
+  return configs[nodeType] || {};
+}
 
 export const useDesignerStore = create<DesignerState>((set, get) => ({
   nodes: [],
@@ -264,10 +295,23 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
     }));
   },
 
-  addNode: (node) => {
+  addNode: (nodeType, position) => {
     get().pushToHistory();
+    
+    const nodeId = generateNodeId();
+    const newNode: WorkflowNode = {
+      id: nodeId,
+      type: getFlowNodeType(nodeType),
+      position,
+      data: {
+        label: getDefaultNodeLabel(nodeType),
+        nodeType,
+        config: getDefaultNodeConfig(nodeType),
+      },
+    };
+    
     set((state) => ({
-      nodes: [...state.nodes, { ...node, id: node.id || generateNodeId() }],
+      nodes: [...state.nodes, newNode],
       isDirty: true,
     }));
   },
