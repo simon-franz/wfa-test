@@ -106,6 +106,7 @@ export interface ExecutionContext {
     type: string;
     payload?: Record<string, unknown>;
   };
+  workflowDefinition?: WorkflowDefinition; // For label-to-id mapping
 }
 
 // Individual node execution result

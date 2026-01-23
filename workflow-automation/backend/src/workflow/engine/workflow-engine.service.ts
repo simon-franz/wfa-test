@@ -20,6 +20,9 @@ export class WorkflowEngineService {
   ): Promise<ExecutionContext> {
     this.logger.log(`Starting workflow execution: ${context.executionId}`);
 
+    // Add workflow definition to context for label-to-id mapping
+    context.workflowDefinition = definition;
+
     // Find trigger node (entry point)
     const triggerNode = definition.nodes.find(
       (n) => n.type === 'manual-trigger' || n.type === 'scheduled-trigger',
@@ -48,6 +51,9 @@ export class WorkflowEngineService {
     fromNodeId: string,
   ): Promise<ExecutionContext> {
     this.logger.log(`Resuming workflow execution: ${context.executionId} from node: ${fromNodeId}`);
+
+    // Add workflow definition to context
+    context.workflowDefinition = definition;
 
     // Build adjacency list
     const adjacencyList = this.buildAdjacencyList(definition);
