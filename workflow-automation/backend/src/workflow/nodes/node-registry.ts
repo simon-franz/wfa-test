@@ -7,6 +7,7 @@ import { ConditionNode } from './action/condition.node';
 import { DelayNode } from './action/delay.node';
 import { HrworksNode } from './action/hrworks.node';
 import { DataTransformNode } from './action/data-transform.node';
+import { CalculationNode } from './action/calculation.node';
 
 @Injectable()
 export class NodeRegistry {
@@ -20,6 +21,7 @@ export class NodeRegistry {
     delay: DelayNode,
     hrworks: HrworksNode,
     dataTransform: DataTransformNode,
+    calculation: CalculationNode,
   ) {
     this.registerNode(manualTrigger);
     this.registerNode(scheduledTrigger);
@@ -28,6 +30,7 @@ export class NodeRegistry {
     this.registerNode(delay);
     this.registerNode(hrworks);
     this.registerNode(dataTransform);
+    this.registerNode(calculation);
   }
 
   private registerNode(node: BaseNode) {

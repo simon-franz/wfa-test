@@ -20,6 +20,7 @@ import { ActionNode } from './nodes/ActionNode';
 import { ConditionNode } from './nodes/ConditionNode';
 import { HRWorksNode } from './nodes/HRWorksNode';
 import { DataTransformNode } from './nodes/DataTransformNode';
+import { CalculationNode } from './nodes/CalculationNode';
 import { DeletableEdge } from './edges/DeletableEdge';
 import { ContextMenu } from './ContextMenu';
 
@@ -30,6 +31,7 @@ const nodeTypes = {
   conditionNode: ConditionNode,
   hrworksNode: HRWorksNode,
   dataTransformNode: DataTransformNode,
+  calculationNode: CalculationNode,
 };
 
 // Define custom edge types

@@ -485,6 +485,54 @@ export function ConfigPanel() {
           </>
         );
 
+      case 'calculation':
+        return (
+          <>
+            <FormGroup>
+              <Label>Operation</Label>
+              <Select
+                value={(config.operation as string) || 'addWeeks'}
+                onChange={(e) => handleConfigChange('operation', e.target.value)}
+              >
+                <option value="addWeeks">Wochen addieren</option>
+                <option value="addDays">Tage addieren</option>
+                <option value="addMonths">Monate addieren</option>
+                <option value="addYears">Jahre addieren</option>
+                <option value="subtractWeeks">Wochen subtrahieren</option>
+                <option value="subtractDays">Tage subtrahieren</option>
+                <option value="subtractMonths">Monate subtrahieren</option>
+                <option value="subtractYears">Jahre subtrahieren</option>
+              </Select>
+            </FormGroup>
+            <FormGroup>
+              <Label>Eingabewert (Datum)</Label>
+              <ContextInput
+                placeholder="z.B. {{global.currentDate}} oder {{node.field}}"
+                value={(config.inputValue as string) || ''}
+                onChange={(e) => handleConfigChange('inputValue', e.target.value)}
+                onFocus={(rect) => handleInputFocus('inputValue', rect)}
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label>Anzahl</Label>
+              <Input
+                type="number"
+                value={(config.amount as number) || 1}
+                onChange={(e) => handleConfigChange('amount', parseInt(e.target.value))}
+                min={1}
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label>Ausgabefeld</Label>
+              <Input
+                placeholder="result"
+                value={(config.outputField as string) || 'result'}
+                onChange={(e) => handleConfigChange('outputField', e.target.value)}
+              />
+            </FormGroup>
+          </>
+        );
+
       case 'data-transform':
         return (
           <>

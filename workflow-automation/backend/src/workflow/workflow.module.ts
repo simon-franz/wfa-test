@@ -19,6 +19,7 @@ import { ConditionNode } from './nodes/action/condition.node';
 import { DelayNode } from './nodes/action/delay.node';
 import { HrworksNode } from './nodes/action/hrworks.node';
 import { DataTransformNode } from './nodes/action/data-transform.node';
+import { CalculationNode } from './nodes/action/calculation.node';
 
 @Module({
   imports: [QueueModule, HrworksModule],
@@ -39,6 +40,7 @@ import { DataTransformNode } from './nodes/action/data-transform.node';
     DelayNode,
     HrworksNode,
     DataTransformNode,
+    CalculationNode,
   ],
   exports: [WorkflowService, WorkflowEngineService, ExecutionService],
 })

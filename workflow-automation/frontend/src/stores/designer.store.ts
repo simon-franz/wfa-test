@@ -48,6 +48,9 @@ interface DesignerState {
   historyIndex: number;
   maxHistorySize: number;
 
+  // Context scopes for variable suggestions
+  getAvailableVariables: () => { scope: string; key: string; path: string }[];
+
   // Actions
   setNodes: (nodes: WorkflowNode[]) => void;
   setEdges: (edges: WorkflowEdge[]) => void;
@@ -57,6 +60,7 @@ interface DesignerState {
   addNode: (nodeType: string, position: { x: number; y: number }) => void;
   updateNodeConfig: (nodeId: string, config: Record<string, unknown>) => void;
   updateNodeName: (nodeId: string, name: string) => void;
+  updateNodeLabel: (nodeId: string, label: string) => void; // Alias for updateNodeName
   deleteNode: (nodeId: string) => void;
   deleteEdge: (edgeId: string) => void;
   selectNode: (nodeId: string | null) => void;
@@ -138,6 +142,9 @@ function getFlowNodeType(nodeType: string): string {
   if (nodeType === 'condition') {
     return 'conditionNode';
   }
+  if (nodeType === 'calculation') {
+    return 'calculationNode';
+  }
   if (nodeType === 'hrworks') {
     return 'hrworksNode';
   }
@@ -155,11 +162,16 @@ function getDefaultNodeLabel(nodeType: string): string {
   const labels: Record<string, string> = {
     'manual-trigger': 'Manueller Trigger',
     'scheduled-trigger': 'Geplanter Trigger',
+    'webhook-trigger': 'Webhook Trigger',
     'http-request': 'HTTP Request',
+    'email': 'E-Mail senden',
     'condition': 'Bedingung',
+    'calculation': 'Berechnung',
     'delay': 'Verzögerung',
     'hrworks': 'HR WORKS',
     'data-transform': 'Daten-Transformation',
+    'loop': 'Schleife',
+    'switch': 'Switch',
   };
   return labels[nodeType] || 'Neuer Knoten';
 }
@@ -175,6 +187,7 @@ function getDefaultNodeConfig(nodeType: string): Record<string, unknown> {
       ],
       enableDefault: true,
     },
+    'calculation': { operation: 'addWeeks', inputValue: '', amount: 1, outputField: 'result' },
     'delay': { duration: 5, unit: 'seconds' },
     'hrworks': { endpoint: '', parameters: {} },
     'data-transform': { operation: 'count', inputPath: '' },
@@ -374,6 +387,11 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
     }));
   },
 
+  updateNodeLabel: (nodeId, label) => {
+    // Alias for updateNodeName
+    get().updateNodeName(nodeId, label);
+  },
+
   deleteNode: (nodeId) => {
     get().pushToHistory();
     set((state) => ({
@@ -450,7 +468,7 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
       nodeType: node.data.nodeType,
       predecessorsCount: predecessors.length,
       predecessors: predecessors.map(p => ({ id: p.id, status: p.data.executionState?.status })),
-      result: predecessors.length === 0 ? true : predecessors.every(pred => pred?.data.executionState?.status === 'success')
+      result: predecessors.length === 0 ? true : predecessors.some(pred => pred?.data.executionState?.status === 'success')
     });
 
     // Trigger nodes can always be executed
@@ -463,8 +481,8 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
       return true;
     }
 
-    // All predecessors must have been executed successfully
-    return predecessors.every(
+    // In test mode: At least ONE predecessor must have been executed successfully (OR-Join)
+    return predecessors.some(
       (pred) => pred?.data.executionState?.status === 'success'
     );
   },
@@ -599,5 +617,42 @@ export const useDesignerStore = create<DesignerState>((set, get) => ({
         },
       })),
     }));
+  },
+
+  getAvailableVariables: () => {
+    const { nodes } = get();
+    const variables: { scope: string; key: string; path: string }[] = [];
+
+    // Global context variables
+    variables.push(
+      { scope: 'global', key: 'currentDate', path: 'global.currentDate' },
+      { scope: 'global', key: 'currentTime', path: 'global.currentTime' },
+      { scope: 'global', key: 'currentDateTime', path: 'global.currentDateTime' },
+      { scope: 'global', key: 'weekday', path: 'global.weekday' }
+    );
+
+    // Workflow context variables
+    variables.push(
+      { scope: 'workflow', key: 'name', path: 'workflow.name' },
+      { scope: 'workflow', key: 'description', path: 'workflow.description' }
+    );
+
+    // Execution context variables
+    variables.push(
+      { scope: 'execution', key: 'variables', path: 'execution.variables' }
+    );
+
+    // Node outputs
+    nodes.forEach((node) => {
+      if (node.data.label) {
+        variables.push({
+          scope: 'node',
+          key: node.data.label,
+          path: node.data.label,
+        });
+      }
+    });
+
+    return variables;
   },
 }));

@@ -115,6 +115,7 @@ const NODE_TYPES: NodeType[] = [
   
   // Logic
   { type: 'condition', label: 'Bedingung', icon: '🔀', category: 'logic' },
+  { type: 'calculation', label: 'Berechnung', icon: '📊', category: 'logic' },
   { type: 'data-transform', label: 'Daten-Transformation', icon: '🔄', category: 'logic' },
   { type: 'loop', label: 'Schleife', icon: '🔁', category: 'logic' },
   { type: 'switch', label: 'Switch', icon: '🔀', category: 'logic' },
