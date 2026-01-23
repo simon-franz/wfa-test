@@ -165,7 +165,7 @@ export function CanvasControls({ onFullscreen }: CanvasControlsProps) {
   }, [fitView]);
 
   const handleAutoLayout = useCallback(() => {
-    applyAutoLayout({ direction: 'LR', nodeSpacing: 150, rankSpacing: 250 });
+    applyAutoLayout({ direction: 'LR', nodeSpacing: 200, rankSpacing: 350 });
     setTimeout(() => fitView({ duration: 200, padding: 0.2 }), 100);
   }, [applyAutoLayout, fitView]);
 

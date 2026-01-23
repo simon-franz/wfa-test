@@ -115,6 +115,10 @@ export class WorkflowService {
       return this.executeDataTransform(config, context);
     }
 
+    if (nodeType === 'calculation') {
+      return this.executeCalculation(config, context);
+    }
+
     if (nodeType === 'manual-trigger' || nodeType === 'scheduled-trigger') {
       return {
         success: true,
@@ -154,10 +158,26 @@ export class WorkflowService {
         case 'getPerson':
         case 'person':
         case 'persons.get':
-          if (!actualParams?.personnelNumber) {
-            throw new Error('personnelNumber parameter required for getPerson');
+        case 'persons.getById':
+          if (!actualParams?.personnelNumber && !actualParams?.id) {
+            throw new Error('personnelNumber or id parameter required for getPerson');
           }
-          const resolvedPersonnelNumber = this.resolveTemplatePath(actualParams.personnelNumber, context) || actualParams.personnelNumber;
+          const personnelNumberRaw = actualParams.personnelNumber || actualParams.id;
+          this.logger.log(`Context keys: ${Object.keys(context).join(', ')}`);
+          if (context.nodeResults) {
+            this.logger.log(`NodeResults keys: ${Object.keys(context.nodeResults).join(', ')}`);
+            // Log first nodeResult structure
+            const firstKey = Object.keys(context.nodeResults)[0];
+            if (firstKey) {
+              this.logger.log(`First nodeResult (${firstKey}): ${JSON.stringify(context.nodeResults[firstKey]).substring(0, 300)}`);
+            }
+          }
+          // Test getValueByPath directly
+          const testValue = this.getValueByPath(context, 'allPersons.persons[0].personnelNumber');
+          this.logger.log(`Direct getValueByPath test: ${testValue}`);
+          
+          const resolvedPersonnelNumber = this.resolveTemplatePath(personnelNumberRaw, context) || personnelNumberRaw;
+          this.logger.log(`personnelNumber raw: ${personnelNumberRaw}, resolved: ${resolvedPersonnelNumber}`);
           result = { person: await this.hrworksApi.getPerson(tenantId, resolvedPersonnelNumber) };
           break;
 
@@ -213,6 +233,8 @@ export class WorkflowService {
 
     // Resolve the input value from context using template syntax
     const resolvedInput = this.resolveTemplatePath(inputPath, context);
+    
+    this.logger.log(`DataTransform: operation=${operation}, inputPath=${inputPath}, resolvedInput type=${typeof resolvedInput}, isArray=${Array.isArray(resolvedInput)}, length=${Array.isArray(resolvedInput) ? resolvedInput.length : 'N/A'}`);
 
     let result: any;
 
@@ -248,6 +270,75 @@ export class WorkflowService {
       default:
         throw new Error(`Unknown data-transform operation: ${operation}`);
     }
+
+    return {
+      success: true,
+      output: { result },
+    };
+  }
+
+  private executeCalculation(config: any, context: Record<string, any>) {
+    const { operation, inputValue, amount } = config;
+
+    if (!operation || !inputValue || amount === undefined) {
+      throw new Error('Calculation requires operation, inputValue, and amount');
+    }
+
+    // Ensure globalContext exists for template resolution
+    if (!context.globalContext) {
+      const now = new Date();
+      context.globalContext = {
+        currentDate: now.toISOString().split('T')[0],
+        currentTime: now.toTimeString().split(' ')[0],
+        currentDateTime: now.toISOString(),
+        weekday: now.toLocaleDateString('de-DE', { weekday: 'long' }),
+      };
+    }
+
+    // Resolve template in inputValue
+    const resolvedValue = this.resolveTemplatePath(inputValue, context);
+    
+    if (!resolvedValue) {
+      throw new Error(`Could not resolve inputValue: ${inputValue}`);
+    }
+
+    // Parse date
+    const date = new Date(resolvedValue);
+    if (isNaN(date.getTime())) {
+      throw new Error(`Invalid date: ${resolvedValue}`);
+    }
+
+    // Perform calculation
+    switch (operation) {
+      case 'addWeeks':
+        date.setDate(date.getDate() + amount * 7);
+        break;
+      case 'subtractWeeks':
+        date.setDate(date.getDate() - amount * 7);
+        break;
+      case 'addDays':
+        date.setDate(date.getDate() + amount);
+        break;
+      case 'subtractDays':
+        date.setDate(date.getDate() - amount);
+        break;
+      case 'addMonths':
+        date.setMonth(date.getMonth() + amount);
+        break;
+      case 'subtractMonths':
+        date.setMonth(date.getMonth() - amount);
+        break;
+      case 'addYears':
+        date.setFullYear(date.getFullYear() + amount);
+        break;
+      case 'subtractYears':
+        date.setFullYear(date.getFullYear() - amount);
+        break;
+      default:
+        throw new Error(`Unknown calculation operation: ${operation}`);
+    }
+
+    const result = date.toISOString().split('T')[0]; // YYYY-MM-DD format
 
     return {
       success: true,
@@ -318,10 +409,49 @@ export class WorkflowService {
     return path;
   }
 
+  private normalizeToCamelCase(label: string): string {
+    const words = label.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+    if (words.length === 0) return '';
+    return words.map((word, index) => {
+      if (index === 0) return word.charAt(0).toLowerCase() + word.slice(1);
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    }).join('');
+  }
+
   private getValueByPath(obj: any, path: string): any {
     if (!obj || !path) return undefined;
 
-    const parts = path.split('.');
+    // Handle array bracket notation: convert persons[0] to persons.0
+    const normalizedPath = path.replace(/\[(\d+)\]/g, '.$1');
+    const parts = normalizedPath.split('.');
+    
+    // Check for context scopes first
+    if (parts[0] === 'global' && obj.globalContext) {
+      let current = obj.globalContext;
+      for (let i = 1; i < parts.length; i++) {
+        if (current === null || current === undefined) return undefined;
+        current = current[parts[i]];
+      }
+      return current;
+    }
+
+    if (parts[0] === 'workflow' && obj.workflowContext) {
+      let current = obj.workflowContext;
+      for (let i = 1; i < parts.length; i++) {
+        if (current === null || current === undefined) return undefined;
+        current = current[parts[i]];
+      }
+      return current;
+    }
+
+    if (parts[0] === 'execution' && obj.executionContext) {
+      let current = obj.executionContext;
+      for (let i = 1; i < parts.length; i++) {
+        if (current === null || current === undefined) return undefined;
+        current = current[parts[i]];
+      }
+      return current;
+    }
     
     // Try direct path first
     let current = obj;
@@ -339,11 +469,105 @@ export class WorkflowService {
     // Strategy 1: Search in nodeResults (workflow execution context)
     // Structure: { "node-id": { output: { ... } } }
     const remainingParts = parts.slice(1);
+    const normalizedFirstPart = this.normalizeToCamelCase(parts[0]);
     
-    for (const [nodeId, nodeResult] of Object.entries(obj)) {
-      if (nodeResult && typeof nodeResult === 'object' && 'output' in nodeResult) {
-        let current = (nodeResult as any).output;
+    // First, try to find node by name in workflowDefinition
+    let targetNodeId: string | undefined;
+    if (obj.workflowDefinition?.nodes) {
+      for (const node of obj.workflowDefinition.nodes) {
+        const normalizedNodeName = this.normalizeToCamelCase(node.name);
+        if (normalizedNodeName === parts[0] || normalizedNodeName === normalizedFirstPart) {
+          targetNodeId = node.id;
+          break;
+        }
+      }
+    }
+    
+    // If we found a matching node ID, look it up in nodeResults
+    if (targetNodeId && obj.nodeResults?.[targetNodeId]) {
+      const nodeResult = obj.nodeResults[targetNodeId];
+      if (nodeResult && typeof nodeResult === 'object') {
+        // Try with output field first (workflow execution context)
+        if ('output' in nodeResult) {
+          let current = (nodeResult as any).output;
+          
+          for (const part of remainingParts) {
+            if (current === null || current === undefined) {
+              break;
+            }
+            current = current[part];
+          }
+          
+          if (current !== undefined) {
+            return current;
+          }
+        }
+      }
+    }
+    
+    // Fallback: iterate through all nodeResults
+    for (const [nodeId, nodeResult] of Object.entries(obj.nodeResults || {})) {
+      // Check if this key matches either directly or after normalization
+      const normalizedKey = this.normalizeToCamelCase(nodeId);
+      const keyMatches = nodeId === parts[0] || normalizedKey === parts[0] || normalizedKey === normalizedFirstPart;
+      
+      if (keyMatches && nodeResult && typeof nodeResult === 'object') {
+        // Try with output field first (workflow execution context)
+        if ('output' in nodeResult) {
+          let current = (nodeResult as any).output;
+          
+          for (const part of remainingParts) {
+            if (current === null || current === undefined) {
+              break;
+            }
+            current = current[part];
+          }
+          
+          if (current !== undefined) {
+            return current;
+          }
+        }
         
+        // Try without output field (test context)
+        let current: any = nodeResult;
+        for (const part of remainingParts) {
+          if (current === null || current === undefined) {
+            break;
+          }
+          current = current[part];
+        }
+        
+        if (current !== undefined) {
+          return current;
+        }
+      }
+    }
+    
+    // Test context: direct keys (no nodeResults)
+    for (const [nodeId, nodeResult] of Object.entries(obj)) {
+      // Check if this key matches either directly or after normalization
+      const normalizedKey = this.normalizeToCamelCase(nodeId);
+      const keyMatches = nodeId === parts[0] || normalizedKey === parts[0] || normalizedKey === normalizedFirstPart;
+      
+      if (keyMatches && nodeResult && typeof nodeResult === 'object') {
+        // Try with output field first (workflow execution context)
+        if ('output' in nodeResult) {
+          let current = (nodeResult as any).output;
+          
+          for (const part of remainingParts) {
+            if (current === null || current === undefined) {
+              break;
+            }
+            current = current[part];
+          }
+          
+          if (current !== undefined) {
+            return current;
+          }
+        }
+        
+        // Try without output field (test context)
+        let current: any = nodeResult;
         for (const part of remainingParts) {
           if (current === null || current === undefined) {
             break;
