@@ -1456,6 +1456,25 @@ Delay Node
 - `low` → Verbindung zu Auto-Approve
 - `default` → Verbindung zu Error-Handler
 
+**Implementierte Features (2026-01-23):**
+- **Template-Resolution in Expressions**: `{{NodeName.field}}` wird automatisch aufgelöst
+  - Backend: `resolveTemplates()` ersetzt Platzhalter mit tatsächlichen Werten
+  - `getValueByPath()` sucht zuerst nach Node-ID, dann nach Node-Label
+  - `findNodeIdByLabel()` mappt benutzerfreundliche Namen zu technischen IDs
+  - `workflowDefinition` wird im ExecutionContext mitgeführt für Label-Lookup
+- **Visual Feedback für gematchte Condition**:
+  - Gematchte Bedingung wird grün hervorgehoben (30% Opacity Hintergrund)
+  - 2px grüner Border und fetter Text
+  - Frontend liest `matchedCondition` aus `executionState.output`
+- **Handles direkt an Conditions**:
+  - Jede Condition-Zeile hat Handle am rechten Rand
+  - Farbcodierung mit 5-Farben-Palette (grün, blau, gelb, rot, primary)
+  - Handles positioniert mit `translateX(50%)` für saubere Verbindungslinien
+  - `overflow: visible` in allen Nodes für sichtbare Checkmarks
+- **Node-Namen in Execution-Historie**:
+  - `getNodeName()` nutzt `workflowDefinition.nodes` für echte Namen
+  - Fallback auf Type-Mapping wenn Definition nicht verfügbar
+
 **API-Client Generierung:** → Siehe **[plan-hrworks-integration.md](./plan-hrworks-integration.md)**
 
 > ℹ️ Im finalen `workflow-automation` Projekt wird diese Datei nach `docs/` verschoben.

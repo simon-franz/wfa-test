@@ -345,10 +345,12 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
 - **Condition Node (Multi-Condition Switch)**:
   - Variable Anzahl von Bedingungen pro Node
   - **First-Match Logik**: Bedingungen werden von oben nach unten geprüft, erste zutreffende wird ausgeführt
-  - Jede Bedingung hat: ID, Label, Expression (JSONata)
+  - Jede Bedingung hat: ID, Label, Expression (JSONata oder Template-Syntax `{{NodeName.field}}`)
   - Optional: Default-Pfad wenn keine Bedingung zutrifft
-  - Jede Bedingung hat eigenen Output-Handle für Verknüpfung
-  - **Use Case**: Switch/Case-ähnliche Logik (z.B. Betrag > 1000 → Manager, > 500 → Team Lead, sonst → Auto-Approve)
+  - Jede Bedingung hat eigenen Output-Handle für Verknüpfung (direkt am rechten Rand der Condition)
+  - **Template-Resolution**: `{{NodeName.field}}` wird automatisch zu Werten aufgelöst (unterstützt Node-Labels)
+  - **Visual Feedback**: Gematchte Bedingung wird grün hervorgehoben nach Ausführung
+  - **Use Case**: Switch/Case-ähnliche Logik (z.B. `{{Betrag.value}} > 1000` → Manager, `> 500` → Team Lead, sonst → Auto-Approve)
 
 ### HR WORKS Integration Node (Phase 1)
 
