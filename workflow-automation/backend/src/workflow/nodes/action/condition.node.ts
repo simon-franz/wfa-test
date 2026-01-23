@@ -35,7 +35,19 @@ export class ConditionNode extends BaseNode {
       // Get value from context
       const value = this.getValueByPath(context, cleanPath);
       
-      return value !== undefined ? String(value) : match;
+      if (value === undefined) return match;
+      
+      // If value looks like a date (YYYY-MM-DD), wrap in quotes for expression parser
+      if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return `"${value}"`;
+      }
+      
+      // If value is a string, wrap in quotes
+      if (typeof value === 'string') {
+        return `"${value}"`;
+      }
+      
+      return String(value);
     });
 
     return resolved;
@@ -46,6 +58,34 @@ export class ConditionNode extends BaseNode {
 
     const parts = path.split('.');
     let current = context;
+
+    // Check for context scopes: global, workflow, execution
+    if (parts[0] === 'global' && context.globalContext) {
+      current = context.globalContext;
+      for (let i = 1; i < parts.length; i++) {
+        if (current === undefined || current === null) return undefined;
+        current = current[parts[i]];
+      }
+      return current;
+    }
+
+    if (parts[0] === 'workflow' && context.workflowContext) {
+      current = context.workflowContext;
+      for (let i = 1; i < parts.length; i++) {
+        if (current === undefined || current === null) return undefined;
+        current = current[parts[i]];
+      }
+      return current;
+    }
+
+    if (parts[0] === 'execution' && context.executionContext) {
+      current = context.executionContext;
+      for (let i = 1; i < parts.length; i++) {
+        if (current === undefined || current === null) return undefined;
+        current = current[parts[i]];
+      }
+      return current;
+    }
 
     // Try to navigate through nodeResults
     if (context.nodeResults) {
@@ -63,7 +103,6 @@ export class ConditionNode extends BaseNode {
       }
 
       // Second try: search by node label (from workflow definition)
-      // We need to find the node ID that matches the label
       const nodeId = this.findNodeIdByLabel(context, nodeName);
       if (nodeId && context.nodeResults[nodeId]) {
         current = context.nodeResults[nodeId].output;
@@ -85,9 +124,36 @@ export class ConditionNode extends BaseNode {
     return current;
   }
 
+  private normalizeLabelToCamelCase(label: string): string {
+    // Remove special characters and split by spaces/non-alphanumeric
+    const words = label.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+    
+    if (words.length === 0) return '';
+    
+    // First word starts with lowercase, rest with uppercase
+    return words
+      .map((word, index) => {
+        if (index === 0) {
+          return word.charAt(0).toLowerCase() + word.slice(1);
+        }
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join('');
+  }
+
   private findNodeIdByLabel(context: any, label: string): string | undefined {
     if (context.workflowDefinition?.nodes) {
-      const node = context.workflowDefinition.nodes.find((n: any) => n.name === label);
+      // Try exact match first
+      let node = context.workflowDefinition.nodes.find((n: any) => n.name === label);
+      
+      // If not found, try camelCase normalized match
+      if (!node) {
+        const normalizedLabel = this.normalizeLabelToCamelCase(label);
+        node = context.workflowDefinition.nodes.find(
+          (n: any) => this.normalizeLabelToCamelCase(n.name) === normalizedLabel
+        );
+      }
+      
       return node?.id;
     }
     return undefined;
@@ -119,6 +185,9 @@ export class ConditionNode extends BaseNode {
     for (const condition of conditions) {
       // Resolve {{}} templates in expression
       const resolvedExpression = this.resolveTemplates(condition.expression, input.context);
+      
+      console.log(`Condition expression: ${condition.expression}`);
+      console.log(`Resolved expression: ${resolvedExpression}`);
       
       const result = await this.expressionService.evaluateBoolean(
         resolvedExpression,

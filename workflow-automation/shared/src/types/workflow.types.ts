@@ -107,6 +107,34 @@ export interface ExecutionContext {
     payload?: Record<string, unknown>;
   };
   workflowDefinition?: WorkflowDefinition; // For label-to-id mapping
+  
+  // Context scopes for template resolution
+  globalContext?: GlobalContext;
+  workflowContext?: WorkflowContext;
+  executionContext?: ExecutionContextVariables;
+}
+
+// Global context with system-wide variables
+export interface GlobalContext {
+  companyName?: string;
+  companyAddress?: string;
+  currentDate: string; // ISO date string
+  currentTime: string; // ISO time string
+  currentDateTime: string; // ISO datetime string
+  weekday: string; // e.g., "Monday"
+  [key: string]: unknown; // Allow custom global variables
+}
+
+// Workflow-specific context
+export interface WorkflowContext {
+  name: string;
+  id: ULID;
+  variables: Record<string, unknown>; // User-defined workflow variables
+}
+
+// Execution-specific context
+export interface ExecutionContextVariables {
+  variables: Record<string, unknown>; // Runtime variables
 }
 
 // Individual node execution result
@@ -118,6 +146,7 @@ export interface NodeExecutionResult {
   startedAt: Date;
   completedAt?: Date;
   duration?: number;
+  nextNodes?: string[]; // For condition nodes: which handles were activated
 }
 
 // Workflow creation/update DTOs

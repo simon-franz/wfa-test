@@ -391,6 +391,58 @@ export function ContextPanel({ visible, onClose, onSelectVariable, currentNodeId
     [availableNodes, getNodeOutputs],
   );
 
+  // Add context scopes as special nodes
+  const contextScopes = useMemo(() => {
+    const scopes: NodeOutput[] = [
+      {
+        nodeId: '__global__',
+        nodeName: 'global',
+        nodeType: 'context',
+        tree: {
+          path: 'global',
+          key: 'global',
+          type: 'object',
+          children: [
+            { path: 'global.currentDate', key: 'currentDate', type: 'string', value: '2026-01-23' },
+            { path: 'global.currentTime', key: 'currentTime', type: 'string', value: '13:40:00' },
+            { path: 'global.currentDateTime', key: 'currentDateTime', type: 'string', value: '2026-01-23T13:40:00' },
+            { path: 'global.weekday', key: 'weekday', type: 'string', value: 'Freitag' },
+          ],
+        },
+      },
+      {
+        nodeId: '__workflow__',
+        nodeName: 'workflow',
+        nodeType: 'context',
+        tree: {
+          path: 'workflow',
+          key: 'workflow',
+          type: 'object',
+          children: [
+            { path: 'workflow.name', key: 'name', type: 'string', value: 'Workflow Name' },
+            { path: 'workflow.description', key: 'description', type: 'string', value: 'Workflow Beschreibung' },
+          ],
+        },
+      },
+      {
+        nodeId: '__execution__',
+        nodeName: 'execution',
+        nodeType: 'context',
+        tree: {
+          path: 'execution',
+          key: 'execution',
+          type: 'object',
+          children: [
+            { path: 'execution.variables', key: 'variables', type: 'object', value: {} },
+          ],
+        },
+      },
+    ];
+    return scopes;
+  }, []);
+
+  const allOutputs = useMemo(() => [...contextScopes, ...nodeOutputs], [contextScopes, nodeOutputs]);
+
   const toggleNode = useCallback((nodeId: string) => {
     setExpandedNodes((prev) => {
       const next = new Set(prev);
@@ -415,17 +467,35 @@ export function ContextPanel({ visible, onClose, onSelectVariable, currentNodeId
     });
   }, []);
 
+  const normalizeToCamelCase = useCallback((label: string): string => {
+    const words = label.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+    if (words.length === 0) return '';
+    return words.map((word, index) => {
+      if (index === 0) return word.charAt(0).toLowerCase() + word.slice(1);
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    }).join('');
+  }, []);
+
   const handleSelectField = useCallback(
     (nodeName: string, fieldPath: string) => {
-      const variable = `{{${nodeName}.${fieldPath}}}`;
-      onSelectVariable(variable);
+      // For context scopes, use the full path directly
+      if (nodeName === 'global' || nodeName === 'workflow' || nodeName === 'execution') {
+        const variable = `{{${fieldPath}}}`;
+        onSelectVariable(variable);
+      } else {
+        const camelCaseName = normalizeToCamelCase(nodeName);
+        const variable = `{{${camelCaseName}.${fieldPath}}}`;
+        onSelectVariable(variable);
+      }
       onClose();
     },
-    [onSelectVariable, onClose],
+    [onSelectVariable, onClose, normalizeToCamelCase],
   );
 
   const getNodeColor = (nodeType: string) => {
     switch (nodeType) {
+      case 'context':
+        return '#a855f7';
       case 'manual-trigger':
       case 'scheduled-trigger':
         return '#10b981';
@@ -458,14 +528,14 @@ export function ContextPanel({ visible, onClose, onSelectVariable, currentNodeId
         />
 
         <Content>
-          {nodeOutputs.length === 0 ? (
+          {allOutputs.length === 0 ? (
             <EmptyState>Keine vorherigen Knoten</EmptyState>
           ) : (
-            nodeOutputs.map((output) => (
+            allOutputs.map((output) => (
               <NodeSection key={output.nodeId}>
                 <NodeHeader onClick={() => toggleNode(output.nodeId)}>
                   <NodeIcon $color={getNodeColor(output.nodeType)}>
-                    {output.nodeType.charAt(0).toUpperCase()}
+                    {output.nodeType === 'context' ? '⚙' : output.nodeType.charAt(0).toUpperCase()}
                   </NodeIcon>
                   <NodeName>{output.nodeName}</NodeName>
                   <NodeExpandIcon $expanded={expandedNodes.has(output.nodeId)}>▶</NodeExpandIcon>
