@@ -1,9 +1,9 @@
-# HR WORKS Workflow Automation - Implementierungsplan Phase 1 (PoC)
+# HR WORKS Workflow Automation - Phase 1 Execution Checklist
 
 ## Ziel
-Full-Stack MVP in 2 Wochen: Backend + Frontend + OAuth2 + Designer + 1 Demo-Workflow
+Full-Stack MVP: Backend + Frontend + OAuth2 + Designer + Demo-Workflow
 
-## Tech-Stack Zusammenfassung
+## Tech-Stack
 | Bereich | Technologie |
 |---------|-------------|
 | Runtime | Bun |
@@ -13,75 +13,39 @@ Full-Stack MVP in 2 Wochen: Backend + Frontend + OAuth2 + Designer + 1 Demo-Work
 | State Machine | XState |
 | Frontend | React + Vite |
 | UI Library | @hrworks/sui-core + @hrworks/sui-extension |
-| Workflow Editor | @xyflow/react (React Flow) |
+| Workflow Editor | @xyflow/react |
 | State Mgmt | Zustand |
 | IDs | ULID |
-| Echtzeit-Updates | Server-Sent Events (SSE) mit `@microsoft/fetch-event-source` |
+| Echtzeit | Server-Sent Events (SSE) |
 
 ---
 
-## Projektstruktur (Monorepo)
+## 1. Projekt-Setup
 
-```
-workflow-automation/
-├── backend/                    # NestJS Backend
-│   ├── src/
-│   │   ├── main.ts
-│   │   ├── app.module.ts
-│   │   ├── auth/              # OAuth2, JWT, Guards
-│   │   ├── db/                # Drizzle, Tenant-Manager
-│   │   ├── hrworks/           # HR WORKS API Client
-│   │   ├── sync/              # Person/OE Sync Service
-│   │   ├── webhooks/          # Webhook Handler
-│   │   ├── workflow/          # Engine, Nodes, Execution
-│   │   └── common/            # Decorators, Pipes, Filters
-│   ├── drizzle/               # Migrations
-│   └── package.json
-├── frontend/                   # React Frontend
-│   ├── src/
-│   │   ├── main.tsx
-│   │   ├── App.tsx
-│   │   ├── api/               # API Client
-│   │   ├── stores/            # Zustand Stores
-│   │   ├── pages/             # Route Pages
-│   │   ├── components/        # UI Components
-│   │   └── features/          # Feature Modules
-│   │       └── designer/      # Workflow Designer
-│   └── package.json
-├── shared/                     # Gemeinsame Types
-│   ├── src/
-│   │   ├── types/
-│   │   ├── schemas/
-│   │   └── utils/
-│   └── package.json
-├── package.json               # Root (Bun Workspace)
-├── bun.lockb
-└── .env.example
-```
-
----
-
-## Implementierungsschritte
-
-### 1. Projekt-Setup
 - [ ] Monorepo mit Bun Workspaces initialisieren
-- [ ] Backend (NestJS) Grundgerüst
-- [ ] Frontend (React + Vite) Grundgerüst
-- [ ] Shared Package für Types
-- [ ] ESLint, Prettier, TypeScript Config
+- [ ] Backend (NestJS) Grundgerüst erstellen
+- [ ] Frontend (React + Vite) Grundgerüst erstellen
+- [ ] Shared Package für Types anlegen
+- [ ] ESLint, Prettier, TypeScript Config einrichten
+- [ ] .env.example mit allen Variablen anlegen
 
 **Kritische Dateien:**
-- `package.json` (Root)
+- `package.json` (Root mit workspaces)
 - `backend/package.json`
 - `frontend/package.json`
 - `shared/package.json`
 - `tsconfig.json`
 
-### 2. Database Layer (Drizzle)
-- [ ] Landlord Schema (tenants Tabelle)
-- [ ] Tenant Schema (users, workflows, executions, etc.)
-- [ ] Tenant-Manager (Connection Pool)
-- [ ] Migrations Setup
+---
+
+## 2. Database Layer (Drizzle)
+
+- [ ] Landlord Schema erstellen (tenants Tabelle)
+- [ ] Tenant Schema erstellen (users, workflows, executions, credentials, synced_*)
+- [ ] Workflow Versions Schema für Historisierung
+- [ ] Tenant-Manager mit Connection Pool implementieren
+- [ ] SQLite für Development konfigurieren
+- [ ] Migrations Setup mit Drizzle Kit
 
 **Kritische Dateien:**
 - `shared/src/db/landlord-schema.ts`
@@ -89,12 +53,27 @@ workflow-automation/
 - `backend/src/db/tenant-manager.ts`
 - `backend/src/db/landlord.ts`
 
-### 3. Authentication (OAuth2 + JWT)
-- [ ] HR WORKS OAuth2 Integration
-- [ ] JWT Token Generation/Validation
-- [ ] Auth Guard
-- [ ] Tenant/User Decorators
-- [ ] Login Endpoint
+---
+
+## 3. Authentication (OAuth2 + JWT)
+
+- [ ] HR WORKS OAuth2 Integration (Client ID, Secret, Scopes)
+- [ ] JWT Token Generation mit tenant_id, user_id, role
+- [ ] JWT Validation Service
+- [ ] HttpOnly Cookie Setup (auth_token)
+- [ ] Auth Guard implementieren
+- [ ] Tenant/User Decorators erstellen
+- [ ] Login/Logout Endpoints
+
+**JWT Payload Struktur:**
+```json
+{
+  "sub": "user_uuid",
+  "tenant_id": "tenant_uuid",
+  "email": "user@company.de",
+  "role": "workflow-admin"
+}
+```
 
 **Kritische Dateien:**
 - `backend/src/auth/auth.module.ts`
@@ -103,23 +82,45 @@ workflow-automation/
 - `backend/src/auth/oauth.controller.ts`
 - `backend/src/common/decorators/tenant.decorator.ts`
 
-### 4. HR WORKS API Client
-- [ ] Authentication (Access Key + Secret → Bearer Token)
-- [ ] Persons API
-- [ ] Organization Units API
-- [ ] Webhooks API
-- [ ] Error Handling & Retries
+---
+
+## 4. HR WORKS API Client
+
+- [ ] Authentication Service (Access Key + Secret → Bearer Token, 15 min Gültigkeit)
+- [ ] Automatischer Token-Refresh bei Ablauf
+- [ ] Persons API Wrapper
+- [ ] Organization Units API Wrapper
+- [ ] Webhooks API Wrapper
+- [ ] Async Job Handling (POST/PUT/DELETE → jobId → Polling)
+- [ ] Dictionary Response Flattening
+- [ ] Error Handling & Retries (max 3x)
+
+**Token-Handling:**
+- Response-Feld ist `token` (nicht `access_token`)
+- 15 Minuten Gültigkeit
+- Sichere Speicherung in Tenant-Konfiguration
 
 **Kritische Dateien:**
 - `backend/src/hrworks/hrworks.module.ts`
 - `backend/src/hrworks/hrworks-api.service.ts`
 - `backend/src/hrworks/hrworks-auth.service.ts`
 
-### 5. Sync Service
-- [ ] Initial Full-Sync (Persons + OEs)
+---
+
+## 5. Sync Service
+
+- [ ] Initial Full-Sync (alle Persons + OEs)
 - [ ] Webhook Registration bei HR WORKS
-- [ ] Webhook Handler für Delta-Updates
-- [ ] Signature Verification
+- [ ] Webhook Handler mit Signature Verification
+- [ ] Delta-Updates via Webhooks
+- [ ] Lokales Caching in synced_persons/synced_organization_units
+
+**Webhook Signature:**
+```typescript
+const stringToSign = `${jobId}.${timestamp}`;
+const signature = crypto.createHmac('sha256', secretKey)
+  .update(stringToSign).digest('base64');
+```
 
 **Kritische Dateien:**
 - `backend/src/sync/sync.module.ts`
@@ -127,62 +128,116 @@ workflow-automation/
 - `backend/src/webhooks/hrworks-webhook.controller.ts`
 - `backend/src/webhooks/hrworks-webhook.service.ts`
 
-### 6. Workflow Engine
-- [ ] Workflow Definition Model
-- [ ] XState Machine Generator
-- [ ] BullMQ Queue Setup
-- [ ] Execution Worker
-- [ ] State Persistence
+---
+
+## 6. Workflow Engine
+
+- [ ] Workflow Definition Model (JSON Schema mit nodes + edges)
+- [ ] XState Machine Generator aus Workflow-Definition
+- [ ] BullMQ Queue Setup für async Execution
+- [ ] Execution Worker implementieren
+- [ ] State Persistence in DB (überlebt App-Neustarts)
+- [ ] ULID für zeitlich sortierbare IDs
 - [ ] Expression Engine (JSONata)
+- [ ] Custom Datum-Funktionen ($now, $formatDate, $addDays, $diffDays)
+- [ ] Template Engine ({{expression}} Platzhalter)
+- [ ] getValueByPath() für Pfad-Auflösung (sucht nach Node-ID dann Node-Label)
+
+**Workflow Context Struktur:**
+```json
+{
+  "input": { },
+  "nodes": {
+    "trigger1": { "output": { } },
+    "httpRequest1": { "output": { } }
+  },
+  "person": { },
+  "$workflow": { "id": "", "name": "" }
+}
+```
 
 **Kritische Dateien:**
 - `backend/src/workflow/workflow.module.ts`
 - `backend/src/workflow/engine/workflow-engine.service.ts`
 - `backend/src/workflow/engine/xstate-generator.ts`
 - `backend/src/workflow/execution/execution.worker.ts`
-- `backend/src/workflow/execution/execution.service.ts` (SSE Stream)
+- `backend/src/workflow/execution/execution.service.ts`
 - `backend/src/workflow/expression/expression.service.ts`
-- `backend/src/workflow/workflow.service.ts` (testNode, getValueByPath)
+- `backend/src/workflow/workflow.service.ts`
 
-### 7. Node Types (Phase 1)
-- [ ] Manual Trigger Node
-- [ ] Scheduled Trigger Node (Cron)
-- [ ] HTTP Request Node
-- [ ] **HR WORKS Node** (mit Dictionary Flattening, Token-Handling, erweiterten Person-Feldern)
-- [ ] **Data Transformation Node** (count, filter, map, reduce mit Result Wrapping)
-- [ ] Condition Node
-- [ ] Delay Node
+---
+
+## 7. Node Types (Phase 1)
+
+### Trigger Nodes
+- [ ] **Manual Trigger**: Workflow manuell starten, Input-Parameter definierbar
+- [ ] **Scheduled Trigger**: Cron-basiert, Zeitzone-Handling
+
+### Action Nodes
+- [ ] **HTTP Request Node**: GET/POST/PUT/DELETE, Header Config, Body Template
+- [ ] **HR WORKS Node**:
+  - Dropdown für Endpoint-Auswahl (Persons, OEs, Absences)
+  - Dynamisches Parameter-Formular
+  - Async Job Handling (Node bleibt "running" bis Job fertig)
+  - Output = `data` Objekt aus Job-Response (ohne Wrapper)
+- [ ] **Data Transformation Node**:
+  - Operationen: count, filter, map, reduce, sort, distinct
+  - Result Wrapping für Context-Nutzung
+- [ ] **Condition Node (Multi-Condition Switch)**:
+  - Variable Anzahl Bedingungen
+  - First-Match Logik (von oben nach unten)
+  - Template-Resolution in Expressions (`{{NodeName.field}}`)
+  - Default-Pfad optional
+  - Eigener Output-Handle pro Bedingung
+  - Visual Feedback: Gematchte Bedingung grün hervorgehoben
+- [ ] **Delay Node**: Minuten/Stunden/Tage, persistente Delays mit BullMQ
+
+- [ ] **Node Registry** für dynamische Registrierung aller Node-Typen
 
 **Kritische Dateien:**
 - `backend/src/workflow/nodes/base-node.ts`
 - `backend/src/workflow/nodes/trigger/manual-trigger.node.ts`
 - `backend/src/workflow/nodes/trigger/scheduled-trigger.node.ts`
 - `backend/src/workflow/nodes/action/http-request.node.ts`
-- `backend/src/workflow/nodes/action/hrworks.node.ts` (Dictionary Flattening, Token-Handling)
-- `backend/src/workflow/nodes/action/data-transform.node.ts` (Result Wrapping)
+- `backend/src/workflow/nodes/action/hrworks.node.ts`
+- `backend/src/workflow/nodes/action/data-transform.node.ts`
 - `backend/src/workflow/nodes/action/condition.node.ts`
 - `backend/src/workflow/nodes/action/delay.node.ts`
-- `backend/src/workflow/nodes/node-registry.ts` (Registrierung aller Node-Typen)
+- `backend/src/workflow/nodes/node-registry.ts`
 
-### 8. REST API
-- [ ] Workflows CRUD
-- [ ] Workflow Executions
-- [ ] **SSE Endpoint** für Echtzeit-Execution-Updates (`/api/executions/:id/stream`)
-- [ ] **Settings Endpoints** (GET/PUT `/api/settings` für Tenant-Konfiguration)
-- [ ] **Node Testing Endpoint** (`POST /api/workflows/:id/test-node` für Play-Button)
+---
+
+## 8. REST API
+
+- [ ] Workflows CRUD (`/api/workflows`)
+- [ ] Workflow Executions (`/api/executions`)
+- [ ] SSE Endpoint für Live-Updates (`/api/executions/:id/stream`)
+- [ ] Node Testing Endpoint (`POST /api/workflows/:id/test-node`)
+- [ ] Settings Endpoints (`GET/PUT /api/settings`)
 - [ ] Synced Persons/OEs Endpoints
+- [ ] Workflow Versions Endpoints (Historie abrufen, Version wiederherstellen)
+- [ ] Structured JSON Logging für alle Requests
 
 **Kritische Dateien:**
 - `backend/src/workflow/workflow.controller.ts`
 - `backend/src/workflow/execution/execution.controller.ts`
 - `backend/src/sync/sync.controller.ts`
+- `backend/src/settings/settings.controller.ts`
 
-### 9. Frontend - Grundgerüst
+---
+
+## 9. Frontend - Grundgerüst
+
 - [ ] SmartFace Integration (@hrworks/sui-core, @hrworks/sui-extension)
-- [ ] Router Setup
+- [ ] React Router Setup
 - [ ] Zustand Store Setup
-- [ ] API Client
+- [ ] API Client mit Authorization Header
 - [ ] Auth State Management
+- [ ] **Theme Store** für Dark/Light Mode mit Persistierung
+- [ ] Error Boundary
+- [ ] Loading States
+- [ ] **Notification Center** (Toast für Fehler/Erfolg)
+- [ ] Layout mit Navigation
 
 **Kritische Dateien:**
 - `frontend/src/main.tsx`
@@ -190,43 +245,106 @@ workflow-automation/
 - `frontend/src/api/client.ts`
 - `frontend/src/stores/auth.store.ts`
 - `frontend/src/stores/workflow.store.ts`
+- `frontend/src/stores/theme.store.ts`
+- `frontend/src/components/Layout.tsx`
 
-### 10. Frontend - Login
-- [ ] Login Page
-- [ ] OAuth2 Redirect Handler
-- [ ] Protected Routes
+---
+
+## 10. Frontend - Login
+
+- [ ] Login Page mit HR WORKS OAuth Redirect
+- [ ] OAuth2 Callback Handler
+- [ ] Protected Routes (Auth Guard)
+- [ ] Logout Funktion
 
 **Kritische Dateien:**
 - `frontend/src/pages/LoginPage.tsx`
 - `frontend/src/pages/OAuthCallbackPage.tsx`
 - `frontend/src/components/ProtectedRoute.tsx`
 
-### 11. Frontend - Workflow List
-- [ ] Workflow List Page
-- [ ] Workflow Card Component
+---
+
+## 11. Frontend - Workflow List
+
+- [ ] **Tabellen-Darstellung** (nicht Karten)
+  - Spalten: Name, Beschreibung, Status (Badge), Aktualisiert, Aktionen
+  - Status-Badges: Aktiv (grün), Inaktiv (gelb), Entwurf (grau)
+- [ ] Action-Buttons: Historie, Ausführen, Löschen
+- [ ] Klick auf Zeile → Workflow-Designer öffnen
 - [ ] Create Workflow Modal
+- [ ] Validierung: Nur ein Trigger pro Workflow
 
 **Kritische Dateien:**
 - `frontend/src/pages/WorkflowListPage.tsx`
-- `frontend/src/components/WorkflowCard.tsx`
+- `frontend/src/components/WorkflowTable.tsx`
 - `frontend/src/components/CreateWorkflowModal.tsx`
 
-### 12. Frontend - Workflow Designer
-- [ ] React Flow Canvas
-- [ ] Custom Node Types (Trigger, Action, Condition)
-- [ ] Node Palette (Drag & Drop)
-- [ ] **Orthogonale Edges** mit Hover-Lösch-Icon
+---
+
+## 12. Frontend - Workflow Designer
+
+### Canvas & Editor
+- [ ] React Flow Canvas mit Drag & Drop
+- [ ] **Horizontales Layout** (links nach rechts, immer!)
+- [ ] Custom Node Types (Trigger, Action, Condition, HR WORKS, DataTransform)
+- [ ] **Node Palette/Library** (Sidebar mit draggable Nodes)
+- [ ] Edge Drawing (Bezier-Kurven)
+- [ ] **Deletable Edges** (Hover-Icon zum Löschen)
 - [ ] **Datenfluss-Animation** auf Edges
-- [ ] Edge Drawing
-- [ ] Node Configuration Panel mit **Context-Button** für Variable Picker
-- [ ] **Context Panel** mit expandable Tree-View, Array-Navigation, Wert-Anzeige
-- [ ] **Node-by-Node Testing** (Play-Button, sequentielle Abhängigkeiten, Output Caching)
-- [ ] **Template Placeholder Resolution** (`{{NodeName.output.field}}`)
-- [ ] **Canvas Controls** (Zoom, Undo/Redo, Auto-Layout, Fullscreen)
-- [ ] **Context Menu** für Nodes (Rechtsklick)
-- [ ] **SSE Integration** für Live-Execution-Updates
-- [ ] **Theme Store** für Dark/Light Mode
-- [ ] Save/Load Workflow
+- [ ] Node Selection & Multi-Select
+
+### Canvas Controls
+- [ ] Zoom-Steuerung (-, %, +)
+- [ ] Undo/Redo-Buttons
+- [ ] Vollbild-Toggle
+- [ ] **Auto-Layout-Funktion**
+- [ ] Hilfe-Button
+- [ ] Grüner "+" FAB-Button
+
+### Node Configuration
+- [ ] **Config Panel** (Sidebar rechts)
+- [ ] **Context-Button** in Input-Feldern → öffnet Context Panel
+- [ ] **Context Panel** mit:
+  - Expandable Tree-View für Node Outputs
+  - Array-Navigation ([0], [1], etc.)
+  - Wert-Anzeige für primitive Typen
+  - Klickbar auf allen Ebenen zum Einfügen
+  - Syntax-Highlighting für JSON
+  - Filterfunktion
+- [ ] **Context Menu** (Rechtsklick): Duplizieren, Löschen, Konfigurieren, Testen
+- [ ] Keyboard-Shortcuts (Delete-Taste)
+
+### Node-by-Node Testing
+- [ ] **Play-Button** an jedem Node
+- [ ] Sequentielle Abhängigkeit (Node nur ausführbar wenn Vorgänger fertig)
+- [ ] **Output Caching** (Ergebnis am Node gespeichert)
+- [ ] Visuelles Status-Feedback:
+  - Grau: Nicht ausführbar
+  - Grün: Bereit
+  - Blau/Spinner: Läuft
+  - Grün mit Haken: Erfolgreich
+  - Rot: Fehler
+- [ ] **Output-Preview** (expandable JSON direkt am Node)
+- [ ] **"Run All"-Button** (alle Nodes in Reihenfolge)
+- [ ] Cache Invalidation bei Config-Änderungen
+
+### Echtzeit-Updates
+- [ ] **SSE Integration** (`@microsoft/fetch-event-source`)
+- [ ] Node-Status-Updates in Echtzeit (running → success/error)
+- [ ] Automatische Reconnect-Logik
+
+### Toolbar
+- [ ] Workflow-Name (editierbar)
+- [ ] Versionsnummer
+- [ ] Aktivieren/Deaktivieren Toggle
+- [ ] Historie-Button
+- [ ] Ausführen-Button (Play-Icon)
+- [ ] Speichern-Button
+
+### Speichern & Versionierung
+- [ ] Workflow speichern mit Versionierung
+- [ ] Workflow laden
+- [ ] **Unsaved Changes Indicator**
 
 **Kritische Dateien:**
 - `frontend/src/features/designer/WorkflowDesigner.tsx`
@@ -238,25 +356,66 @@ workflow-automation/
 - `frontend/src/features/designer/nodes/DataTransformNode.tsx`
 - `frontend/src/features/designer/nodes/ConditionNode.tsx`
 - `frontend/src/features/designer/ConfigPanel.tsx`
-- `frontend/src/features/designer/ContextPanel.tsx` (Tree-View, Array-Navigation)
+- `frontend/src/features/designer/ContextPanel.tsx`
 - `frontend/src/features/designer/components/ContextInput.tsx`
 - `frontend/src/features/designer/components/NodePlayButton.tsx`
-- `frontend/src/features/designer/components/NodeExecutionPanel.tsx`
 - `frontend/src/features/designer/edges/DeletableEdge.tsx`
 - `frontend/src/features/designer/ContextMenu.tsx`
 - `frontend/src/features/designer/CanvasControls.tsx`
 - `frontend/src/features/designer/hooks/useAutoLayout.ts`
-- `frontend/src/features/designer/hooks/useContextInput.ts`
-- `frontend/src/stores/designer.store.ts` (Node Execution Logic, Context Handling)
-- `frontend/src/stores/theme.store.ts`
-- `frontend/src/pages/WorkflowDesignerPage.tsx` (SSE Integration)
+- `frontend/src/stores/designer.store.ts`
+- `frontend/src/pages/WorkflowDesignerPage.tsx`
+
+---
+
+## 13. Frontend - Ausführungshistorie
+
+- [ ] **Split-Layout**: Liste links (350px), Details rechts
+- [ ] **Sidebar (Ausführungsliste)**:
+  - Zurück-Button zum Designer
+  - Nummerierte Einträge (#1, #2, #3)
+  - Datum/Zeit, Status-Badge
+  - Execution-ID (monospace)
+- [ ] **Detail-Panel**:
+  - Header: Status, Start-/Endzeit
+  - Node-Liste (aufklappbar)
+  - Node-Header: Icon, Name (lesbar, nicht ID!), Startzeit, Status
+  - Node-Content: Output als JSON-Viewer
+- [ ] **JSON-Viewer**:
+  - Syntax-Highlighting
+  - Ein-/ausklappbare Objekte/Arrays
+  - Item/Key-Zähler bei eingeklappten Elementen
+- [ ] **Node-Namen-Mapping** (condition-123 → "Bedingung")
+- [ ] **Node-Icons** (Trigger, Schedule, Condition, HR WORKS, etc.)
+
+**Kritische Dateien:**
+- `frontend/src/pages/ExecutionHistoryPage.tsx`
+- `frontend/src/components/ExecutionList.tsx`
+- `frontend/src/components/ExecutionDetail.tsx`
+- `frontend/src/components/JsonViewer.tsx`
+
+---
+
+## 14. Frontend - Settings
+
+- [ ] Settings Page mit Navigation-Link
+- [ ] HR WORKS API-Credentials Formular (apiKey, apiSecret, baseUrl)
+- [ ] Sync-Einstellungen (Webhook vs. Polling)
+- [ ] Test-Connection-Button
+- [ ] Tenant-Informationen anzeigen
+
+**Kritische Dateien:**
 - `frontend/src/pages/SettingsPage.tsx`
 
-### 13. Demo-Workflow: Onboarding
-- [ ] Workflow Template erstellen
-- [ ] End-to-End Test
+---
 
-**Demo-Workflow:**
+## 15. Demo-Workflow: Onboarding
+
+- [ ] Workflow Template erstellen
+- [ ] End-to-End Test durchführen
+- [ ] Dokumentation erstellen
+
+**Demo-Workflow Struktur:**
 ```
 [Manual Trigger]
   → [HTTP: Person Details abrufen]
@@ -268,26 +427,27 @@ workflow-automation/
 
 ---
 
-## Verification / Testing
+## 16. Verification & Testing
 
-1. **Backend Unit Tests:**
-   - Auth Service Tests
-   - Expression Engine Tests
-   - Node Execution Tests
+### Backend Tests
+- [ ] Auth Service Unit Tests
+- [ ] Expression Engine Unit Tests
+- [ ] Node Execution Unit Tests
+- [ ] Webhook Signature Verification Test
 
-2. **Integration Tests:**
-   - Workflow CRUD API
-   - Webhook Signature Verification
-   - Full Workflow Execution
+### Integration Tests
+- [ ] Workflow CRUD API
+- [ ] Full Workflow Execution
+- [ ] SSE Stream Test
 
-3. **E2E Test:**
-   - Login → Create Workflow → Execute → Verify Result
-
-4. **Manual Testing:**
-   - Designer UI funktioniert
-   - Nodes können verbunden werden
-   - Workflow speichern/laden
-   - Workflow manuell triggern
+### Manual E2E Testing
+- [ ] Login → OAuth Flow
+- [ ] Workflow erstellen
+- [ ] Nodes hinzufügen & verbinden
+- [ ] Node-by-Node Testing (Play-Button)
+- [ ] Workflow speichern
+- [ ] Workflow ausführen
+- [ ] Ausführungshistorie prüfen
 
 ---
 
@@ -334,17 +494,17 @@ REDIS_PORT=6379
 - @xyflow/react
 - zustand
 - styled-components
-- @microsoft/fetch-event-source (für SSE)
+- @microsoft/fetch-event-source
 
 **Shared:**
-- zod (Schema Validation)
+- zod
 - typescript
 
 ---
 
-## Offene Punkte für spätere Phasen
+## Offene Punkte (spätere Phasen)
 
-- PersonTask API (Phase 2) - API noch nicht verfügbar
-- Approval Builder API (Phase 3) - API noch nicht verfügbar
+- PersonTask API (Phase 2)
+- Approval Builder API (Phase 3)
 - Monitoring Dashboard (Phase 4)
 - Template Library (Phase 4)
