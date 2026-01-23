@@ -18,7 +18,7 @@ export class HrworksNode extends BaseNode {
     const result = await this.workflowService['executeHrworksNode'](
       tenantId,
       config.config,
-      context.nodeResults
+      context
     );
 
     return { output: result.output };

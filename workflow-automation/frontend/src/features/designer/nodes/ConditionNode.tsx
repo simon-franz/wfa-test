@@ -148,7 +148,7 @@ export const ConditionNode = memo(({ data, selected, id }: NodeProps<WorkflowNod
           <ConditionsList>
             {conditions.map((condition: any, index: number) => (
               <ConditionItem key={condition.id} $matched={matchedConditionId === condition.id}>
-                <span>{condition.label}: {condition.expression}</span>
+                <span>{condition.label}</span>
                 <ConditionHandle
                   type="source"
                   position={Position.Right}
@@ -159,7 +159,7 @@ export const ConditionNode = memo(({ data, selected, id }: NodeProps<WorkflowNod
             ))}
             {enableDefault && (
               <ConditionItem $matched={matchedConditionId === 'default'}>
-                <span>Default: (keine trifft zu)</span>
+                <span>Default</span>
                 <ConditionHandle
                   type="source"
                   position={Position.Right}

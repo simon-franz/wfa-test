@@ -140,7 +140,7 @@ export class HrworksApiService {
   }
 
   async getPerson(tenantId: string, personnelNumber: string): Promise<HRWorksPerson> {
-    return this.request<HRWorksPerson>(tenantId, 'GET', `/v2/persons/${personnelNumber}`);
+    return this.request<HRWorksPerson>(tenantId, 'GET', `/v2/persons/${personnelNumber}/master-data`);
   }
 
   async createPerson(tenantId: string, personData: Partial<HRWorksPerson>): Promise<HRWorksPerson> {
