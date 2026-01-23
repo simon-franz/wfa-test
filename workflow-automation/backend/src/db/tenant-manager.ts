@@ -80,7 +80,7 @@ const TENANT_SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS workflow_executions (
     id TEXT PRIMARY KEY,
     workflow_id TEXT NOT NULL REFERENCES workflows(id),
-    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'running', 'waiting', 'completed', 'failed', 'cancelled')),
     triggered_by TEXT NOT NULL CHECK(triggered_by IN ('manual', 'scheduled', 'webhook')),
     triggered_by_user_id TEXT REFERENCES users(id),
     context TEXT NOT NULL,
