@@ -17,7 +17,7 @@ const NodeContainer = styled.div<{ $selected: boolean }>`
   border: 2px solid ${(props) => (props.$selected ? 'var(--color-primary)' : 'var(--color-primary)')};
   border-radius: var(--radius-lg);
   box-shadow: ${(props) => (props.$selected ? 'var(--shadow-lg)' : 'var(--shadow-md)')};
-  overflow: hidden;
+  overflow: visible;
   transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
 `;
 
