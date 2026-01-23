@@ -93,8 +93,11 @@ export class ExecutionWorker implements OnModuleInit, OnModuleDestroy {
       // Execute workflow
       const resultContext = await this.workflowEngine.executeWorkflow(definition, context);
 
+      // Re-fetch execution to check if it's waiting
+      const updatedExecution = await this.executionService.findById(tenantId, executionId);
+      
       // Update status to completed (only if not waiting)
-      if (execution.status !== 'waiting') {
+      if (updatedExecution.status !== 'waiting') {
         await this.executionService.updateStatus(tenantId, executionId, 'completed', resultContext);
       }
 
