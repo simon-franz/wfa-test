@@ -232,13 +232,17 @@ export function WorkflowDesignerPage() {
     };
   }, [workflowId, isNewWorkflow, fetchWorkflow, clearCurrentWorkflow, reset]);
 
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
   useEffect(() => {
-    if (currentWorkflow) {
+    if (currentWorkflow && isInitialLoad) {
+      // Only load definition on initial load, not after save
       setWorkflowName(currentWorkflow.name);
       loadFromDefinition(currentWorkflow.definition as WorkflowDefinition);
       fetchExecutions(currentWorkflow.id);
+      setIsInitialLoad(false);
     }
-  }, [currentWorkflow, loadFromDefinition, fetchExecutions]);
+  }, [currentWorkflow, loadFromDefinition, fetchExecutions, isInitialLoad]);
 
   const handleSave = useCallback(async () => {
     if (!currentWorkflow) return;
