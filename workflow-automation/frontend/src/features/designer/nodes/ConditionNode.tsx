@@ -17,8 +17,9 @@ const NodeContainer = styled.div<{ $selected: boolean }>`
   border: 2px solid ${(props) => (props.$selected ? 'var(--color-primary)' : 'var(--color-warning)')};
   border-radius: var(--radius-lg);
   box-shadow: ${(props) => (props.$selected ? 'var(--shadow-lg)' : 'var(--shadow-md)')};
-  overflow: hidden;
+  overflow: visible;
   transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+  padding-right: 6px;
 `;
 
 const NodeHeader = styled.div`
@@ -51,6 +52,8 @@ const NodeTitle = styled.div`
 
 const NodeBody = styled.div`
   padding: var(--spacing-3);
+  padding-right: 0;
+  overflow: visible;
 `;
 
 const ExpressionPreview = styled.div`
@@ -65,48 +68,43 @@ const ExpressionPreview = styled.div`
   overflow: hidden;
 `;
 
-const HandleContainer = styled.div`
-  position: absolute;
-  right: -6px;
-  top: 50%;
-  transform: translateY(-50%);
+const ConditionsList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-4);
+  gap: var(--spacing-1);
+  overflow: visible;
 `;
 
-const HandleLabel = styled.div<{ $type: 'true' | 'false' }>`
+const ConditionItem = styled.div<{ $matched?: boolean }>`
+  position: relative;
+  font-size: var(--font-size-xs);
+  color: ${(props) => props.$matched ? 'var(--color-success)' : 'var(--color-text-muted)'};
+  background-color: ${(props) => 
+    props.$matched ? 'rgba(16, 185, 129, 0.3)' : 'var(--color-bg-tertiary)'};
+  border: ${(props) => props.$matched ? '2px solid var(--color-success)' : 'none'};
+  padding: var(--spacing-2);
+  padding-right: var(--spacing-4);
+  border-radius: var(--radius-sm);
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  font-family: monospace;
+  word-break: break-all;
+  font-weight: ${(props) => props.$matched ? '600' : 'normal'};
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
-  position: relative;
-
-  span {
-    font-size: var(--font-size-xs);
-    color: ${(props) => (props.$type === 'true' ? 'var(--color-success)' : 'var(--color-danger)')};
-    font-weight: 500;
-    background: var(--color-bg-secondary);
-    padding: 2px 6px;
-    border-radius: var(--radius-sm);
-  }
+  justify-content: space-between;
 `;
 
-const StyledHandle = styled(Handle)`
-  width: 12px;
-  height: 12px;
+const ConditionHandle = styled(Handle)<{ $color?: string }>`
+  width: 10px;
+  height: 10px;
+  background-color: ${(props) => props.$color || 'var(--color-primary)'};
   border: 2px solid var(--color-bg-secondary);
-  position: relative !important;
-  transform: none !important;
+  position: absolute !important;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) translateX(50%) !important;
   left: auto !important;
-  right: auto !important;
-`;
-
-const TrueHandle = styled(StyledHandle)`
-  background-color: var(--color-success);
-`;
-
-const FalseHandle = styled(StyledHandle)`
-  background-color: var(--color-danger);
 `;
 
 const TopHandle = styled(Handle)`
@@ -117,7 +115,25 @@ const TopHandle = styled(Handle)`
 `;
 
 export const ConditionNode = memo(({ data, selected, id }: NodeProps<WorkflowNodeData>) => {
-  const expression = (data.config?.expression as string) || 'true';
+  // Support both old (single expression) and new (multiple conditions) format
+  const config = data.config as any;
+  const conditions = config?.conditions || [
+    { id: 'true', label: 'Ja', expression: config?.expression || 'true' },
+    { id: 'false', label: 'Nein', expression: `not (${config?.expression || 'true'})` },
+  ];
+  const enableDefault = config?.enableDefault !== false;
+  
+  // Get matched condition from execution result
+  const matchedConditionId = data.executionState?.output?.matchedCondition;
+
+  // Color palette for handles
+  const colors = [
+    'var(--color-success)',
+    'var(--color-info)',
+    'var(--color-warning)',
+    'var(--color-danger)',
+    'var(--color-primary)',
+  ];
 
   return (
     <NodeWrapper>
@@ -129,18 +145,31 @@ export const ConditionNode = memo(({ data, selected, id }: NodeProps<WorkflowNod
           <NodeTitle>{data.label}</NodeTitle>
         </NodeHeader>
         <NodeBody>
-          <ExpressionPreview>{expression}</ExpressionPreview>
+          <ConditionsList>
+            {conditions.map((condition: any, index: number) => (
+              <ConditionItem key={condition.id} $matched={matchedConditionId === condition.id}>
+                <span>{condition.label}: {condition.expression}</span>
+                <ConditionHandle
+                  type="source"
+                  position={Position.Right}
+                  id={condition.id}
+                  $color={colors[index % colors.length]}
+                />
+              </ConditionItem>
+            ))}
+            {enableDefault && (
+              <ConditionItem $matched={matchedConditionId === 'default'}>
+                <span>Default: (keine trifft zu)</span>
+                <ConditionHandle
+                  type="source"
+                  position={Position.Right}
+                  id="default"
+                  $color="var(--color-text-muted)"
+                />
+              </ConditionItem>
+            )}
+          </ConditionsList>
         </NodeBody>
-        <HandleContainer>
-          <HandleLabel $type="true">
-            <span>Ja</span>
-            <TrueHandle type="source" position={Position.Right} id="true" />
-          </HandleLabel>
-          <HandleLabel $type="false">
-            <span>Nein</span>
-            <FalseHandle type="source" position={Position.Right} id="false" />
-          </HandleLabel>
-        </HandleContainer>
       </NodeContainer>
       <NodeExecutionPanel executionState={data.executionState} />
     </NodeWrapper>

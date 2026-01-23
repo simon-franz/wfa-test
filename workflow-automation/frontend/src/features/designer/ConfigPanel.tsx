@@ -237,6 +237,8 @@ export function ConfigPanel() {
     (variable: string) => {
       if (!selectedNode || !activeInputKey) return;
 
+      console.log('handleSelectVariable:', { variable, activeInputKey, config: selectedNode.data.config });
+
       // Handle nested keys like "parameters.id"
       if (activeInputKey.startsWith('parameters.')) {
         const paramName = activeInputKey.replace('parameters.', '');
@@ -248,6 +250,19 @@ export function ConfigPanel() {
           ...parameters,
           [paramName]: newValue,
         });
+      } else if (activeInputKey === 'expression' && selectedNode.data.config.conditions) {
+        // For condition nodes with multiple conditions, we need to update the active condition
+        // Since we don't track which condition is being edited, we'll update the first one
+        // This is a limitation - ideally we'd track the condition index
+        const conditions = selectedNode.data.config.conditions as any[];
+        if (conditions.length > 0) {
+          const updatedConditions = [...conditions];
+          updatedConditions[0] = {
+            ...updatedConditions[0],
+            expression: (updatedConditions[0].expression || '') + variable,
+          };
+          handleConfigChange('conditions', updatedConditions);
+        }
       } else {
         const currentValue = (selectedNode.data.config[activeInputKey] as string) || '';
         const newValue = currentValue + variable;
@@ -353,17 +368,94 @@ export function ConfigPanel() {
         );
 
       case 'condition':
+        const conditions = (config.conditions as any[]) || [
+          { id: 'condition-1', label: 'Condition 1', expression: 'true' },
+        ];
+        const enableDefault = config.enableDefault !== false;
+
         return (
-          <FormGroup>
-            <Label>Bedingung (JSONata)</Label>
-            <ContextInput
-              multiline
-              value={(config.expression as string) || ''}
-              onChange={(e) => handleConfigChange('expression', e.target.value)}
-              onFocus={(rect) => handleInputFocus('expression', rect)} 
-              placeholder='$nodes.getData.output.role = "Developer"'
-            />
-          </FormGroup>
+          <>
+            <FormGroup>
+              <Label>Bedingungen (First-Match)</Label>
+              {conditions.map((condition, index) => (
+                <div key={condition.id} style={{ marginBottom: 'var(--spacing-3)' }}>
+                  <div style={{ display: 'flex', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-2)' }}>
+                    <Input
+                      placeholder="Label"
+                      value={condition.label}
+                      onChange={(e) => {
+                        const newConditions = [...conditions];
+                        newConditions[index].label = e.target.value;
+                        handleConfigChange('conditions', newConditions);
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      onClick={() => {
+                        const newConditions = conditions.filter((_, i) => i !== index);
+                        handleConfigChange('conditions', newConditions);
+                      }}
+                      style={{
+                        padding: 'var(--spacing-2)',
+                        background: 'var(--color-danger)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 'var(--radius-sm)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <ContextInput
+                    multiline
+                    value={condition.expression}
+                    onChange={(e) => {
+                      const newConditions = [...conditions];
+                      newConditions[index].expression = e.target.value;
+                      handleConfigChange('conditions', newConditions);
+                    }}
+                    onFocus={(rect) => handleInputFocus('expression', rect)}
+                    placeholder="amount > 1000"
+                  />
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  const newConditions = [
+                    ...conditions,
+                    {
+                      id: `condition-${Date.now()}`,
+                      label: `Condition ${conditions.length + 1}`,
+                      expression: 'true',
+                    },
+                  ];
+                  handleConfigChange('conditions', newConditions);
+                }}
+                style={{
+                  padding: 'var(--spacing-2) var(--spacing-3)',
+                  background: 'var(--color-primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 'var(--radius-sm)',
+                  cursor: 'pointer',
+                  width: '100%',
+                }}
+              >
+                + Bedingung hinzufügen
+              </button>
+            </FormGroup>
+            <FormGroup>
+              <Label style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
+                <input
+                  type="checkbox"
+                  checked={enableDefault}
+                  onChange={(e) => handleConfigChange('enableDefault', e.target.checked)}
+                />
+                Default-Pfad aktivieren
+              </Label>
+            </FormGroup>
+          </>
         );
 
       case 'delay':
