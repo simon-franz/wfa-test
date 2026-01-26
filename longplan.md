@@ -24,7 +24,7 @@ Runtime: **Bun** (schneller als Node.js, native TypeScript-Support)
 Framework: NestJS
 ORM: **Drizzle** (Type-safe, Multi-Dialect Support, bessere Performance als Prisma)
 Datenbank: PostgreSQL (Produktion), SQLite (lokale Entwicklung)
-Queue System: BullMQ (Redis-basiert, für asynchrone Workflow-Ausführung)
+Queue System: BullMQ (benötigt Valkey/Redis-Fork, für asynchrone Workflow-Ausführung)
 API: REST + Webhooks
 Authentication: OAuth2 (SSO mit HR WORKS - siehe hrworks-api.yml /v2/authentication)
 Echtzeit-Updates: **Server-Sent Events (SSE)** für Live-Workflow-Execution-Updates (Library: `@microsoft/fetch-event-source` im Frontend)
@@ -144,8 +144,10 @@ const poolConfig = {
 → Später bei 500+ Tenants: Migration zu PgBouncer evaluieren
 
 Frontend
-Framework: React mit SmartFace UI Library (npm Package)
-Workflow Designer: React Flow (@xyflow/react)
+Build-Tool: **Vite** (schnelles HMR, optimierte Builds)
+Framework: **React 18** mit SmartFace UI Library (npm Package)
+Routing: **react-router-dom** (Client-seitiges Routing)
+Workflow Designer: **React Flow** (@xyflow/react)
 State Management: **Zustand** (einfacher als Redux, weniger Boilerplate)
 UI Components: SmartFace Component Library
 Styling: Styled-Components (wie in SmartFace verwendet)
@@ -381,18 +383,18 @@ jobs:
     # ... kubectl apply / helm upgrade
 ```
 
-**Redis / BullMQ Setup:**
+**Valkey / BullMQ Setup:**
 
 | Aspekt | Entscheidung |
 |--------|--------------|
-| Service | **AWS ElastiCache** (Managed Redis) |
+| Service | **AWS ElastiCache for Valkey** (Managed Valkey) |
 | Modus | **Cluster Mode mit Multi-AZ** |
-| Tenants | **Shared Redis** mit Key-Prefixes |
+| Tenants | **Shared Valkey** mit Key-Prefixes |
 | Persistence | Automatische Backups + Replikation |
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                  AWS ElastiCache Cluster                    │
+│               AWS ElastiCache for Valkey                    │
 │                                                             │
 │   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐   │
 │   │  Primary    │    │  Primary    │    │  Primary    │   │
@@ -1048,7 +1050,7 @@ await db.insert(workflowExecutions).values({
 
 **App-Neustart sicher:**
 - Alle States in PostgreSQL (nicht in Memory)
-- BullMQ Jobs überleben Neustarts (Redis persistent)
+- BullMQ Jobs überleben Neustarts (Valkey persistent)
 - Bei Startup: Offene Jobs werden automatisch fortgesetzt
 
 **Testing-Strategie (Fixtures-basiert):**
@@ -1251,11 +1253,12 @@ Basic Node Configuration Panel
   - **Execution Flow**: A → B → C (B erst nach A, C erst nach B)
   - **Output Caching**: Ergebnis wird am Node gespeichert und im Context Panel verfügbar
   - **Visuelles Status-Feedback**:
-    - Grau: Nicht ausführbar (Vorgänger fehlen)
+    - Grau: `pending` - Nicht ausführbar (Vorgänger fehlen)
     - Grün: Bereit zum Ausführen
-    - Blau/Spinner: Läuft gerade
-    - Grün mit Haken: Erfolgreich ausgeführt
-    - Rot: Fehler
+    - Blau/Spinner: `running` - Läuft gerade
+    - Gelb/Orange: `waiting` - Wartet auf externes Event (Delay, Approval, PersonTask)
+    - Grün mit Haken: `success` - Erfolgreich ausgeführt
+    - Rot: `error` - Fehler
   - **Output-Preview**: Expandable JSON-View direkt am Node
   - **"Run All"-Button**: Führt alle Nodes in topologischer Reihenfolge aus
   - **Cache Invalidation**: Outputs werden gelöscht bei Änderung der Node-Konfiguration oder Vorgänger-Outputs
@@ -1287,6 +1290,54 @@ Basic Node Configuration Panel
   - Persistierung der Theme-Präferenz
   - Zustand Store für Theme-State
 Workflow Speichern/Laden
+
+**Workflow Export (JSON)**:
+  - Export der kompletten Workflow-Definition als JSON-Datei
+  - Enthält alle Nodes, Edges und Konfigurationen
+  - Download als `.json` Datei über Button im Designer oder Workflow-Übersicht
+  - Format: Standardisiertes JSON-Schema für Portabilität
+  - **Export-Button Positionen**:
+    - Designer-Toolbar: Icon-Button mit Download-Symbol
+    - Workflow-Übersicht: Action-Button in der Tabellen-Zeile (Drei-Punkte-Menü oder direkt)
+  - **Export-Format**:
+    ```json
+    {
+      "version": "1.0",
+      "exportedAt": "2026-01-25T12:00:00Z",
+      "workflow": {
+        "name": "Onboarding Workflow",
+        "description": "...",
+        "nodes": [...],
+        "edges": [...],
+        "settings": {...}
+      }
+    }
+    ```
+
+**Workflow Import (JSON)**:
+  - Import einer zuvor exportierten JSON-Datei
+  - **Import-Button**: In der Workflow-Übersicht neben "Neuer Workflow" Button
+  - **Validierung**:
+    - Schema-Validierung (gültiges JSON, erforderliche Felder)
+    - Node-Typ-Prüfung (alle Node-Typen müssen bekannt sein)
+    - Version-Check (Kompatibilitätsprüfung)
+  - Erstellt neuen Workflow aus Import mit eindeutigem Namen
+  - **Konflikt-Handling**: Bei doppelten Namen automatische Umbenennung (z.B. "Name (1)")
+  - **Fehlerbehandlung**: Dialog mit aussagekräftigen Fehlermeldungen bei ungültigem Import
+  - **Backend-Endpoint**: `POST /api/workflows/import` mit multipart/form-data
+
+**Workflow Duplizieren**:
+  - Duplizieren-Button in der Workflow-Übersicht (Tabellen-Aktionen) und im Designer-Toolbar
+  - Erstellt vollständige Kopie mit neuem Namen (z.B. "Original Name (Kopie)")
+  - Kopiert alle Nodes, Edges und Konfigurationen
+  - **Neue IDs**: Alle Elemente erhalten neue UUIDs (keine Referenz-Konflikte)
+  - Öffnet duplizierten Workflow direkt im Designer
+  - **Backend-Endpoint**: `POST /api/workflows/:id/duplicate`
+  - **Response**: Neuer Workflow mit allen Daten
+  - **UI-Flow**:
+    1. User klickt "Duplizieren"
+    2. Optional: Dialog für neuen Namen (mit Vorschlag "Original (Kopie)")
+    3. Workflow wird erstellt und im Designer geöffnet
 
 ### UI-Spezifikationen (Detail)
 
@@ -1376,9 +1427,166 @@ Workflow List View
 Workflow Detail View
 Basic Styling & Theming
 
-1.3 Minimale Node-Typen
+1.3 Error Handling für externe Systeme
 
-Trigger Nodes (Phase 1)
+**Nur für Nodes die mit externen Systemen kommunizieren:**
+
+| Node-Typ | Error Handling | Begründung |
+|----------|----------------|------------|
+| HTTP Request | ✅ Ja | Netzwerk-Fehler, Timeouts, API-Fehler |
+| HR WORKS | ✅ Ja | API-Fehler, Auth-Fehler, Job-Timeouts |
+| Email (Phase 2) | ✅ Ja | SMTP-Fehler, Auth-Fehler |
+| Webhook (Phase 2) | ✅ Ja | Externe Systeme |
+| Delay | ❌ Nein | Kann nicht fehlschlagen |
+| Condition | ❌ Nein | Logik-Fehler = Design-Fehler |
+| Data Transformation | ❌ Nein | Validierungsfehler beim Speichern abfangen |
+| Trigger (Manual/Scheduled) | ❌ Nein | Kann nicht fehlschlagen |
+
+**Error Branch (On Error) - Für externe System-Nodes:**
+
+```typescript
+interface NodeErrorConfig {
+  onError: 'stop' | 'continue' | 'fallback';
+  retryCount?: number;      // 0-5, Default: 0
+  retryDelay?: number;      // ms, Default: 1000
+  retryBackoff?: number;    // Exponentieller Faktor, Default: 2
+  timeout?: number;         // ms, Default: 30000
+}
+```
+
+**Error-Modi:**
+
+| Modus | Verhalten | Use Case |
+|-------|-----------|----------|
+| `stop` | Workflow stoppt sofort, Status = `failed` | Kritische Operationen (Default) |
+| `continue` | Fehler wird geloggt, nächster Node startet | Optionale Operationen |
+| `fallback` | Error-Branch wird ausgeführt | Alternative Logik bei Fehler |
+
+**Error-Output Struktur:**
+```typescript
+interface NodeError {
+  errorMessage: string;
+  errorCode: string;        // 'TIMEOUT', 'HTTP_500', 'NETWORK_ERROR', etc.
+  nodeId: string;
+  nodeName: string;
+  timestamp: string;
+  retryAttempt?: number;    // Welcher Versuch war das?
+  originalInput?: any;      // Input der zum Fehler führte
+}
+```
+
+**Retry-Konfiguration (für HTTP/HR WORKS Nodes):**
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  HTTP Request - Error Settings                               │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Bei Fehler                                                  │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ ○ Workflow stoppen                                     │  │
+│  │ ● Wiederholen (Retry)                                  │  │
+│  │ ○ Fortfahren (Fehler ignorieren)                       │  │
+│  │ ○ Error-Branch ausführen                               │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Retry-Einstellungen                                         │
+│  ┌──────────────────────┐  ┌──────────────────────┐         │
+│  │ Versuche:  [3    ▼]  │  │ Wartezeit:  [1000ms] │         │
+│  └──────────────────────┘  └──────────────────────┘         │
+│                                                              │
+│  ☑ Exponentieller Backoff (Faktor: 2)                       │
+│    → 1s, 2s, 4s zwischen Versuchen                          │
+│                                                              │
+│  Timeout                                                     │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ [30000] ms (30 Sekunden)                               │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Retry nur bei:                                              │
+│  ☑ Server-Fehler (5xx)                                      │
+│  ☑ Timeout                                                   │
+│  ☑ Netzwerk-Fehler                                          │
+│  ☐ Client-Fehler (4xx) - nicht empfohlen                    │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Retry-Logik Implementation:**
+```typescript
+async function executeNodeWithRetry(
+  node: WorkflowNode,
+  context: ExecutionContext,
+  config: NodeErrorConfig
+): Promise<NodeOutput> {
+  const maxAttempts = (config.retryCount ?? 0) + 1;
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      // Timeout-Wrapper
+      const result = await Promise.race([
+        executeNode(node, context),
+        timeout(config.timeout ?? 30000)
+      ]);
+      return result;
+    } catch (error) {
+      lastError = error;
+
+      // Prüfe ob Retry sinnvoll ist
+      if (!isRetryableError(error) || attempt === maxAttempts) {
+        break;
+      }
+
+      // Exponentieller Backoff
+      const delay = config.retryDelay ?? 1000;
+      const backoff = config.retryBackoff ?? 2;
+      const waitTime = delay * Math.pow(backoff, attempt - 1);
+
+      await sleep(waitTime);
+    }
+  }
+
+  // Alle Retries fehlgeschlagen
+  return handleNodeError(node, lastError, config);
+}
+
+function isRetryableError(error: any): boolean {
+  // 5xx Server-Fehler
+  if (error.statusCode >= 500) return true;
+  // Timeout
+  if (error.code === 'TIMEOUT' || error.code === 'ETIMEDOUT') return true;
+  // Netzwerk-Fehler
+  if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') return true;
+  // 4xx Client-Fehler → KEIN Retry
+  if (error.statusCode >= 400 && error.statusCode < 500) return false;
+  return false;
+}
+```
+
+**Visuelles Feedback im Designer:**
+- **Error-Handle**: Roter Punkt am unteren Rand des Nodes (nur sichtbar wenn `onError: 'fallback'`)
+- **Retry-Badge**: Kleines Badge "↻3" am Node wenn Retries konfiguriert
+- **Timeout-Indikator**: Uhr-Symbol wenn custom Timeout gesetzt
+
+**Error-Branch Verbindung:**
+```
+┌─────────────┐
+│  HTTP Node  │──────────────▶ [Nächster Node]
+│             │     (success)
+│      🔴     │
+└──────┬──────┘
+       │ (error)
+       ▼
+┌─────────────┐
+│ Error Handler│
+│   (Fallback) │
+└─────────────┘
+```
+
+1.4 Minimale Node-Typen
+
+**Trigger Nodes (Phase 1)**
 Manual Trigger
    - Workflow wird manuell gestartet
    - Input-Parameter definierbar
@@ -1395,6 +1603,9 @@ HTTP Request Node
    - Header Configuration
    - Body Template (Handlebars)
    - Response Mapping
+   - **Timeout-Konfiguration**: Default 30s, konfigurierbar pro Node
+   - **Retry-Settings**: Anzahl, Delay, Backoff (siehe Error Handling Sektion 1.3)
+   - **Error-Branch**: Optionaler Error-Output für Fallback-Logik
 
 **HR WORKS Node** (NEU - bereits in Phase 1)
    - Dedizierter Knoten für HR WORKS Integration
@@ -1409,6 +1620,8 @@ HTTP Request Node
    - **Parameter-Flexibilität**: Unterstützt sowohl `params` als auch `parameters` Feldnamen in Node-Config
    - Integrierte Fehlerbehandlung für HR WORKS-spezifische Errors
    - Response-Mapping mit vordefinierten Templates
+   - **Timeout & Retry**: Konfigurierbar wie HTTP Request Node (siehe Sektion 1.3)
+   - **Job-Polling Timeout**: Separates Timeout für Async Jobs (Default: 60s)
 
 **Data Transformation Node** (NEU - bereits in Phase 1)
    - Operationen für Datenverarbeitung: count, filter, map, reduce, sort, distinct
@@ -1427,10 +1640,6 @@ Delay Node
    - Variable Anzahl von Bedingungen pro Node
    - **First-Match Logik**: Bedingungen werden von oben nach unten evaluiert
    - Erste zutreffende Bedingung wird ausgeführt, danach stoppt die Prüfung
-   - Jede Bedingung hat:
-     - `id`: Eindeutige ID (wird als Handle-ID verwendet)
-     - `label`: Anzeigename (z.B. "Hoher Betrag", "Mittlerer Betrag")
-     - `expression`: JSONata Expression (z.B. `amount > 1000`)
    - Optional: **Default-Pfad** wenn keine Bedingung zutrifft
    - Jede Bedingung hat eigenen Output-Handle für Verknüpfung
    - **Use Cases**:
@@ -1438,13 +1647,78 @@ Delay Node
      - Status-Routing: "urgent" → Sofort, "normal" → Queue, "low" → Batch
      - Rollen-basiert: Admin → Full Access, Manager → Limited, User → Read-Only
 
+**Condition Builder UI (visuelle Bedingungserstellung):**
+
+Statt manuelle JSONata-Eingabe eine benutzerfreundliche 3-Felder-UI:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Bedingung: "Hoher Betrag"                                      │
+│  ┌──────────────────┐  ┌─────────────┐  ┌──────────────────┐   │
+│  │ {{Betrag.value}} │  │  >          │  │ 1000             │   │
+│  │        [⌄]       │  │     [⌄]     │  │                  │   │
+│  └──────────────────┘  └─────────────┘  └──────────────────┘   │
+│       Variable           Operator          Wert/Variable        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Verfügbare Operatoren:**
+| Operator | Anzeige | Generierte JSONata |
+|----------|---------|-------------------|
+| `=` | ist gleich | `field = value` |
+| `!=` | ist ungleich | `field != value` |
+| `>` | größer als | `field > value` |
+| `>=` | größer oder gleich | `field >= value` |
+| `<` | kleiner als | `field < value` |
+| `<=` | kleiner oder gleich | `field <= value` |
+| `contains` | beinhaltet | `$contains(field, value)` |
+| `startsWith` | beginnt mit | `$match(field, /^value/)` |
+| `endsWith` | endet mit | `$match(field, /value$/)` |
+| `isEmpty` | ist leer | `field = "" or field = null` |
+| `isNotEmpty` | ist nicht leer | `field != "" and field != null` |
+
+**Vorteile:**
+- Keine JSONata-Syntax-Kenntnisse erforderlich
+- Keine Fallstricke (`=` vs `==`, `and` vs `&&`, `or` vs `||`)
+- Variable Picker für linkes/rechtes Feld mit Autocomplete
+- Backend generiert automatisch korrekte JSONata-Expression
+- Optional: "Advanced Mode" Toggle für Power-User mit direkter JSONata-Eingabe
+
+**Datenmodell:**
+```typescript
+interface Condition {
+  id: string;
+  label: string;
+  leftOperand: string;    // Variable-Pfad, z.B. "{{Betrag.value}}"
+  operator: ConditionOperator;
+  rightOperand: string;   // Wert oder Variable-Pfad
+  expression?: string;    // Generierte JSONata (oder manuell bei Advanced Mode)
+}
+
+type ConditionOperator =
+  | '=' | '!=' | '>' | '>=' | '<' | '<='
+  | 'contains' | 'startsWith' | 'endsWith'
+  | 'isEmpty' | 'isNotEmpty';
+```
+
 **Beispiel Config:**
 ```json
 {
   "conditions": [
-    { "id": "high", "label": "Hoher Betrag", "expression": "amount > 1000" },
-    { "id": "medium", "label": "Mittlerer Betrag", "expression": "amount > 500" },
-    { "id": "low", "label": "Niedriger Betrag", "expression": "amount > 100" }
+    {
+      "id": "high",
+      "label": "Hoher Betrag",
+      "leftOperand": "{{Betrag.value}}",
+      "operator": ">",
+      "rightOperand": "1000"
+    },
+    {
+      "id": "medium",
+      "label": "Mittlerer Betrag",
+      "leftOperand": "{{Betrag.value}}",
+      "operator": ">",
+      "rightOperand": "500"
+    }
   ],
   "enableDefault": true
 }
@@ -1452,7 +1726,7 @@ Delay Node
 
 **Output-Handles:**
 - `high` → Verbindung zu Manager-Approval
-- `medium` → Verbindung zu Team-Lead-Approval  
+- `medium` → Verbindung zu Team-Lead-Approval
 - `low` → Verbindung zu Auto-Approve
 - `default` → Verbindung zu Error-Handler
 
@@ -1829,10 +2103,6 @@ Delay Node
    - Variable Anzahl von Bedingungen pro Node
    - **First-Match Logik**: Bedingungen werden von oben nach unten evaluiert
    - Erste zutreffende Bedingung wird ausgeführt, danach stoppt die Prüfung
-   - Jede Bedingung hat:
-     - `id`: Eindeutige ID (wird als Handle-ID verwendet)
-     - `label`: Anzeigename (z.B. "Hoher Betrag", "Mittlerer Betrag")
-     - `expression`: JSONata Expression (z.B. `amount > 1000`)
    - Optional: **Default-Pfad** wenn keine Bedingung zutrifft
    - Jede Bedingung hat eigenen Output-Handle für Verknüpfung
    - **Use Cases**:
@@ -1840,13 +2110,78 @@ Delay Node
      - Status-Routing: "urgent" → Sofort, "normal" → Queue, "low" → Batch
      - Rollen-basiert: Admin → Full Access, Manager → Limited, User → Read-Only
 
+**Condition Builder UI (visuelle Bedingungserstellung):**
+
+Statt manuelle JSONata-Eingabe eine benutzerfreundliche 3-Felder-UI:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Bedingung: "Hoher Betrag"                                      │
+│  ┌──────────────────┐  ┌─────────────┐  ┌──────────────────┐   │
+│  │ {{Betrag.value}} │  │  >          │  │ 1000             │   │
+│  │        [⌄]       │  │     [⌄]     │  │                  │   │
+│  └──────────────────┘  └─────────────┘  └──────────────────┘   │
+│       Variable           Operator          Wert/Variable        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Verfügbare Operatoren:**
+| Operator | Anzeige | Generierte JSONata |
+|----------|---------|-------------------|
+| `=` | ist gleich | `field = value` |
+| `!=` | ist ungleich | `field != value` |
+| `>` | größer als | `field > value` |
+| `>=` | größer oder gleich | `field >= value` |
+| `<` | kleiner als | `field < value` |
+| `<=` | kleiner oder gleich | `field <= value` |
+| `contains` | beinhaltet | `$contains(field, value)` |
+| `startsWith` | beginnt mit | `$match(field, /^value/)` |
+| `endsWith` | endet mit | `$match(field, /value$/)` |
+| `isEmpty` | ist leer | `field = "" or field = null` |
+| `isNotEmpty` | ist nicht leer | `field != "" and field != null` |
+
+**Vorteile:**
+- Keine JSONata-Syntax-Kenntnisse erforderlich
+- Keine Fallstricke (`=` vs `==`, `and` vs `&&`, `or` vs `||`)
+- Variable Picker für linkes/rechtes Feld mit Autocomplete
+- Backend generiert automatisch korrekte JSONata-Expression
+- Optional: "Advanced Mode" Toggle für Power-User mit direkter JSONata-Eingabe
+
+**Datenmodell:**
+```typescript
+interface Condition {
+  id: string;
+  label: string;
+  leftOperand: string;    // Variable-Pfad, z.B. "{{Betrag.value}}"
+  operator: ConditionOperator;
+  rightOperand: string;   // Wert oder Variable-Pfad
+  expression?: string;    // Generierte JSONata (oder manuell bei Advanced Mode)
+}
+
+type ConditionOperator =
+  | '=' | '!=' | '>' | '>=' | '<' | '<='
+  | 'contains' | 'startsWith' | 'endsWith'
+  | 'isEmpty' | 'isNotEmpty';
+```
+
 **Beispiel Config:**
 ```json
 {
   "conditions": [
-    { "id": "high", "label": "Hoher Betrag", "expression": "amount > 1000" },
-    { "id": "medium", "label": "Mittlerer Betrag", "expression": "amount > 500" },
-    { "id": "low", "label": "Niedriger Betrag", "expression": "amount > 100" }
+    {
+      "id": "high",
+      "label": "Hoher Betrag",
+      "leftOperand": "{{Betrag.value}}",
+      "operator": ">",
+      "rightOperand": "1000"
+    },
+    {
+      "id": "medium",
+      "label": "Mittlerer Betrag",
+      "leftOperand": "{{Betrag.value}}",
+      "operator": ">",
+      "rightOperand": "500"
+    }
   ],
   "enableDefault": true
 }
@@ -1854,11 +2189,11 @@ Delay Node
 
 **Output-Handles:**
 - `high` → Verbindung zu Manager-Approval
-- `medium` → Verbindung zu Team-Lead-Approval  
+- `medium` → Verbindung zu Team-Lead-Approval
 - `low` → Verbindung zu Auto-Approve
 - `default` → Verbindung zu Error-Handler
 
-1.4 Expression Language Spezifikation (JSONata + Platzhalter)
+1.5 Expression Language Spezifikation (JSONata + Platzhalter)
 
 Die Workflow Engine verwendet **JSONata** als Expression Language.
 - **Library:** `jsonata` (npm) - https://jsonata.org/
@@ -2031,7 +2366,7 @@ Der Context der an Expressions übergeben wird:
 }
 ```
 
-1.5 Use Case: Einfacher Onboarding-Workflow
+1.6 Use Case: Einfacher Onboarding-Workflow
 Szenario Neuer Mitarbeiter → IT-Equipment bestellen → Email an Admin
 
 [Manual Trigger] 
@@ -2472,7 +2807,7 @@ Horizontal Scaling
 Stateless Backend Services
 Load Balancing
 Queue-based Architecture
-Redis für Shared State
+Valkey für Shared State
 
 Rate Limiting
 API Call Limits (zu HR WORKS)
@@ -2507,11 +2842,12 @@ Sequentielle Abhängigkeiten: Node nur ausführbar wenn alle Vorgänger ausgefü
 Output Caching: Ergebnisse werden gespeichert und im Context Panel verfügbar
 Mock Trigger Data: Trigger-Nodes können mit Test-Daten ausgeführt werden
 Visuelles Status-Feedback:
-  - Grau: Nicht ausführbar (Vorgänger fehlen)
+  - Grau: `pending` - Nicht ausführbar (Vorgänger fehlen)
   - Grün: Bereit zum Ausführen
-  - Blau/Spinner: Läuft gerade
-  - Grün mit Haken: Erfolgreich
-  - Rot: Fehler
+  - Blau/Spinner: `running` - Läuft gerade
+  - Gelb/Orange: `waiting` - Wartet auf externes Event (Delay, Approval, PersonTask)
+  - Grün mit Haken: `success` - Erfolgreich
+  - Rot: `error` - Fehler
 Output-Preview: Expandable JSON-View direkt am Node
 "Run All"-Button: Führt alle Nodes in topologischer Reihenfolge aus
 Cache Invalidation: Outputs werden gelöscht bei Config-Änderungen

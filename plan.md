@@ -24,10 +24,12 @@ workflow-automation/
 | Backend-Framework | **NestJS** | Modulare Architektur, TypeScript-first |
 | ORM | **Drizzle** | Type-safe, Multi-Dialect (SQLite/PostgreSQL), Performance |
 | Datenbank | **PostgreSQL** (Prod), **SQLite** (Dev) | Schnelle lokale Entwicklung, robust in Production |
-| Queue-System | **BullMQ** | Redis-basiert, robust für async Jobs |
+| Queue-System | **BullMQ** | Benötigt Valkey (Redis-Fork), robust für async Jobs |
 | State-Management | **Zustand** | Einfacher als Redux, weniger Boilerplate |
+| Frontend | **Vite + React** | Schnelles Build-Tool, React 18 SPA |
 | UI-Framework | **SmartFace** | HR WORKS Design-System, shadcn-ähnlich |
 | Workflow-Designer | **React Flow** | Bewährt (n8n, make.com) |
+| Routing | **react-router-dom** | Client-seitiges Routing |
 | Echtzeit-Updates | **Server-Sent Events (SSE)** | Unidirektionale Streams für Execution Updates, geringere Last als Polling. Library: `@microsoft/fetch-event-source` |
 | Hosting | **AWS EKS** | Kubernetes für Skalierung |
 | CI/CD | Später definieren | |
@@ -163,7 +165,12 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
   - Play-Button nur aktiv, wenn alle vorherigen Nodes ausgeführt wurden
   - Sequentielle Ausführung: A → B → C (B erst nach A, C erst nach B)
   - Output wird im Node gespeichert und im Context Panel verfügbar
-  - Visuelles Feedback: Node zeigt Status (pending, running, success, error)
+  - Visuelles Feedback: Node zeigt Status
+    - `pending`: Noch nicht ausgeführt (grau)
+    - `running`: Wird gerade ausgeführt (blau/spinner)
+    - `waiting`: Wartet auf externes Event (gelb/orange) - für Delay, Approval, PersonTask
+    - `success`: Erfolgreich abgeschlossen (grün/Haken)
+    - `error`: Fehlgeschlagen (rot/X)
   - Output-Preview direkt am Node (expandable)
   - "Run All"-Button zum Ausführen aller Nodes in Reihenfolge
   - Cached Outputs bleiben erhalten bis Workflow-Definition ändert
@@ -189,12 +196,30 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
   - Klick auf Icon entfernt die Verbindung
   - Bestätigungsdialog bei kritischen Verbindungen
 - Workflow Speichern/Laden
+- **Workflow Export (JSON)**:
+  - Export der kompletten Workflow-Definition als JSON-Datei
+  - Enthält alle Nodes, Edges und Konfigurationen
+  - Download als `.json` Datei über Button im Designer oder Workflow-Übersicht
+  - Format: Standardisiertes JSON-Schema für Portabilität
+- **Workflow Import (JSON)**:
+  - Import einer zuvor exportierten JSON-Datei
+  - Validierung des Imports (Schema-Validierung, Node-Typ-Prüfung)
+  - Erstellt neuen Workflow aus Import mit eindeutigem Namen
+  - Konflikt-Handling bei doppelten Namen (automatische Umbenennung)
+  - Fehlerbehandlung mit aussagekräftigen Fehlermeldungen
+- **Workflow Duplizieren**:
+  - Duplizieren-Button in der Workflow-Übersicht (Tabellen-Aktionen) und im Designer-Toolbar
+  - Erstellt vollständige Kopie mit neuem Namen (z.B. "Original Name (Kopie)")
+  - Kopiert alle Nodes, Edges und Konfigurationen
+  - Neue IDs für alle Elemente (keine Referenz-Konflikte)
+  - Öffnet duplizierten Workflow direkt im Designer
 
 ### Workflow-Übersicht & Navigation
 - **Workflow-Liste als Tabelle** (statt Karten):
   - Spalten: Name, Beschreibung, Status (Badge), Aktualisiert (Datum/Zeit), Aktionen
   - Status-Badges mit Farben: Aktiv (grün), Inaktiv (gelb), Entwurf (grau)
-  - Action-Buttons pro Zeile: Historie, Ausführen, Löschen
+  - Action-Buttons pro Zeile: Historie, Ausführen, Duplizieren, Export, Löschen
+  - "Import Workflow" Button im Header der Tabelle (neben "Neuer Workflow")
   - Klick auf Zeile öffnet Workflow-Designer
 - **Workflow-Designer Toolbar**:
   - Buttons: Historie, Ausführen (mit Play-Icon), Aktivieren/Deaktivieren, Speichern
@@ -237,8 +262,8 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
     - ⏱️ Verzögerung
     - ⚙️ Standard (unbekannt)
 - **Workflow-Ausführung**:
-  - Polling alle 500ms für Status-Updates
-  - Node-Status-Updates in Echtzeit (completed → success, failed → error)
+  - Echtzeit-Updates via SSE (Server-Sent Events)
+  - Node-Status-Updates live (completed → success, failed → error)
   - Keine automatischen Retries (attempts: 1)
   - Checkmarks/Error-Icons während Ausführung
   - Alert nach Abschluss (Erfolg/Fehler)
@@ -332,8 +357,35 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
 - Manual Trigger: Workflow manuell starten, Input-Parameter definierbar, für Testing & Debugging
 - Scheduled Trigger: Cron-basierte Ausführung, Zeitzone-Handling, einfache Intervalle (täglich, wöchentlich)
 
+### Error Handling für externe Systeme (Phase 1)
+**Nur für Nodes die mit externen Systemen kommunizieren:**
+- HTTP Request Node
+- HR WORKS Node
+- Email Node (Phase 2)
+- Webhook Node (Phase 2)
+
+**Nicht für interne Nodes** (Delay, Condition, Data Transformation, Trigger).
+
+- **Error Branch (On Error)**:
+  - Optionaler Error-Output-Handle für Fallback-Logik
+  - Konfigurierbare Fehlerbehandlung:
+    - `stop`: Workflow stoppt bei Fehler (Default)
+    - `continue`: Fehler ignorieren, nächster Node wird ausgeführt
+    - `fallback`: Error-Branch ausführen (separater Pfad)
+  - Error-Output enthält: `errorMessage`, `errorCode`, `nodeId`, `timestamp`
+  - Visuell: Roter Error-Handle am unteren Rand des Nodes
+- **Retry-Konfiguration**:
+  - `retryCount`: Anzahl der Wiederholungsversuche (0-5, Default: 0)
+  - `retryDelay`: Wartezeit zwischen Retries in ms (Default: 1000)
+  - `retryBackoff`: Exponentieller Backoff-Faktor (Default: 2)
+  - Retry nur bei: 5xx Server-Fehler, Timeout, Network Error
+  - Keine Retries bei 4xx Client-Fehlern
+- **Timeout-Konfiguration**:
+  - `timeout`: Maximale Wartezeit auf Response in ms (Default: 30000)
+  - Bei Timeout: Error mit `errorCode: 'TIMEOUT'`
+
 ### Action Nodes (Phase 1)
-- HTTP Request Node: GET/POST/PUT/DELETE zu HR WORKS API, Header Configuration, Body Template (Handlebars), Response Mapping
+- HTTP Request Node: GET/POST/PUT/DELETE zu HR WORKS API, Header Configuration, Body Template (Handlebars), Response Mapping, **Timeout & Retry Settings**
 - **HR WORKS Node**: Dedizierter Knoten für HR WORKS Integration (Details siehe unten)
 - **Data Transformation Node**: 
   - Operationen für Datenverarbeitung: count, filter, map, reduce, sort, distinct
@@ -345,12 +397,18 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
 - **Condition Node (Multi-Condition Switch)**:
   - Variable Anzahl von Bedingungen pro Node
   - **First-Match Logik**: Bedingungen werden von oben nach unten geprüft, erste zutreffende wird ausgeführt
-  - Jede Bedingung hat: ID, Label, Expression (JSONata oder Template-Syntax `{{NodeName.field}}`)
   - Optional: Default-Pfad wenn keine Bedingung zutrifft
   - Jede Bedingung hat eigenen Output-Handle für Verknüpfung (direkt am rechten Rand der Condition)
-  - **Template-Resolution**: `{{NodeName.field}}` wird automatisch zu Werten aufgelöst (unterstützt Node-Labels)
   - **Visual Feedback**: Gematchte Bedingung wird grün hervorgehoben nach Ausführung
-  - **Use Case**: Switch/Case-ähnliche Logik (z.B. `{{Betrag.value}} > 1000` → Manager, `> 500` → Team Lead, sonst → Auto-Approve)
+  - **Use Case**: Switch/Case-ähnliche Logik (z.B. Betrag > 1000 → Manager, > 500 → Team Lead, sonst → Auto-Approve)
+  - **Condition Builder UI** (visuelle Bedingungserstellung statt manuelle JSONata):
+    - 3-Felder-Layout pro Bedingung: `[Variable] [Operator] [Wert/Variable]`
+    - Linkes Feld: Variable Picker (zeigt verfügbare Outputs vorheriger Nodes)
+    - Operator-Dropdown: `=`, `!=`, `>`, `>=`, `<`, `<=`, `contains`, `startsWith`, `endsWith`, `isEmpty`, `isNotEmpty`
+    - Rechtes Feld: Wert eingeben oder Variable auswählen
+    - Backend generiert automatisch korrekte JSONata-Expression
+    - **Vorteile**: Keine Syntax-Kenntnisse nötig, keine Fallstricke (`=` vs `==`, `and` vs `&&`)
+    - Optional: "Advanced Mode" Toggle für Power-User mit direkter JSONata-Eingabe
 
 ### HR WORKS Integration Node (Phase 1)
 
@@ -546,7 +604,7 @@ $count(approvers[status = "approved"]) >= 3  // Mit Funktionen
 
 ### Performance & Scalability
 - Workflow Caching, Database Indexing, Query Optimization, Connection Pooling
-- Horizontal Scaling: Stateless Backend, Load Balancing, Queue-based Architecture, Redis für Shared State
+- Horizontal Scaling: Stateless Backend, Load Balancing, Queue-based Architecture, Valkey für Shared State
 - Rate Limiting: API Call Limits, Workflow Execution Limits, Per-User/Per-OE Quotas
 
 ### Integration Ecosystem
@@ -560,12 +618,8 @@ $count(approvers[status = "approved"]) >= 3  // Mit Funktionen
   - Sequentielle Abhängigkeiten (Node nur ausführbar wenn Vorgänger ausgeführt)
   - Output Caching für Context Panel
   - Mock Trigger Data für Testing
-  - Visuelles Status-Feedback (pending, running, success, error)
+  - Visuelles Status-Feedback (pending, running, waiting, success, error)
   - Output-Preview direkt am Node
   - "Run All"-Button für komplette Workflow-Ausführung
 - Workflow Testing: Test Mode (Dry-Run), Mock Data Injection, Step-by-Step Debugging, Unit Tests
 - Versioning: Workflow Versions, Rollback, A/B Testing, Canary Deployments
-
----
-
-Soll ich das als herunterladbare Datei (Markdown, JSON oder YAML) für dich aufbereiten?
