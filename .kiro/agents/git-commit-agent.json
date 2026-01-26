@@ -1,0 +1,11 @@
+{
+  "name": "git-commit-agent",
+  "description": "Spezialisierter Agent für intelligente Git-Commits",
+  "resources": [
+    "file://.kiro/.subagents/git-commit-agent/instructions.md"
+  ],
+  "allowedTools": [
+    "execute_bash",
+    "fs_read"
+  ]
+}
