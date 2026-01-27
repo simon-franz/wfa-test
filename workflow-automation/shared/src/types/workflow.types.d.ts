@@ -68,6 +68,20 @@ export interface WorkflowExecution extends Timestamps {
     context: ExecutionContext;
     error?: string;
 }
+export interface GlobalContext {
+    currentDate: string;
+    currentTime: string;
+    currentDateTime: string;
+    weekday: string;
+}
+export interface WorkflowContext {
+    name: string;
+    id: ULID;
+    variables: Record<string, unknown>;
+}
+export interface ExecutionContextVariables {
+    variables: Record<string, unknown>;
+}
 export interface ExecutionContext {
     workflowId: ULID;
     executionId: ULID;
@@ -78,6 +92,10 @@ export interface ExecutionContext {
         type: string;
         payload?: Record<string, unknown>;
     };
+    workflowDefinition?: WorkflowDefinition;
+    globalContext?: GlobalContext;
+    workflowContext?: WorkflowContext;
+    executionContext?: ExecutionContextVariables;
 }
 export interface NodeExecutionResult {
     nodeId: string;
@@ -87,6 +105,7 @@ export interface NodeExecutionResult {
     startedAt: Date;
     completedAt?: Date;
     duration?: number;
+    nextNodes?: string[];
 }
 export interface CreateWorkflowDto {
     name: string;

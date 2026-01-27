@@ -59,6 +59,32 @@ workflow-automation/
 └─────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
+### Tenant-Provisioning (via API)
+**Automatische Tenant-Erstellung aus HR WORKS:**
+```typescript
+// POST /api/tenants
+// Header: X-Provisioning-Secret: <shared-secret>
+{
+  "slug": "acme-corp",
+  "name": "Acme Corporation",
+  "hrworksCustomerId": "123",
+  "apiKey": "...",
+  "apiSecret": "...",
+  "baseUrl": "api.hrworks.de"
+}
+```
+
+**Ablauf:**
+1. HR WORKS erstellt API-Key-Pair für Kunden
+2. HR WORKS ruft Provisioning-API mit Shared Secret auf
+3. Workflow-App validiert Secret (`PROVISIONING_SECRET` env var)
+4. Erstellt Tenant in Landlord-DB + neue Tenant-DB
+5. Speichert verschlüsselte HR WORKS Credentials
+6. Initial Sync (Persons, OEs) - async
+7. Registriert Webhooks bei HR WORKS - async
+
+**Sicherheit:** Shared Secret zwischen HR WORKS und Workflow-App, verschlüsselte Credential-Speicherung
+
 ### Tenant-Auflösung (JWT Cookie - Single Domain)
 ```
 ┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
@@ -101,8 +127,65 @@ workflow-automation/
 ### Authentifizierung & Autorisierung
 - OAuth2 Integration mit HR WORKS
 - SSO-Flow implementieren
-- Rollen-basierte Zugriffskontrolle (initial nur workflow-admin)
 - Session Management mit JWT Token Handling
+- **Rollen-System (4 Ebenen)**:
+
+| Rolle | Scope | Berechtigungen |
+|-------|-------|----------------|
+| **server_admin** | Global (Landlord-DB) | Mandanten anlegen/löschen/verwalten, System-Konfiguration, alle Tenants sehen |
+| **consultant** | Global (Marketplace) | Workflows in Marketplace publizieren, Template-Verwaltung, Tenant-übergreifend |
+| **master_admin** | Tenant-spezifisch | Volle Rechte im eigenen Mandanten, User-Verwaltung, Billing, Settings |
+| **workflow-administrator** | Tenant-spezifisch | Workflows erstellen/bearbeiten/löschen/ausführen, Executions sehen, keine User-Verwaltung |
+
+- **Zugriffsbeschränkung**: Nur Personen mit Rolle `workflow-administrator` oder `master_admin` aus HR WORKS dürfen sich in der Workflow-Automation App anmelden
+- **Andere HR WORKS User**: Haben keinen direkten Zugriff auf die App (Integration in HR WORKS Oberfläche kommt später)
+
+- **JWT Payload erweitert**:
+```json
+{
+  "sub": "user_uuid",
+  "tenant_id": "tenant_uuid",  // null für server_admin/consultant
+  "email": "user@company.de",
+  "role": "workflow-administrator",
+  "global_role": "consultant",  // Optional: für Consultants mit Tenant-Zugriff
+  "iat": 1234567890,
+  "exp": 1234567890
+}
+```
+
+- **API-Authentifizierung (alle AJAX/Fetch-Calls)**:
+  - JWT-Token wird als **HttpOnly Cookie** gespeichert (`auth_token`)
+  - Cookie wird automatisch bei jedem Request mitgesendet
+  - Backend validiert Cookie via `JwtAuthGuard`
+  - **Kein manuelles Setzen des Authorization-Headers nötig** (Cookie-basiert)
+  - Bei SSE (Server-Sent Events): Token muss explizit im Header mitgegeben werden
+
+```typescript
+// Frontend: API-Client mit automatischem Cookie-Handling
+const api = {
+  async getWorkflows() {
+    // Cookie wird automatisch mitgesendet
+    const response = await fetch('/api/workflows', {
+      credentials: 'include', // Wichtig: Cookies mitsenden
+    });
+    return response.json();
+  },
+  
+  // SSE: Token explizit im Header
+  connectToExecutionStream(executionId: string) {
+    return new EventSource(`/api/executions/${executionId}/stream`, {
+      withCredentials: true, // Cookie mitsenden
+    });
+  }
+};
+```
+
+- **Development Login Bypass**:
+  - Zusätzlicher "Dev Login" Button im Login-Screen (nur sichtbar wenn `NODE_ENV=development`)
+  - Erstellt direkt ein JWT-Token mit Mock-User-Daten ohne OAuth2-Flow
+  - Mock-User hat vorkonfigurierte Tenant-ID und Admin-Rechte
+  - Ermöglicht schnelles Testen ohne HR WORKS OAuth2-Setup
+  - **Wichtig**: Dieser Button darf in Production NICHT verfügbar sein (Environment-Check im Backend!)
 
 ### Daten-Synchronisation
 - Organisationseinheiten-Sync: Initial Full-Sync aus HR WORKS, Delta-Updates via Webhooks, lokales Caching
@@ -139,14 +222,79 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
 - Logging & Audit Trail
 
 ### Designer UI (Frontend)
+
+**Node-Darstellung (kompakt & professionell):**
+- **Kompakte Nodes**: Icon + Label + Kurzbeschreibung (max. 2 Zeilen)
+- **Farbcodierung nach Typ**:
+  - Trigger: Blau
+  - HR WORKS: Orange/Coral
+  - Transformation: Lila
+  - Condition: Gelb
+  - Action: Grün
+- **Play-Button**: Grüner Play-Button oben rechts am Node (nur im Test-Modus)
+- **Status-Indicator**: Kleines Icon unten links (✓ success, ✗ error, ⏳ running)
+- **Keine technischen Details** im Node selbst (z.B. "action.hrworks" oder "Node Type")
+
+**Edges (Verbindungslinien):**
+- **Gestrichelte Linien** (nicht durchgezogen)
+- **Animierte Datenfluss-Visualisierung**: Punkte/Striche bewegen sich entlang der Linie
+- **Bezier-Kurven** für natürliche Verbindungen
+- **Hover-Effekt**: Linie wird dicker, Lösch-Icon erscheint
+- **Farbe**: Grau (neutral), bei Hover: Primärfarbe
+
+**Node Configuration Panel (benutzerfreundlich, KEIN JSON!):**
+- **Rechte Sidebar** öffnet sich beim Klick auf Node
+- **Strukturierte Felder** statt JSON-Textfeld:
+  - **Name**: Einfaches Text-Input
+  - **Einstellungen**: Gruppiert nach Kategorie
+  - **Dropdowns** für Auswahlfelder (z.B. "API Endpoint", "Operation")
+  - **Parameter-Felder**: Dynamisch basierend auf gewähltem Endpoint
+  - **Variable Picker Button** (🔗) neben jedem Input-Feld
+- **Beispiel HR WORKS Node**:
+  ```
+  Name: [HR WORKS                    ]
+  
+  Einstellungen
+  ─────────────
+  API Endpoint: [Person nach ID abrufen  ▼]
+  
+  Parameter
+  ─────────────
+  Person ID *:  [z.B. {{trigger.id}}     ] 🔗
+  
+  [Knoten löschen]  [Speichern]
+  ```
+- **Beispiel Data Transformation Node**:
+  ```
+  Name: [Daten-Transformation        ]
+  
+  Einstellungen
+  ─────────────
+  Operation:    [Anzahl (Count)         ▼]
+                - Anzahl (Count)
+                - Feld extrahieren
+                - Filtern
+                - Transformieren (Map)
+                - Summe
+                - Durchschnitt
+  
+  Input:        [{{HR WORKS.output.persons}}] 🔗
+  
+  [Knoten löschen]  [Speichern]
+  ```
+
+**WICHTIG: Keine generischen Felder wie:**
+- ❌ "Node Type: action.transform"
+- ❌ "Configuration (JSON)"
+- ❌ "Enter configuration (JSON)"
+- ✅ Stattdessen: Spezifische, benutzerfreundliche Felder pro Node-Typ
+
 - Canvas mit Drag & Drop
 - Node Palette (Start, Action, End)
 - Connection Drawing zwischen Nodes
-- Node Configuration Panel
-- **JWT Authentication**: Alle API-Requests zum Backend müssen Authorization-Header mit JWT-Token enthalten (`Authorization: Bearer <token>`)
 - **Echtzeit-Execution-Updates via SSE**:
   - Backend sendet Live-Updates während Workflow-Ausführung über Server-Sent Events
-  - Frontend verwendet `@microsoft/fetch-event-source` mit Authorization-Header
+  - Frontend verwendet `@microsoft/fetch-event-source` mit `withCredentials: true`
   - Node-Status-Updates in Echtzeit (running, success, error)
   - Ersetzt Polling-Mechanismus (reduziert Backend-Load)
   - Automatische Reconnect-Logik bei Verbindungsabbruch
@@ -171,7 +319,13 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
     - `waiting`: Wartet auf externes Event (gelb/orange) - für Delay, Approval, PersonTask
     - `success`: Erfolgreich abgeschlossen (grün/Haken)
     - `error`: Fehlgeschlagen (rot/X)
-  - Output-Preview direkt am Node (expandable)
+  - **Input/Output-Preview unterhalb des Nodes (Tabs)**:
+    - Expandable Section unterhalb des Node-Körpers
+    - **2 Tabs**: "Input" und "Output"
+    - JSON-Darstellung mit Syntax-Highlighting
+    - Ein-/ausklappbare Objekte und Arrays
+    - Nur sichtbar nach Node-Ausführung
+    - Kann minimiert/maximiert werden
   - "Run All"-Button zum Ausführen aller Nodes in Reihenfolge
   - Cached Outputs bleiben erhalten bis Workflow-Definition ändert
 - **Template Placeholder System**:
@@ -586,9 +740,42 @@ $count(approvers[status = "approved"]) >= 3  // Mit Funktionen
 - AI/LLM Node: OpenAI/Azure Integration, Prompt Templates, Response Parsing, Content Moderation
 
 ### Workflow-Templates & Marketplace
-- Template Library: Vorkonfigurierte Standard-Workflows, Kategorien, One-Click Import, Customization
-- Template Creator: Workflow als Template speichern, Parametrisierung, Documentation, Sharing
-- Workflow Marketplace (Optional): Community Workflows, Rating & Reviews, Version Management
+**Template Gallery (Landlord-DB, global verfügbar):**
+- Consultants und server_admins können Workflows als Templates publizieren
+- Template-Metadaten: Titel, Beschreibung, Kategorie, Tags, Version, Author
+- Templates sind Tenant-übergreifend sichtbar
+- **"Aktivieren"-Funktion**: Kopiert Template in Tenant-DB zur Nutzung/Bearbeitung
+- Kategorien: Onboarding, Offboarding, Approvals, HR-Prozesse, Custom
+- Versionierung: Templates können aktualisiert werden, Tenants sehen Update-Hinweis
+- Rating & Reviews (optional)
+
+**Template-Workflow:**
+```
+1. Consultant erstellt Workflow in eigenem Tenant
+2. "Als Template publizieren" → Titel, Beschreibung, Kategorie
+3. Template wird in Landlord-DB gespeichert (global)
+4. Andere Tenants sehen Template in Gallery
+5. "Aktivieren" → Workflow wird in Tenant kopiert
+6. Tenant kann Workflow anpassen/nutzen
+```
+
+**Datenmodell (Landlord-DB):**
+```typescript
+export const workflowTemplates = pgTable('workflow_templates', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  title: text('title').notNull(),
+  description: text('description'),
+  category: text('category'), // 'onboarding', 'offboarding', 'approvals', etc.
+  tags: jsonb('tags'), // ['hr', 'automation', 'approval']
+  graph: jsonb('graph').notNull(), // Workflow-Definition
+  version: text('version').default('1.0.0'),
+  authorId: uuid('author_id').references(() => globalUsers.id),
+  isPublic: boolean('is_public').default(true),
+  downloadCount: integer('download_count').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+```
 
 ### Advanced Trigger & Scheduling
 - Composite Triggers: Multiple Conditions (AND/OR), Time + Event Kombination, Debouncing & Throttling

@@ -1,15 +1,19 @@
 HR WORKS API Generator - Komplette Setup Anleitung
 
-Übersicht
+## Übersicht
 
-Diese Anleitung zeigt dir, wie du aus einer OpenAPI YAML-Datei automatisch TypeScript API-Clients für HR WORKS generierst. Der Prozess nutzt den OpenAPI Generator in Docker und wurde aus dem hrworks/e2e-utils Repository extrahiert.
+Diese Anleitung zeigt dir, wie du aus einer OpenAPI YAML-Datei automatisch TypeScript API-Clients für HR WORKS generierst. 
 
-Voraussetzungen
+**🐳 Docker-basiertes Setup:** Der gesamte Generierungsprozess läuft in einem Docker-Container mit `docker-compose`. Der OpenAPI Generator wird als Docker-Image ausgeführt, sodass keine lokale Installation des Generators nötig ist.
 
-WSL2 (Windows Subsystem for Linux) mit Ubuntu 20.04 LTS oder höher
-Docker installiert und lauffähig in WSL
-Node.js Version 16 oder höher
-npm Package Manager
+**Quelle:** Extrahiert aus dem hrworks/e2e-utils Repository.
+
+## Voraussetzungen
+
+- **WSL2** (Windows Subsystem for Linux) mit Ubuntu 20.04 LTS oder höher
+- **Docker** installiert und lauffähig in WSL ⚠️ **WICHTIG: Docker muss laufen!**
+- **Node.js** Version 16 oder höher
+- **npm** Package Manager
 
 Projektstruktur
 
@@ -44,9 +48,13 @@ workflow-automation/
 ```
 
 
-Datei 1: docker-compose.yml
-Pfad: tools/generators/api-generator/docker-compose.yml
+## Datei 1: docker-compose.yml
 
+**Pfad:** `tools/generators/api-generator/docker-compose.yml`
+
+**Zweck:** Diese Datei definiert den Docker-Container, der den OpenAPI Generator ausführt. Der Generator läuft komplett isoliert im Container - du musst den OpenAPI Generator **nicht** lokal installieren.
+
+```yaml
 version: "3"
 services:
   openapi-generator:
@@ -56,167 +64,137 @@ services:
       - ./input:/local/input
       - ../../../packages/hrworks-api-client/auto-client:/local/output
     command: generate
-      -i /local/input/API\_internal-fixed.yml
+      -i /local/input/API_internal-fixed.yml
       -g typescript-fetch
       -o /local/output
       --additional-properties=supportsES6=true,npmName=@hrworks/auto-client,npmVersion=1.0.0,withInterfaces=true,nullSafeAdditionalProps=true,modelPropertyNaming=original,stringEnums=true
+```
 
-Wichtige Parameter erklärt:
-image: openapitools/openapi-generator-cli:latest - Docker Image des OpenAPI Generators
-user: "${UID:-1000}:${GID:-1000}" - Nutzt die aktuelle User-ID, damit Files die richtigen Permissions haben
-./input:/local/input - Mapped das input-Verzeichnis (wo deine YAML liegt)
-../../../packages/hrworks-api-client/auto-client:/local/output - Output-Verzeichnis für generierten Code
--i /local/input/API\_internal-fixed.yml - Input OpenAPI-Datei
--g typescript-fetch - Generator-Typ (TypeScript mit Fetch API)
-supportsES6=true - Nutzt moderne ES6+ JavaScript Features
-npmName=@hrworks/auto-client - NPM Package Name
-withInterfaces=true - Generiert TypeScript Interfaces
-nullSafeAdditionalProps=true - Null-sichere zusätzliche Properties
-modelPropertyNaming=original - Behält originale Property-Namen bei
-stringEnums=true - Enums als String-Literale
-⚠️ Anpassen für dein Projekt:
-Ändere API\_internal-fixed.yml zum Namen deiner OpenAPI-Datei
-Passe die Volume-Pfade an deine Projektstruktur an
-Optional: Ändere npmName und npmVersion nach deinen Wünschen
+**Wichtige Parameter erklärt:**
+- `image: openapitools/openapi-generator-cli:latest` - Docker Image des OpenAPI Generators (wird automatisch heruntergeladen)
+- `user: "${UID:-1000}:${GID:-1000}"` - Nutzt die aktuelle User-ID, damit generierte Files die richtigen Permissions haben
+- `./input:/local/input` - Mapped das input-Verzeichnis (wo deine YAML liegt) in den Container
+- `../../../packages/hrworks-api-client/auto-client:/local/output` - Output-Verzeichnis für generierten Code (wird aus dem Container zurück ins Host-System geschrieben)
+- `-i /local/input/API_internal-fixed.yml` - Input OpenAPI-Datei (Pfad **innerhalb** des Containers)
+- `-g typescript-fetch` - Generator-Typ (TypeScript mit Fetch API)
+- `supportsES6=true` - Nutzt moderne ES6+ JavaScript Features
+- `npmName=@hrworks/auto-client` - NPM Package Name
+- `withInterfaces=true` - Generiert TypeScript Interfaces
+- `nullSafeAdditionalProps=true` - Null-sichere zusätzliche Properties
+- `modelPropertyNaming=original` - Behält originale Property-Namen bei
+- `stringEnums=true` - Enums als String-Literale
+
+⚠️ **Anpassen für dein Projekt:**
+- Ändere `API_internal-fixed.yml` zum Namen deiner OpenAPI-Datei
+- Passe die Volume-Pfade an deine Projektstruktur an
+- Optional: Ändere `npmName` und `npmVersion` nach deinen Wünschen
 
 Datei 2: generate.js
 Pfad: tools/generators/api-generator/generate.js
 
-Da ich die Datei nicht direkt abrufen konnte, hier eine funktionale Version basierend auf der Struktur:
-
 #!/usr/bin/env node
 
-const { execSync } = require('child\_process');
-const fs = require('fs');
-const path = require('path');
+const { execSync } = require("child_process");
+const path = require("path");
+const fs = require("fs");
 
 // Konfiguration
-const SCRIPT\DIR = \\_dirname;
-const OUTPUT\DIR = path.join(SCRIPT\DIR, '../../../packages/hrworks-api-client/auto-client');
-const INPUT\DIR = path.join(SCRIPT\DIR, 'input');
+const REPO_ROOT = path.resolve(__dirname, "../../..");
+const INPUT_DIR = path.join(__dirname, "input");
+const OUTPUT_DIR = path.join(REPO_ROOT, "packages/api-client");
+const API_FILE = path.join(INPUT_DIR, "API_internal-fixed.yml");
+const DOCKER_COMPOSE_FILE = path.join(__dirname, "docker-compose.yml");
 
-console.log('🚀 Starte API-Client-Generierung...');
-console.log(📁 Script-Verzeichnis: ${SCRIPT\_DIR});
-console.log(📁 Output-Verzeichnis: ${OUTPUT\_DIR});
-console.log(📁 Input-Verzeichnis: ${INPUT\_DIR});
+console.log("🚀 Generiere API-Client...");
 
-// Schritt 1: Docker-Service prüfen
-console.log('\n🐳 Prüfe Docker-Status...');
 try {
-  execSync('docker info', { stdio: 'ignore' });
-  console.log('✅ Docker läuft');
-} catch (error) {
-  console.error('❌ Docker läuft nicht. Bitte starte Docker:');
-  console.error('   sudo service docker start');
-  process.exit(1);
-}
-
-// Schritt 2: Prüfe ob Input-Datei existiert
-console.log('\n📄 Prüfe OpenAPI-Datei...');
-const inputFiles = fs.readdirSync(INPUT\_DIR).filter(f => f.endsWith('.yml') || f.endsWith('.yaml'));
-if (inputFiles.length === 0) {
-  console.error('❌ Keine YAML-Datei im input/ Verzeichnis gefunden!');
-  process.exit(1);
-}
-console.log(✅ Gefunden: ${inputFiles.join(', ')});
-
-// Schritt 3: Output-Verzeichnis vorbereiten
-console.log('\n🧹 Bereite Output-Verzeichnis vor...');
-if (fs.existsSync(OUTPUT\_DIR)) {
-  console.log('   Bereinige alten Output...');
-  // Achtung: Lösche nur den Inhalt, nicht das Verzeichnis selbst
-  const files = fs.readdirSync(OUTPUT\_DIR);
-  for (const file of files) {
-    const filePath = path.join(OUTPUT\_DIR, file);
-    if (fs.lstatSync(filePath).isDirectory()) {
-      fs.rmSync(filePath, { recursive: true, force: true });
-    } else {
-      fs.unlinkSync(filePath);
-    }
+  // Prüfen, ob die API-Spezifikation existiert
+  if (!fs.existsSync(API_FILE)) {
+    console.error("❌ API-Spezifikation nicht gefunden: " + API_FILE);
+    console.log(
+      "Bitte lege die API-Spezifikation unter tools/generators/api-generator/input/API.yml ab."
+    );
+    process.exit(1);
   }
-}
-fs.mkdirSync(OUTPUT\_DIR, { recursive: true });
-console.log('✅ Output-Verzeichnis bereit');
 
-// Schritt 4: Docker Compose ausführen
-console.log('\n⚙️  Führe OpenAPI Generator aus...');
-console.log('   Dies kann einige Minuten dauern...\n');
+  // Prüfen, ob die Docker-Compose-Datei existiert
+  if (!fs.existsSync(DOCKER_COMPOSE_FILE)) {
+    console.error(
+      "❌ Docker-Compose-Datei nicht gefunden: " + DOCKER_COMPOSE_FILE
+    );
+    process.exit(1);
+  }
 
-try {
-  // Setze Umgebungsvariablen für User/Group IDs
-  const env = {
-    ...process.env,
-    UID: process.getuid ? process.getuid() : '1000',
-    GID: process.getgid ? process.getgid() : '1000'
-  };
+  // Erstelle Output-Verzeichnis, falls nicht vorhanden
+  if (!fs.existsSync(OUTPUT_DIR)) {
+    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  } else {
+    // Alte Dateien löschen (außer .gitkeep)
+    const filesToKeep = [".gitkeep"];
+    fs.readdirSync(OUTPUT_DIR)
+      .filter((file) => !filesToKeep.includes(file))
+      .forEach((file) => {
+        const filePath = path.join(OUTPUT_DIR, file);
+        if (fs.lstatSync(filePath).isDirectory()) {
+          fs.rmSync(filePath, { recursive: true });
+        } else {
+          fs.unlinkSync(filePath);
+        }
+      });
+  }
 
-  execSync('docker-compose up --abort-on-container-exit', {
-    cwd: SCRIPT\_DIR,
-    stdio: 'inherit',
-    env: env
+  // Docker-Compose für die Code-Generierung ausführen
+  console.log("📦 Verwende Docker-Compose für die Generierung...");
+  console.log(`   Docker-Compose-Datei: ${DOCKER_COMPOSE_FILE}`);
+
+  execSync(`docker-compose -f "${DOCKER_COMPOSE_FILE}" up`, {
+    stdio: "inherit",
+    cwd: path.dirname(DOCKER_COMPOSE_FILE),
   });
 
-  console.log('\n✅ API-Client erfolgreich generiert!');
+  console.log("✅ API-Client erfolgreich generiert!");
+
+  /* ----------------------------------- WIP ---------------------------------- */
+  // Nachbearbeitung für Typenprobleme
+  // console.log("🔄 Führe Nachbearbeitungen durch...");
+
+  // Leere Type-Definitionen fixen
+  //   const modelDir = path.join(OUTPUT_DIR, "models");
+  //   if (fs.existsSync(modelDir)) {
+  //     fs.readdirSync(modelDir)
+  //       .filter((file) => file.endsWith(".ts") && file.includes("Response"))
+  //       .forEach((file) => {
+  //         const filePath = path.join(modelDir, file);
+  //         let content = fs.readFileSync(filePath, "utf8");
+
+  //         // Leere Types fixen
+  //         content = content.replace(
+  //           /export type (\w+) = ;/g,
+  //           "export type $1 = any;"
+  //         );
+
+  //         // Type Assertions für Discriminator-Typen hinzufügen
+  //         content = content.replace(
+  //           /return (\w+)FromJSONTyped\(json, ignoreDiscriminator\);/g,
+  //           "return $1FromJSONTyped(json, ignoreDiscriminator) as unknown as JobsResponse;"
+  //         );
+
+  //         fs.writeFileSync(filePath, content);
+  //       });
+  //   }
+  //   console.log("✅ Nachbearbeitungen abgeschlossen!");
 } catch (error) {
-  console.error('\n❌ Fehler bei der Generierung:', error.message);
+  console.error("❌ Fehler bei der Generierung:", error);
   process.exit(1);
 }
-
-// Schritt 5: Cleanup - Docker Container entfernen
-console.log('\n🧹 Räume Docker-Container auf...');
-try {
-  execSync('docker-compose down', {
-    cwd: SCRIPT\_DIR,
-    stdio: 'ignore'
-  });
-  console.log('✅ Cleanup abgeschlossen');
-} catch (error) {
-  console.warn('⚠️  Warnung: Container-Cleanup fehlgeschlagen (kann ignoriert werden)');
-}
-
-// Schritt 6: Prüfe Output
-console.log('\n📊 Prüfe generierten Output...');
-const outputFiles = fs.readdirSync(OUTPUT\_DIR);
-if (outputFiles.length === 0) {
-  console.error('❌ Kein Output generiert! Prüfe die Logs oben.');
-  process.exit(1);
-}
-
-console.log(✅ ${outputFiles.length} Dateien/Ordner generiert:);
-outputFiles.slice(0, 10).forEach(file => console.log(   - ${file}));
-if (outputFiles.length > 10) {
-  console.log(   ... und ${outputFiles.length - 10} weitere);
-}
-
-console.log('\n' + '='.repeat(60));
-console.log('✨ FERTIG! API-Client wurde erfolgreich generiert.');
-console.log('='.repeat(60));
-console.log('\n⚠️  WICHTIG: Manuelle Anpassungen erforderlich!');
-console.log('\n1. JobsResponse.ts:');
-console.log('   Pfad: packages/hrworks-api-client/auto-client/src/models/JobsResponse.ts');
-console.log('   Aktion: Return-Types mit "as JobResponse" maskieren\n');
-console.log('2. JobsResponseType.ts:');
-console.log('   Pfad: packages/hrworks-api-client/auto-client/src/models/JobsResponseType.ts');
-console.log('   Aktion: Return-Types mit "as JobsResponseType" maskieren\n');
-console.log('Führe danach "npm run build" aus!');
-console.log('\n');
-
-⚠️ Anpassen für dein Projekt:
-Prüfe die Pfade zu deinem Output-Verzeichnis
-Optional: Passe die Log-Ausgaben an
 
 Datei 3: generate.sh (Optional)
 Pfad: tools/generators/api-generator/generate.sh
 
-#!/bin/bash
-
-set -e
-
-echo "🚀 Starte API-Client-Generierung via Docker Compose..."
-
-Setze UID und GID für korrekte Permissions
+##!/bin/bash
 export UID=$(id -u)
 export GID=$(id -g)
+docker-compose run --rm openapi-generator
 
 Führe Docker Compose aus
 docker-compose up --abort-on-container-exit
@@ -255,27 +233,21 @@ Datei 5: package.json (API-Client Package)
 Pfad: packages/hrworks-api-client/package.json
 
 {
-  "name": "@hrworks/hrworks-api-client",
-  "version": "1.0.0",
-  "description": "Enhanced HRworks API Client with unified interface and helper methods",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "name": "e2e-utils",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "tsc",
-    "test": "jest",
-    "generate-auto-client": "cd ../../tools/generators/api-generator && node generate.js",
-    "build:all": "node build.js"
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "maintain-docker": "docker system prune -f && docker pull openapitools/openapi-generator-cli:latest",
+    "generate-api-client": "node tools/generators/api-generator/generate.js"
   },
-  "dependencies": {
-    "@formkit/tempo": "^0.1.2",
-    "@hrworks/auto-api-client": "file:auto-client",
-    "jsonwebtoken": "^9.0.2"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@types/jest": "^29.5.0",
-    "@types/jsonwebtoken": "^9.0.10",
-    "jest": "^29.5.0",
-    "typescript": "^4.9.5"
+    "lerna": "^8.2.4"
   }
 }
 
