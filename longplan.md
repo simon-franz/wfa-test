@@ -102,31 +102,200 @@ Development vs Production:
 | Workflow Definitions | Unbegrenzt (bis Löschung) |
 | Synced Persons/OEs | Bis Tenant-Löschung |
 
-**Tenant-Provisioning (via API):**
+**Tenant-Provisioning (via API mit Shared Secret):**
 
 ```
 ┌─────────────┐     POST /api/tenants           ┌─────────────────────┐
 │  HR WORKS   │ ────────────────────────────────▶│  Workflow App       │
-│             │  {                               │                     │
-│  Erstellt   │    "name": "Acme Corp",          │  1. Tenant in       │
-│  API-Key    │    "apiKey": "...",              │     Landlord-DB     │
-│  Pair       │    "apiSecret": "...",           │  2. Neue Tenant-DB  │
-│             │    "hrworksCustomerId": "123"    │  3. Initial Sync    │
-└─────────────┘  }                               │     (Persons, OEs)  │
-                                                 └─────────────────────┘
+│             │  Headers:                        │                     │
+│  Erstellt   │    X-Provisioning-Secret: ***    │  1. Secret prüfen   │
+│  API-Key    │  Body:                           │  2. Tenant in       │
+│  Pair       │  {                               │     Landlord-DB     │
+│             │    "slug": "acme-corp",          │  3. Neue Tenant-DB  │
+│             │    "name": "Acme Corp",          │  4. Credentials     │
+│             │    "hrworksCustomerId": "123",   │     speichern       │
+│             │    "apiKey": "...",              │  5. Initial Sync    │
+│             │    "apiSecret": "...",           │  6. Webhooks        │
+│             │    "baseUrl": "api.hrworks.de"   │     registrieren    │
+│             │  }                               │                     │
+└─────────────┘                                  └─────────────────────┘
+```
+
+**Shared Secret:**
+- Wird zwischen HR WORKS und Workflow-Automation ausgetauscht
+- Gespeichert in Environment Variable: `PROVISIONING_SECRET`
+- HR WORKS sendet Secret im Header: `X-Provisioning-Secret`
+- Workflow-App validiert Secret vor Tenant-Erstellung
+
+**API-Endpoint:**
+```typescript
+// backend/src/tenants/tenants.controller.ts
+@Controller('tenants')
+export class TenantsController {
+  @Post()
+  async createTenant(
+    @Headers('x-provisioning-secret') secret: string,
+    @Body() data: CreateTenantDto,
+  ) {
+    // 1. Validate shared secret
+    if (secret !== process.env.PROVISIONING_SECRET) {
+      throw new UnauthorizedException('Invalid provisioning secret');
+    }
+
+    // 2. Validate input
+    if (!data.slug || !data.apiKey || !data.apiSecret) {
+      throw new BadRequestException('Missing required fields');
+    }
+
+    // 3. Check if tenant already exists
+    const existing = await landlordDB
+      .select()
+      .from(tenants)
+      .where(eq(tenants.slug, data.slug))
+      .limit(1);
+
+    if (existing.length > 0) {
+      throw new ConflictException('Tenant already exists');
+    }
+
+    // 4. Create tenant in Landlord-DB
+    const dbUrl = this.generateTenantDbUrl(data.slug);
+    const [tenant] = await landlordDB.insert(tenants).values({
+      slug: data.slug,
+      name: data.name,
+      dbUrl,
+      hrworksCompanyId: data.hrworksCustomerId,
+      status: 'active',
+      plan: 'free',
+    }).returning();
+
+    // 5. Create tenant database
+    await this.createTenantDatabase(tenant.id, dbUrl);
+
+    // 6. Store HR WORKS credentials (encrypted)
+    const tenantDB = await getTenantDB(tenant.id);
+    await tenantDB.insert(credentials).values({
+      name: 'hrworks-api',
+      type: 'hrworks',
+      encryptedData: await this.encrypt({
+        apiKey: data.apiKey,
+        apiSecret: data.apiSecret,
+        baseUrl: data.baseUrl,
+      }),
+    });
+
+    // 7. Initial sync (async)
+    this.syncService.initialSync(tenant.id).catch(err => {
+      console.error('Initial sync failed:', err);
+    });
+
+    // 8. Register webhooks (async)
+    this.webhookService.registerWebhooks(tenant.id).catch(err => {
+      console.error('Webhook registration failed:', err);
+    });
+
+    return {
+      success: true,
+      tenantId: tenant.id,
+      slug: tenant.slug,
+    };
+  }
+
+  private generateTenantDbUrl(slug: string): string {
+    const isDev = process.env.NODE_ENV === 'development';
+    
+    if (isDev) {
+      // SQLite für Development
+      return `file:./dev-tenants/tenant_${slug}.db`;
+    } else {
+      // PostgreSQL für Production
+      const host = process.env.DB_HOST;
+      const port = process.env.DB_PORT || 5432;
+      const user = process.env.DB_USER;
+      const password = process.env.DB_PASSWORD;
+      return `postgresql://${user}:${password}@${host}:${port}/tenant_${slug}`;
+    }
+  }
+
+  private async createTenantDatabase(tenantId: string, dbUrl: string) {
+    const isDev = process.env.NODE_ENV === 'development';
+    
+    if (isDev) {
+      // SQLite: Datei wird automatisch erstellt
+      const db = drizzleSqlite(new Database(dbUrl.replace('file:', '')));
+      await this.runMigrations(db);
+    } else {
+      // PostgreSQL: Datenbank erstellen
+      const adminDB = new Pool({ connectionString: process.env.ADMIN_DB_URL });
+      await adminDB.query(`CREATE DATABASE tenant_${tenantId}`);
+      await adminDB.end();
+      
+      // Migrationen ausführen
+      const tenantDB = new Pool({ connectionString: dbUrl });
+      await this.runMigrations(drizzlePg(tenantDB));
+      await tenantDB.end();
+    }
+  }
+
+  private async encrypt(data: any): Promise<string> {
+    // Verschlüsselung mit AWS KMS oder crypto
+    const cipher = crypto.createCipher('aes-256-cbc', process.env.ENCRYPTION_KEY);
+    let encrypted = cipher.update(JSON.stringify(data), 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return encrypted;
+  }
+}
+```
+
+**DTO (Data Transfer Object):**
+```typescript
+// backend/src/tenants/dto/create-tenant.dto.ts
+export class CreateTenantDto {
+  @IsString()
+  @IsNotEmpty()
+  slug: string; // z.B. "acme-corp"
+
+  @IsString()
+  @IsNotEmpty()
+  name: string; // z.B. "Acme Corporation"
+
+  @IsString()
+  @IsNotEmpty()
+  hrworksCustomerId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  apiKey: string;
+
+  @IsString()
+  @IsNotEmpty()
+  apiSecret: string;
+
+  @IsString()
+  @IsNotEmpty()
+  baseUrl: string; // z.B. "api.hrworks.de"
+}
 ```
 
 **Ablauf Tenant-Erstellung:**
 1. HR WORKS erstellt neues API-Key-Pair für den Kunden
-2. HR WORKS ruft `POST /api/tenants` der Workflow App auf
-3. Workflow App speichert Tenant-Metadaten in Landlord-DB (inkl. API-Key für Webhook-Validierung)
-4. Workflow App erstellt neue PostgreSQL-Datenbank für Tenant
-5. Workflow App führt Initial Sync durch (alle Persons + OEs laden)
-6. Workflow App registriert benötigte Webhooks bei HR WORKS
+2. HR WORKS ruft `POST /api/tenants` mit Shared Secret auf
+3. Workflow App validiert Secret
+4. Workflow App speichert Tenant-Metadaten in Landlord-DB
+5. Workflow App erstellt neue PostgreSQL-Datenbank (oder SQLite in Dev)
+6. Workflow App speichert verschlüsselte HR WORKS Credentials
+7. Workflow App führt Initial Sync durch (alle Persons + OEs laden) - async
+8. Workflow App registriert benötigte Webhooks bei HR WORKS - async
+
+**Sicherheit:**
+- Shared Secret in Environment Variable (nicht im Code!)
+- HR WORKS Credentials werden verschlüsselt gespeichert
+- Tenant-DB wird isoliert erstellt
+- Validierung aller Eingaben
 
 **PostgreSQL Setup (Production):**
 - Ein PostgreSQL-Server (AWS RDS)
-- Jeder Tenant = eigene Datenbank (`tenant_{id}`)
+- Jeder Tenant = eigene Datenbank (`tenant_{slug}`)
 - Backup: AWS DB Snapshots (automatisiert)
 
 **Connection Pooling (Application-Level):**
@@ -1182,11 +1351,153 @@ describe('Onboarding Workflow', () => {
 ```
 
 Authentifizierung & Autorisierung
-OAuth2 Integration mit HR WORKS
-SSO-Flow implementieren
-Rollen-basierte Zugriffskontrolle (nur workflow-admin)
-Session Management
-JWT Token Handling
+
+**Rollen-System (4 Ebenen):**
+
+| Rolle | Scope | Berechtigungen | Zugriff |
+|-------|-------|----------------|---------|
+| **server_admin** | Global (Landlord-DB) | Mandanten anlegen/löschen/verwalten, System-Konfiguration, alle Tenants sehen | Admin-Panel |
+| **consultant** | Global (Marketplace) | Workflows in Marketplace publizieren, Template-Verwaltung, Tenant-übergreifend | Marketplace-UI |
+| **master_admin** | Tenant-spezifisch | Volle Rechte im eigenen Mandanten, User-Verwaltung, Billing, Settings, alle Workflow-Funktionen | Workflow-App |
+| **workflow-administrator** | Tenant-spezifisch | Workflows erstellen/bearbeiten/löschen/ausführen, Executions sehen, keine User-Verwaltung | Workflow-App |
+
+**Zugriffsbeschränkung:**
+- Nur Personen mit Rolle `workflow-administrator` oder `master_admin` aus HR WORKS dürfen sich in der Workflow-Automation App anmelden
+- OAuth2-Callback prüft die Rolle aus HR WORKS User-Daten
+- Bei ungültiger Rolle: Redirect zu Fehlerseite "Keine Berechtigung"
+- Andere HR WORKS User haben keinen direkten Zugriff (Integration in HR WORKS Oberfläche kommt später)
+
+**OAuth2 Flow mit Rollen-Check:**
+```typescript
+// Backend: OAuth2 Callback Handler
+@Get('oauth2/callback')
+async handleOAuth2Callback(@Query('code') code: string, @Res() res: Response) {
+  // 1. Exchange code for token
+  const hrworksToken = await this.hrworksAuth.exchangeCode(code);
+  
+  // 2. Fetch user data from HR WORKS
+  const hrworksUser = await this.hrworksApi.getCurrentUser(hrworksToken);
+  
+  // 3. Check role
+  const allowedRoles = ['workflow-administrator', 'master_admin'];
+  if (!allowedRoles.includes(hrworksUser.role)) {
+    return res.redirect('/error?reason=insufficient_permissions');
+  }
+  
+  // 4. Create JWT
+  const payload = {
+    sub: hrworksUser.id,
+    tenant_id: hrworksUser.companyId,
+    email: hrworksUser.email,
+    role: hrworksUser.role,
+  };
+  
+  const token = this.jwtService.sign(payload);
+  
+  res.cookie('auth_token', token, {
+    httpOnly: true,
+    secure: true,
+    maxAge: 24 * 60 * 60 * 1000,
+  });
+  
+  return res.redirect('/workflows');
+}
+```
+
+**JWT Payload:**
+```json
+{
+  "sub": "user_uuid",
+  "tenant_id": "tenant_uuid",  // null für server_admin/consultant
+  "email": "user@company.de",
+  "role": "workflow-administrator",
+  "global_role": "consultant",  // Optional: für Consultants mit Tenant-Zugriff
+  "iat": 1234567890,
+  "exp": 1234567890
+}
+```
+
+**Role-Based Guards (NestJS):**
+```typescript
+// Decorator für Rollen-Check
+@SetMetadata('roles', ['workflow-administrator', 'master_admin'])
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Get('workflows')
+async getWorkflows() { ... }
+
+// RolesGuard Implementation
+@Injectable()
+export class RolesGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const requiredRoles = this.reflector.get<string[]>('roles', context.getHandler());
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
+    
+    return requiredRoles.some(role => user.role === role || user.global_role === role);
+  }
+}
+```
+
+**Development Login Bypass (nur für lokale Entwicklung):**
+```typescript
+// Backend: POST /api/auth/dev-login (nur wenn NODE_ENV=development)
+@Post('dev-login')
+async devLogin(@Res() res: Response) {
+  if (process.env.NODE_ENV !== 'development') {
+    throw new ForbiddenException('Dev login only available in development');
+  }
+
+  const mockUser = {
+    sub: 'dev-user-123',
+    tenant_id: 'dev-tenant-123',
+    email: 'dev@example.com',
+    role: 'workflow-administrator',
+  };
+
+  const token = this.jwtService.sign(mockUser);
+  
+  res.cookie('auth_token', token, {
+    httpOnly: true,
+    secure: false,
+    maxAge: 24 * 60 * 60 * 1000,
+  });
+
+  return res.json({ success: true, user: mockUser });
+}
+```
+
+```tsx
+// Frontend: Login-Screen mit Dev-Button
+const LoginScreen = () => {
+  const isDev = import.meta.env.MODE === 'development';
+
+  const handleDevLogin = async () => {
+    await fetch('/api/auth/dev-login', { method: 'POST' });
+    navigate('/workflows');
+  };
+
+  return (
+    <div>
+      <Button onClick={handleOAuth2Login}>Login mit HR WORKS</Button>
+      {isDev && (
+        <Button variant="secondary" onClick={handleDevLogin}>
+          🔧 Dev Login (Bypass)
+        </Button>
+      )}
+    </div>
+  );
+};
+```
+
+**Vorteile:**
+- Kein HR WORKS OAuth2-Setup während Entwicklung nötig
+- Schnelles Testen von Features
+- Mock-Tenant mit Testdaten
+
+**Sicherheit:**
+- Backend prüft `NODE_ENV` - in Production nicht verfügbar
+- Frontend zeigt Button nur in Development-Mode
+- Doppelte Absicherung (Frontend + Backend)
 
 Daten-Synchronisation
 Organisationseinheiten Sync
@@ -2737,22 +3048,351 @@ Content Moderation
 
 4.3 Workflow-Templates & Marketplace
 
-Template Library
-Vorkonfigurierte Standard-Workflows
-Kategorien (Onboarding, Offboarding, Approvals, etc.)
-One-Click Import
-Customization nach Import
+**Template Gallery (Landlord-DB, global verfügbar)**
 
-Template Creator
-Workflow als Template speichern
-Parametrisierung
-Documentation
-Sharing innerhalb Organisation
+Nur `consultant` und `server_admin` können Templates publizieren. Alle Tenants können Templates aktivieren.
 
-Workflow Marketplace (Optional)
-Community-geteilte Workflows
-Rating & Reviews
-Version Management
+**Architektur:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    LANDLORD DB                              │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  workflow_templates                                    │  │
+│  │  - id, title, description, category, tags             │  │
+│  │  - graph (Workflow-Definition als JSON)               │  │
+│  │  - version, authorId, isPublic, downloadCount         │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                         │
+        ┌────────────────┼────────────────┐
+        │ "Aktivieren"   │                │
+        ▼                ▼                ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│  Tenant 1    │  │  Tenant 2    │  │  Tenant N    │
+│  workflows   │  │  workflows   │  │  workflows   │
+│  (Kopie)     │  │  (Kopie)     │  │  (Kopie)     │
+└──────────────┘  └──────────────┘  └──────────────┘
+```
+
+**Template-Workflow:**
+
+1. **Publizieren (Consultant/Server-Admin):**
+```typescript
+// POST /api/templates
+{
+  "sourceWorkflowId": "workflow-123",  // Aus eigenem Tenant
+  "title": "Onboarding Workflow",
+  "description": "Automatisiert den Onboarding-Prozess...",
+  "category": "onboarding",
+  "tags": ["hr", "automation", "new-hire"],
+  "version": "1.0.0"
+}
+
+// Backend kopiert Workflow-Definition in Landlord-DB
+const template = await landlordDB.insert(workflowTemplates).values({
+  title: data.title,
+  description: data.description,
+  category: data.category,
+  tags: data.tags,
+  graph: sourceWorkflow.graph,  // Workflow-Definition
+  version: data.version,
+  authorId: user.id,
+  isPublic: true,
+});
+```
+
+2. **Template Gallery (alle Tenants):**
+```tsx
+// Frontend: Template-Gallery-Screen
+const TemplateGallery = () => {
+  const templates = useTemplates(); // GET /api/templates
+
+  return (
+    <div>
+      <h1>Workflow Templates</h1>
+      <FilterBar categories={['onboarding', 'offboarding', 'approvals']} />
+      
+      <TemplateGrid>
+        {templates.map(template => (
+          <TemplateCard
+            key={template.id}
+            title={template.title}
+            description={template.description}
+            category={template.category}
+            author={template.author}
+            downloads={template.downloadCount}
+            onActivate={() => activateTemplate(template.id)}
+          />
+        ))}
+      </TemplateGrid>
+    </div>
+  );
+};
+```
+
+3. **Aktivieren (Tenant kopiert Template):**
+```typescript
+// POST /api/templates/:id/activate
+async activateTemplate(templateId: string, tenantId: string) {
+  // 1. Lade Template aus Landlord-DB
+  const template = await landlordDB
+    .select()
+    .from(workflowTemplates)
+    .where(eq(workflowTemplates.id, templateId));
+
+  // 2. Kopiere in Tenant-DB
+  const tenantDB = await getTenantDB(tenantId);
+  const newWorkflow = await tenantDB.insert(workflowDefinitions).values({
+    name: template.title,
+    description: `${template.description} (aus Template)`,
+    graph: template.graph,  // Kopie der Workflow-Definition
+    isTemplate: false,
+    isActive: false,  // Tenant muss aktivieren
+    createdBy: userId,
+  });
+
+  // 3. Download-Counter erhöhen
+  await landlordDB
+    .update(workflowTemplates)
+    .set({ downloadCount: sql`download_count + 1` })
+    .where(eq(workflowTemplates.id, templateId));
+
+  return newWorkflow;
+}
+```
+
+4. **Tenant kann Workflow anpassen:**
+- Workflow ist jetzt im Tenant als normale Workflow-Definition
+- Kann bearbeitet, aktiviert, gelöscht werden
+- Keine Verbindung mehr zum Template (Kopie, kein Link)
+
+**Datenmodell (Landlord-DB):**
+```typescript
+// shared/db/landlord-schema.ts
+export const workflowTemplates = pgTable('workflow_templates', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  title: text('title').notNull(),
+  description: text('description'),
+  category: text('category'), // 'onboarding', 'offboarding', 'approvals', 'hr-processes', 'custom'
+  tags: jsonb('tags').$type<string[]>(), // ['hr', 'automation', 'approval']
+  graph: jsonb('graph').notNull(), // Workflow-Definition (nodes, edges)
+  version: text('version').default('1.0.0'),
+  authorId: uuid('author_id').references(() => globalUsers.id),
+  authorName: text('author_name'), // Denormalisiert für Performance
+  isPublic: boolean('is_public').default(true),
+  downloadCount: integer('download_count').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Optional: Template-Aktivierungen tracken
+export const templateActivations = pgTable('template_activations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  templateId: uuid('template_id').references(() => workflowTemplates.id),
+  tenantId: uuid('tenant_id').references(() => tenants.id),
+  workflowId: uuid('workflow_id'), // ID in Tenant-DB
+  activatedBy: uuid('activated_by'),
+  activatedAt: timestamp('activated_at').defaultNow(),
+});
+```
+
+**Frontend: Template Gallery UI**
+```tsx
+// screens/templates/TemplateGalleryScreen.tsx
+const TemplateGalleryScreen = () => {
+  const [category, setCategory] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const { data: templates } = useQuery({
+    queryKey: ['templates', category, searchTerm],
+    queryFn: () => api.getTemplates({ category, search: searchTerm }),
+  });
+
+  return (
+    <Layout>
+      <Header>
+        <h1>Workflow Templates</h1>
+        <SearchBar value={searchTerm} onChange={setSearchTerm} />
+      </Header>
+
+      <Sidebar>
+        <CategoryFilter
+          categories={[
+            { id: 'onboarding', label: 'Onboarding', icon: '👋' },
+            { id: 'offboarding', label: 'Offboarding', icon: '👋' },
+            { id: 'approvals', label: 'Genehmigungen', icon: '✅' },
+            { id: 'hr-processes', label: 'HR-Prozesse', icon: '📋' },
+            { id: 'custom', label: 'Sonstiges', icon: '⚙️' },
+          ]}
+          selected={category}
+          onChange={setCategory}
+        />
+      </Sidebar>
+
+      <TemplateGrid>
+        {templates?.map(template => (
+          <TemplateCard
+            key={template.id}
+            template={template}
+            onActivate={async () => {
+              await activateTemplate(template.id);
+              toast.success('Template aktiviert!');
+              navigate('/workflows');
+            }}
+          />
+        ))}
+      </TemplateGrid>
+    </Layout>
+  );
+};
+
+// Komponente: Template-Card
+const TemplateCard = ({ template, onActivate }) => (
+  <Card>
+    <CardHeader>
+      <CategoryBadge>{template.category}</CategoryBadge>
+      <h3>{template.title}</h3>
+    </CardHeader>
+    
+    <CardBody>
+      <p>{template.description}</p>
+      
+      <Tags>
+        {template.tags.map(tag => (
+          <Tag key={tag}>{tag}</Tag>
+        ))}
+      </Tags>
+      
+      <Metadata>
+        <Author>von {template.authorName}</Author>
+        <Downloads>↓ {template.downloadCount}</Downloads>
+        <Version>v{template.version}</Version>
+      </Metadata>
+    </CardBody>
+    
+    <CardFooter>
+      <Button onClick={onActivate} variant="primary">
+        Aktivieren
+      </Button>
+      <Button onClick={() => previewTemplate(template.id)} variant="secondary">
+        Vorschau
+      </Button>
+    </CardFooter>
+  </Card>
+);
+```
+
+**Backend: Template-Endpoints**
+```typescript
+// backend/src/templates/templates.controller.ts
+@Controller('templates')
+export class TemplatesController {
+  // Alle Templates abrufen (öffentlich)
+  @Get()
+  async getTemplates(
+    @Query('category') category?: string,
+    @Query('search') search?: string,
+  ) {
+    let query = landlordDB.select().from(workflowTemplates);
+    
+    if (category) {
+      query = query.where(eq(workflowTemplates.category, category));
+    }
+    
+    if (search) {
+      query = query.where(
+        or(
+          like(workflowTemplates.title, `%${search}%`),
+          like(workflowTemplates.description, `%${search}%`),
+        )
+      );
+    }
+    
+    return query;
+  }
+
+  // Template publizieren (nur consultant/server_admin)
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @SetMetadata('roles', ['consultant', 'server_admin'])
+  async publishTemplate(
+    @Body() data: PublishTemplateDto,
+    @CurrentUser() user: User,
+  ) {
+    // Workflow aus Tenant laden
+    const tenantDB = await getTenantDB(user.tenantId);
+    const workflow = await tenantDB
+      .select()
+      .from(workflowDefinitions)
+      .where(eq(workflowDefinitions.id, data.sourceWorkflowId));
+
+    // Als Template speichern
+    return landlordDB.insert(workflowTemplates).values({
+      title: data.title,
+      description: data.description,
+      category: data.category,
+      tags: data.tags,
+      graph: workflow.graph,
+      version: data.version,
+      authorId: user.id,
+      authorName: `${user.firstName} ${user.lastName}`,
+    });
+  }
+
+  // Template aktivieren (alle Tenants)
+  @Post(':id/activate')
+  @UseGuards(JwtAuthGuard)
+  async activateTemplate(
+    @Param('id') templateId: string,
+    @TenantId() tenantId: string,
+    @CurrentUser() user: User,
+  ) {
+    // Template laden
+    const [template] = await landlordDB
+      .select()
+      .from(workflowTemplates)
+      .where(eq(workflowTemplates.id, templateId));
+
+    // In Tenant kopieren
+    const tenantDB = await getTenantDB(tenantId);
+    const newWorkflow = await tenantDB.insert(workflowDefinitions).values({
+      name: template.title,
+      description: `${template.description} (aus Template)`,
+      graph: template.graph,
+      isActive: false,
+      createdBy: user.id,
+    });
+
+    // Download-Counter erhöhen
+    await landlordDB
+      .update(workflowTemplates)
+      .set({ downloadCount: sql`download_count + 1` })
+      .where(eq(workflowTemplates.id, templateId));
+
+    // Aktivierung tracken
+    await landlordDB.insert(templateActivations).values({
+      templateId,
+      tenantId,
+      workflowId: newWorkflow.id,
+      activatedBy: user.id,
+    });
+
+    return newWorkflow;
+  }
+}
+```
+
+**Vorteile:**
+- Zentrale Template-Verwaltung in Landlord-DB
+- Tenants können Templates unabhängig anpassen
+- Keine Abhängigkeiten zwischen Template und Kopie
+- Consultants können Best-Practices teilen
+- Download-Tracking für Popularität
+
+**Optional: Template-Updates**
+- Wenn Template aktualisiert wird, können Tenants benachrichtigt werden
+- "Update verfügbar"-Badge in Workflow-Liste
+- Tenant entscheidet ob Update übernommen wird (Merge oder Neuinstallation)
 
 4.4 Advanced Trigger & Scheduling
 
@@ -2959,7 +3599,7 @@ Database Schema (Drizzle ORM)
 ```typescript
 import { pgTable, uuid, text, timestamp } from 'drizzle-orm/pg-core';
 
-// Nur Tenant-Metadaten in der Landlord-DB
+// Tenant-Metadaten
 export const tenants = pgTable('tenants', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').notNull(),
@@ -2970,6 +3610,19 @@ export const tenants = pgTable('tenants', {
   plan: text('plan').default('free'), // free, pro, enterprise
   hrworksCompanyId: text('hrworks_company_id'), // Referenz zu HR WORKS
   createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Global Users (server_admin, consultant)
+export const globalUsers = pgTable('global_users', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  email: text('email').unique().notNull(),
+  passwordHash: text('password_hash'),
+  firstName: text('first_name'),
+  lastName: text('last_name'),
+  role: text('role').notNull(), // 'server_admin' oder 'consultant'
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  lastLoginAt: timestamp('last_login_at'),
 });
 ```
 
@@ -2984,7 +3637,7 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash'),
   firstName: text('first_name'),
   lastName: text('last_name'),
-  role: text('role').default('member'), // admin, workflow-admin, member
+  role: text('role').notNull(), // 'master_admin' oder 'workflow-administrator'
   hrworksPersonId: text('hrworks_person_id'), // Verknüpfung zu HR WORKS Person
   isActive: boolean('is_active').default(true),
   lastLoginAt: timestamp('last_login_at'),
