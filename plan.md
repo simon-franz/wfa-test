@@ -138,6 +138,28 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
 - Event Queue (BullMQ)
 - Logging & Audit Trail
 
+### Engine Testing (Unit & Integration Tests)
+**Unit Tests:**
+- Node-Execution-Logik für jeden Node-Typ (HTTP, Condition, Data Transform, Delay)
+- Condition-Evaluation: JSONata-Expressions, Multi-Condition First-Match-Logic
+- Template-Resolution: `{{variable}}` Platzhalter, verschachtelte Pfade
+- Context-Scope-Resolution: `{{global.*}}`, `{{workflow.*}}`, `{{execution.*}}`
+- Error-Handling: Error-Branch, Retry-Logic, Timeout-Handling
+- Data-Transformation: count, filter, map, reduce, sort, distinct
+
+**Integration Tests:**
+- End-to-End Workflow-Ausführung (Linear-Flow: Trigger → Action → Action → End)
+- Branching-Szenarien: Condition mit mehreren Pfaden, First-Match-Verhalten
+- Error-Branch-Handling: Fehler in Node → Error-Output → Fallback-Pfad
+- Delay-Node mit BullMQ: Job-Scheduling, Resume nach Delay
+- HR WORKS Node: Gemockte API-Calls, Async-Job-Handling, Token-Refresh
+- Context-Passing: Output von Node A als Input in Node B
+
+**Test-Framework:**
+- Vitest für Unit/Integration Tests
+- Supertest für API-Tests
+- Mock-Services für externe APIs (HR WORKS, Email)
+
 ### Designer UI (Frontend)
 - Canvas mit Drag & Drop
 - Node Palette (Start, Action, End)
@@ -227,26 +249,37 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
   - Zurück-Navigation von Historie zum Designer
 - **Ausführungshistorie-Seite** (`/workflows/:id/executions`):
   - **Split-Layout**: Liste links (350px), Details rechts
-  - **Ausführungsliste (Sidebar)**:
+  - **Ausführungsliste (Sidebar links)**:
     - Zurück-Button zum Designer (← Zurück)
-    - Nummerierte Einträge (#1, #2, #3) mit Badge
-    - Datum/Zeit, Status-Badge (Erfolgreich/Fehlgeschlagen/Läuft)
-    - Execution-ID (monospace)
-    - Klick lädt Details rechts
+    - **Filter-Bereich**:
+      - Status-Filter: Alle / Erfolgreich / Fehlgeschlagen / Läuft
+      - Datums-Filter: Zeitraum auswählen (von-bis)
+    - **Execution-Liste** (scrollbar):
+      - Nummerierte Einträge (#1, #2, #3) mit Badge
+      - Datum/Zeit, Status-Badge (Erfolgreich/Fehlgeschlagen/Läuft)
+      - Execution-ID (monospace)
+      - Klick lädt Details rechts
   - **Detail-Panel (rechts)**:
-    - Header: Status, Start-/Endzeit, Fehlermeldung
-    - **Node-Liste** (aufklappbar):
-      - Node-Header: Expand-Icon (▶/▼), Node-Icon (Emoji), Node-Name (lesbar), Startzeit, Status-Badge
-      - Node-Content (ausgeklappt):
-        - **Output**: Interaktiver JSON-Viewer mit ein-/ausklappbaren Objekten/Arrays
-        - **Fehler**: Fehlermeldung (falls vorhanden)
-        - **Metadaten**: Timestamps, Dauer
-    - **JSON-Viewer Features**:
-      - Syntax-Highlighting (Keys blau, Strings rot, Numbers grün, Booleans/Null blau)
-      - Ein-/Ausklappbare Objekte und Arrays (▶/▼ Icons)
-      - Item/Key-Zähler bei eingeklappten Elementen ("3 items", "5 keys")
-      - Einrückung für Hierarchie
-      - Hover-Effekte auf Toggle-Icons
+    - **Workflow-Diagramm (oben)**:
+      - Visueller Graph der ausgeführten Nodes (wie im Designer)
+      - Nodes zeigen Status-Farben (grün=success, rot=error, grau=skipped)
+      - Read-only Ansicht (kein Editing)
+      - Zoom-Controls
+      - Zeigt tatsächlich ausgeführten Pfad (bei Conditions nur gematchte Branch)
+    - **Node-Details (unten)**:
+      - Header: Status, Start-/Endzeit, Fehlermeldung
+      - **Node-Liste** (aufklappbar):
+        - Node-Header: Expand-Icon (▶/▼), Node-Icon (Emoji), Node-Name (lesbar), Startzeit, Status-Badge
+        - Node-Content (ausgeklappt):
+          - **Output**: Interaktiver JSON-Viewer mit ein-/ausklappbaren Objekten/Arrays
+          - **Fehler**: Fehlermeldung (falls vorhanden)
+          - **Metadaten**: Timestamps, Dauer
+      - **JSON-Viewer Features**:
+        - Syntax-Highlighting (Keys blau, Strings rot, Numbers grün, Booleans/Null blau)
+        - Ein-/Ausklappbare Objekte und Arrays (▶/▼ Icons)
+        - Item/Key-Zähler bei eingeklappten Elementen ("3 items", "5 keys")
+        - Einrückung für Hierarchie
+        - Hover-Effekte auf Toggle-Icons
   - **Node-Namen-Mapping**:
     - `condition-123456` → "Bedingung"
     - `hrworks-1` → "HR WORKS"
@@ -277,7 +310,7 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
 - Klick auf Zeile öffnet Workflow-Designer
 - Pro Workflow darf es **nur einen Trigger-Knoten** geben (Validierung im Designer)
 
-#### Workflow-Designer Layout (oberer Bereich, ~60% der Höhe)
+#### Workflow-Designer Layout
 
 **Visueller Graph-Editor:**
 - Knoten-basierter Editor mit Drag-and-Drop-Funktionalität
@@ -304,42 +337,6 @@ const expectedSig = crypto.createHmac('sha256', secretKey)
 - Vollbild-Toggle
 - Hilfe-Button
 - Grüner "+" FAB-Button zum Hinzufügen neuer Knoten
-
-#### Verlauf/Historie (linker unterer Bereich)
-
-**Statistik-Dashboard:**
-- Gesamte Ausführungen (Anzahl)
-- Ausgeführte Nodes (Anzahl)
-
-**Filter-Optionen:**
-- "Alle Ausführungen" / gefilterte Ansicht
-- Datumsfilter
-- Statusfilter
-
-**Ausführungsliste:**
-- Scrollbare Liste aller Workflow-Durchläufe
-- Pro Eintrag:
-  - Status-Icon (grüner Haken = erfolgreich, rot = fehlgeschlagen)
-  - Ausführungs-ID (z.B. "Ausführung #1047")
-  - Zeitstempel (Datum + Uhrzeit)
-- Klick auf Eintrag öffnet Details im rechten Panel
-
-#### Ausführungsdetails (rechter unterer Bereich)
-
-**Header:**
-- Ausführungs-ID mit Status-Icon
-- Gesamtdauer
-- Schließen-Button (X)
-
-**Knoten-Liste (chronologisch):**
-- Für jeden ausgeführten Knoten:
-  - Icon des Knotentyps
-  - Knotenname (z.B. "Jira", "Condition", "Get Issue")
-  - Ausführungsdauer
-  - Zeitstempel
-  - Aufklappbare Sections:
-    - **Eingabe**: JSON-Darstellung der Input-Daten
-    - **Ausgabe**: JSON-Darstellung der Output-Daten (syntax-highlighted)
 
 #### Workflow-Versionierung & Historie
 - **Zeitstempel-basierte Historisierung** für jeden Speichervorgang
