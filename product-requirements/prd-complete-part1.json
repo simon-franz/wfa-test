@@ -1,0 +1,113 @@
+{
+  "project": "Workflow Automation Platform",
+  "description": "VOLLSTÄNDIGE PRD mit ALLEN Details aus plan.md",
+  "note": "Diese Datei enthält ALLE technischen Spezifikationen, UI-Details, Code-Beispiele und Anforderungen",
+  "technicalFoundation": {
+    "projectStructure": {
+      "requirement": "Monorepo mit definierter Verzeichnisstruktur",
+      "structure": {
+        "backend": "NestJS Backend",
+        "frontend": "React Frontend mit SmartFace",
+        "shared": "Gemeinsame Types, Utils, Schemas",
+        "tools": "Build-Tools, Generatoren",
+        "tools/generators/api-generator": "OpenAPI Client Generator",
+        "docs": "Dokumentation",
+        "docs/plan-hrworks-integration.md": "HR WORKS API Generator Setup (aus Root übernehmen)"
+      }
+    },
+    "technologyStack": {
+      "runtime": {
+        "choice": "Bun",
+        "reason": "Schneller als Node.js, native TypeScript-Support"
+      },
+      "backendFramework": {
+        "choice": "NestJS",
+        "reason": "Modulare Architektur, TypeScript-first"
+      },
+      "orm": {
+        "choice": "Drizzle",
+        "reason": "Type-safe, Multi-Dialect (SQLite/PostgreSQL), Performance"
+      },
+      "database": {
+        "production": "PostgreSQL",
+        "development": "SQLite",
+        "reason": "Schnelle lokale Entwicklung, robust in Production"
+      },
+      "queueSystem": {
+        "choice": "BullMQ",
+        "dependency": "Valkey (Redis-Fork)",
+        "reason": "Robust für async Jobs"
+      },
+      "stateManagement": {
+        "choice": "Zustand",
+        "reason": "Einfacher als Redux, weniger Boilerplate"
+      },
+      "frontend": {
+        "choice": "Vite + React",
+        "reason": "Schnelles Build-Tool, React 18 SPA"
+      },
+      "uiFramework": {
+        "choice": "SmartFace",
+        "source": "/SmartFace-dev",
+        "reason": "HR WORKS Design-System, shadcn-ähnlich",
+        "styling": "Styled-Components (wie in SmartFace verwendet)"
+      },
+      "workflowDesigner": {
+        "choice": "React Flow",
+        "reason": "Bewährt (n8n, make.com)"
+      },
+      "routing": {
+        "choice": "react-router-dom",
+        "reason": "Client-seitiges Routing"
+      },
+      "realtimeUpdates": {
+        "choice": "Server-Sent Events (SSE)",
+        "library": "@microsoft/fetch-event-source",
+        "reason": "Unidirektionale Streams für Execution Updates, geringere Last als Polling"
+      },
+      "hosting": {
+        "choice": "AWS EKS",
+        "reason": "Kubernetes für Skalierung"
+      }
+    },
+    "designGuidelines": {
+      "lookAndFeel": "Orientierung an HR WORKS UI",
+      "components": "SmartFace Component Library (aus /SmartFace-dev)",
+      "styling": "Styled-Components (wie in SmartFace verwendet)",
+      "theme": "Dunkles Theme (Dark Mode)",
+      "colors": {
+        "success": "Grün",
+        "warning": "Orange",
+        "error": "Rot",
+        "trigger": "Blau",
+        "hrworks": "Orange/Coral",
+        "transformation": "Lila",
+        "condition": "Gelb",
+        "action": "Grün"
+      }
+    }
+  },
+  "multiTenantArchitecture": {
+    "pattern": "Landlord-DB Pattern",
+    "description": "Landlord-DB für Tenant-Metadaten, separate Tenant-DBs für Business-Daten",
+    "landlordDb": {
+      "database": "PostgreSQL (Prod) / SQLite (Dev)",
+      "tables": {
+        "tenants": {
+          "fields": ["id", "name", "slug", "dbUrl", "status", "plan"],
+          "constraint": "Nur Metadaten - keine User-/Business-Daten!"
+        }
+      }
+    },
+    "tenantDb": {
+      "tables": ["users", "workflows", "executions", "credentials", "approvals", "synced_*"],
+      "isolation": "Totale Datenisolation zwischen Tenants",
+      "benefits": [
+        "GDPR/Compliance-ready",
+        "Einfaches Offboarding (DROP DATABASE)",
+        "SQLite für Development, PostgreSQL für Production"
+      ]
+    },
+    "diagram": "Landlord-DB → Tenant DB 1, Tenant DB 2, Tenant DB N"
+  }
+}

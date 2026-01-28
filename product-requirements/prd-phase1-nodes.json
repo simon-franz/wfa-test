@@ -1,0 +1,255 @@
+{
+  "project": "Workflow Automation Platform",
+  "phase": "Phase 1: Trigger & Action Nodes",
+  "duration": "Wochen 1-6 (continued)",
+  "branchName": "feature/phase1-nodes",
+  "description": "Implementation of trigger nodes, action nodes, and HR WORKS integration",
+  "userStories": [
+    {
+      "id": "US-035",
+      "title": "Manual Trigger Node",
+      "description": "Als User kann ich Workflows manuell starten mit optionalen Input-Parametern",
+      "acceptanceCriteria": [
+        "Manual Trigger Node implementiert",
+        "Input-Parameter definierbar",
+        "Für Testing & Debugging verwendbar",
+        "Output enthält Trigger-Daten für nachfolgende Nodes",
+        "Typecheck passes"
+      ],
+      "priority": 35,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-036",
+      "title": "Scheduled Trigger Node",
+      "description": "Als User kann ich Workflows zeitbasiert mit Cron ausführen",
+      "acceptanceCriteria": [
+        "Scheduled Trigger Node implementiert",
+        "Cron-basierte Ausführung",
+        "Zeitzone-Handling",
+        "Einfache Intervalle (täglich, wöchentlich, monatlich)",
+        "Cron-Expression Builder UI",
+        "Typecheck passes"
+      ],
+      "priority": 36,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-037",
+      "title": "HTTP Request Node",
+      "description": "Als User kann ich HTTP-Requests zu externen APIs senden",
+      "acceptanceCriteria": [
+        "GET/POST/PUT/DELETE Methoden unterstützt",
+        "Header Configuration",
+        "Body Template (Handlebars)",
+        "Response Mapping",
+        "Timeout & Retry Settings",
+        "Error Handling mit Error Branch",
+        "Typecheck passes"
+      ],
+      "priority": 37,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-038",
+      "title": "Error Handling für externe Systeme",
+      "description": "Als System behandle ich Fehler bei externen API-Calls mit Retry und Fallback",
+      "acceptanceCriteria": [
+        "Error Branch (On Error) für HTTP Request, HR WORKS, Email, Webhook Nodes",
+        "Konfigurierbare Fehlerbehandlung: stop (default), continue, fallback",
+        "Error-Output enthält: errorMessage, errorCode, nodeId, timestamp",
+        "Visuell: Roter Error-Handle am unteren Rand des Nodes",
+        "Retry-Konfiguration: retryCount (0-5), retryDelay (ms), retryBackoff (exponentiell)",
+        "Retry nur bei 5xx, Timeout, Network Error (nicht bei 4xx)",
+        "Timeout-Konfiguration: timeout (ms, default 30000)",
+        "Typecheck passes"
+      ],
+      "priority": 38,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-039",
+      "title": "Data Transformation Node",
+      "description": "Als User kann ich Daten transformieren und aggregieren",
+      "acceptanceCriteria": [
+        "Operationen: count, filter, map, reduce, sort, distinct",
+        "JSONPath-Expressions für Daten-Extraktion",
+        "Wrapping von Ergebnissen in Objekte für Context-Nutzung",
+        "Aggregations-Funktionen (sum, average, min, max)",
+        "Array-Manipulation",
+        "UI mit Operation-Dropdown und Input-Feld",
+        "Typecheck passes"
+      ],
+      "priority": 39,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-040",
+      "title": "Delay Node",
+      "description": "Als User kann ich Workflows zeitlich verzögern",
+      "acceptanceCriteria": [
+        "Zeitverzögerung in Minuten, Stunden, Tagen",
+        "Pause & Resume Funktionalität",
+        "Persistente Delays mit BullMQ",
+        "Status: waiting während Delay",
+        "Typecheck passes"
+      ],
+      "priority": 40,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-041",
+      "title": "Condition Node (Multi-Condition Switch)",
+      "description": "Als User kann ich mehrere Bedingungen in einem Node definieren mit First-Match Logik",
+      "acceptanceCriteria": [
+        "Variable Anzahl von Bedingungen pro Node",
+        "First-Match Logik: Bedingungen von oben nach unten geprüft",
+        "Optional: Default-Pfad wenn keine Bedingung zutrifft",
+        "Jede Bedingung hat eigenen Output-Handle",
+        "Visual Feedback: Gematchte Bedingung wird grün hervorgehoben",
+        "Use Case: Switch/Case-ähnliche Logik",
+        "Typecheck passes"
+      ],
+      "priority": 41,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-042",
+      "title": "Condition Builder UI (visuell)",
+      "description": "Als User erstelle ich Bedingungen visuell ohne JSONata-Kenntnisse",
+      "acceptanceCriteria": [
+        "3-Felder-Layout: [Variable] [Operator] [Wert/Variable]",
+        "Linkes Feld: Variable Picker mit verfügbaren Outputs",
+        "Operator-Dropdown: =, !=, >, >=, <, <=, contains, startsWith, endsWith, isEmpty, isNotEmpty",
+        "Rechtes Feld: Wert eingeben oder Variable auswählen",
+        "Backend generiert automatisch korrekte JSONata-Expression",
+        "Optional: Advanced Mode Toggle für direkte JSONata-Eingabe",
+        "Typecheck passes"
+      ],
+      "priority": 42,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-043",
+      "title": "HR WORKS API Client Generierung",
+      "description": "Als System generiere ich TypeScript Client aus HR WORKS OpenAPI Spec",
+      "acceptanceCriteria": [
+        "OpenAPI Generator Tool in tools/generators/api-generator/",
+        "Generiert TypeScript Client aus OpenAPI Spec",
+        "Unterstützt alle HR WORKS Endpoints (Persons, OEs, Absences, etc.)",
+        "Type-safe API Calls",
+        "Siehe plan-hrworks-integration.md für Details",
+        "Typecheck passes"
+      ],
+      "priority": 43,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-044",
+      "title": "HR WORKS Node - Async Job Handling",
+      "description": "Als System behandle ich asynchrone HR WORKS Jobs transparent",
+      "acceptanceCriteria": [
+        "Backend pollt automatisch Job-Status über /jobs/{jobId}",
+        "Frontend zeigt Node als running bis Job abgeschlossen",
+        "UI-Mapping: Async-Calls als synchrone Operationen dargestellt",
+        "Timeout-Handling: Nach 60 Sekunden Job als fehlgeschlagen",
+        "Retry-Logic: Bei Netzwerkfehlern max. 3x wiederholen",
+        "Output-Mapping: Nur data Objekt aus Job-Response als Node-Output",
+        "Dictionary Response Flattening für einfacheren Zugriff",
+        "Typecheck passes"
+      ],
+      "priority": 44,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-045",
+      "title": "HR WORKS Node - Token-Handling",
+      "description": "Als System verwalte ich HR WORKS JWT-Tokens automatisch",
+      "acceptanceCriteria": [
+        "JWT-Token hat 15 Minuten Gültigkeit",
+        "Automatische Token-Refresh bei Ablauf",
+        "Token wird im Response-Feld token zurückgegeben (nicht access_token)",
+        "Sichere Speicherung in Tenant-Konfiguration",
+        "Typecheck passes"
+      ],
+      "priority": 45,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-046",
+      "title": "HR WORKS Node - Erweiterte Person-Felder",
+      "description": "Als User kann ich alle HR WORKS Person-Felder verwenden",
+      "acceptanceCriteria": [
+        "Unterstützung für: personnelNumber, birthday, gender, role, department, etc.",
+        "Automatische Typ-Validierung basierend auf OpenAPI Spec",
+        "Select-Felder für Enum-Werte (Gender, Salutation)",
+        "Typecheck passes"
+      ],
+      "priority": 46,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-047",
+      "title": "HR WORKS Node - UI Konfiguration",
+      "description": "Als User konfiguriere ich HR WORKS Nodes über benutzerfreundliche UI",
+      "acceptanceCriteria": [
+        "Dropdown: API-Endpoint auswählen (Persons, OEs, Absences, etc.)",
+        "Dynamisches Formular für Parameter je nach Endpoint",
+        "Required-Felder markiert",
+        "Typ-Validierung (string, number, date)",
+        "Autocomplete für Person-IDs, OE-IDs aus synchronisierten Daten",
+        "Unterstützt params und parameters Feldnamen",
+        "Response-Mapping für nachfolgende Nodes",
+        "JSON-Path Zugriff auf Response-Daten",
+        "Typecheck passes"
+      ],
+      "priority": 47,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-048",
+      "title": "Expression Language - JSONata Integration",
+      "description": "Als System verwende ich JSONata für Templates und Conditions",
+      "acceptanceCriteria": [
+        "JSONata Library (npm) integriert",
+        "Templates: {{expression}} Platzhalter in Strings",
+        "Conditions: Pure JSONata Expressions",
+        "Template Engine mit Regex für {{...}} Platzhalter",
+        "JSONata evaluiert Expressions mit Context",
+        "Typecheck passes"
+      ],
+      "priority": 48,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-049",
+      "title": "Expression Language - JSONata Funktionen",
+      "description": "Als User kann ich JSONata Funktionen in Expressions verwenden",
+      "acceptanceCriteria": [
+        "Strings: $lowercase(), $uppercase(), $contains(), $replace()",
+        "Numbers: $sum(), $average(), $round(), $abs()",
+        "Arrays: $count(), array[filter], $distinct(), $sort()",
+        "Custom Datum: $now(), $formatDate(), $addDays(), $diffDays()",
+        "Dokumentation für User verfügbar",
+        "Typecheck passes"
+      ],
+      "priority": 49,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

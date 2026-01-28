@@ -1,0 +1,364 @@
+{
+  "project": "Workflow Automation Platform",
+  "phase": "Phase 4: Enterprise Features & Scale",
+  "duration": "Wochen 21-28",
+  "branchName": "feature/phase4-enterprise",
+  "description": "Monitoring, advanced nodes, marketplace, performance optimization, and integrations",
+  "userStories": [
+    {
+      "id": "US-069",
+      "title": "Workflow Analytics Dashboard",
+      "description": "Als Admin sehe ich Workflow-Metriken und Performance-Daten",
+      "acceptanceCriteria": [
+        "Active Workflows Anzahl",
+        "Execution Times (Average, Min, Max)",
+        "Error Rates",
+        "Bottleneck Detection",
+        "SLA Monitoring",
+        "Grafische Darstellung (Charts)",
+        "Typecheck passes"
+      ],
+      "priority": 69,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-070",
+      "title": "Audit Trail & Compliance",
+      "description": "Als Compliance-Officer habe ich vollständige Nachverfolgbarkeit",
+      "acceptanceCriteria": [
+        "Complete Execution History",
+        "Data Change Logs",
+        "Export (PDF, CSV)",
+        "DSGVO-konforme Datenhaltung",
+        "Retention Policies",
+        "Typecheck passes"
+      ],
+      "priority": 70,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-071",
+      "title": "Dead Letter Queue",
+      "description": "Als System behandle ich fehlgeschlagene Jobs in Dead Letter Queue",
+      "acceptanceCriteria": [
+        "Dead Letter Queue für fehlgeschlagene Jobs",
+        "Retry Strategies (exponential backoff)",
+        "Manual Intervention möglich",
+        "Rollback-Funktionalität",
+        "Alert System für kritische Fehler",
+        "Typecheck passes"
+      ],
+      "priority": 71,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-072",
+      "title": "Sub-Workflow Node",
+      "description": "Als User kann ich Workflows als wiederverwendbare Komponenten nutzen",
+      "acceptanceCriteria": [
+        "Workflow als wiederverwendbare Komponente",
+        "Parameter Passing an Sub-Workflow",
+        "Return Values vom Sub-Workflow",
+        "Versioning für Sub-Workflows",
+        "Typecheck passes"
+      ],
+      "priority": 72,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-073",
+      "title": "Parallel Execution Node",
+      "description": "Als User kann ich Workflow-Branches parallel ausführen",
+      "acceptanceCriteria": [
+        "Fork-Join Pattern",
+        "Parallel Branches",
+        "Synchronization Point",
+        "Timeout Handling",
+        "Error Handling für einzelne Branches",
+        "Typecheck passes"
+      ],
+      "priority": 73,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-074",
+      "title": "Database Node",
+      "description": "Als User kann ich direkt auf Datenbanken zugreifen",
+      "acceptanceCriteria": [
+        "Direct DB Queries (PostgreSQL)",
+        "Insert/Update/Delete Operations",
+        "Transaction Support",
+        "Query Builder UI",
+        "SQL Injection Prevention",
+        "Typecheck passes"
+      ],
+      "priority": 74,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-075",
+      "title": "AI/LLM Node",
+      "description": "Als User kann ich LLMs in Workflows integrieren",
+      "acceptanceCriteria": [
+        "OpenAI/Azure Integration",
+        "Prompt Templates",
+        "Response Parsing",
+        "Content Moderation",
+        "Token Usage Tracking",
+        "Typecheck passes"
+      ],
+      "priority": 75,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-076",
+      "title": "Workflow-Templates & Marketplace - Template Gallery",
+      "description": "Als User sehe ich verfügbare Workflow-Templates im Marketplace",
+      "acceptanceCriteria": [
+        "Template Gallery in Landlord-DB (global verfügbar)",
+        "Consultants und server_admins können Templates publizieren",
+        "Template-Metadaten: Titel, Beschreibung, Kategorie, Tags, Version, Author",
+        "Templates sind Tenant-übergreifend sichtbar",
+        "Kategorien: Onboarding, Offboarding, Approvals, HR-Prozesse, Custom",
+        "Rating & Reviews (optional)",
+        "Typecheck passes"
+      ],
+      "priority": 76,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-077",
+      "title": "Workflow-Templates - Aktivieren-Funktion",
+      "description": "Als User kann ich Templates in meinen Tenant kopieren und nutzen",
+      "acceptanceCriteria": [
+        "Aktivieren-Button kopiert Template in Tenant-DB",
+        "Template wird als neuer Workflow erstellt",
+        "User kann Workflow anpassen/nutzen",
+        "Versionierung: Templates können aktualisiert werden",
+        "Update-Hinweis für Tenants bei neuen Versionen",
+        "Typecheck passes"
+      ],
+      "priority": 77,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-078",
+      "title": "Workflow-Templates - Datenmodell",
+      "description": "Als System speichere ich Templates in Landlord-DB",
+      "acceptanceCriteria": [
+        "Drizzle Schema workflow_templates in Landlord-DB",
+        "Felder: id, title, description, category, tags, graph, version, authorId, isPublic, downloadCount",
+        "Timestamps: createdAt, updatedAt",
+        "Typecheck passes"
+      ],
+      "priority": 78,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-079",
+      "title": "Composite Triggers",
+      "description": "Als User kann ich mehrere Trigger-Bedingungen kombinieren",
+      "acceptanceCriteria": [
+        "Multiple Conditions (AND/OR)",
+        "Time + Event Kombination",
+        "Debouncing & Throttling",
+        "Typecheck passes"
+      ],
+      "priority": 79,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-080",
+      "title": "Smart Scheduling",
+      "description": "Als User kann ich Workflows intelligent zeitlich planen",
+      "acceptanceCriteria": [
+        "Business Hours Berücksichtigung",
+        "Holiday Calendar Integration",
+        "Timezone Support",
+        "Dynamic Scheduling basierend auf Bedingungen",
+        "Typecheck passes"
+      ],
+      "priority": 80,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-081",
+      "title": "Workflow Variables",
+      "description": "Als User kann ich Variablen in Workflows definieren und nutzen",
+      "acceptanceCriteria": [
+        "Global Variables (Workflow-weit)",
+        "Node-lokale Variables",
+        "Environment Variables",
+        "Secrets (verschlüsselt)",
+        "Type Safety für Variables",
+        "Typecheck passes"
+      ],
+      "priority": 81,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-082",
+      "title": "Granulare Berechtigungen",
+      "description": "Als Admin kann ich detaillierte Berechtigungen vergeben",
+      "acceptanceCriteria": [
+        "Workflow-Ownership",
+        "Edit/View/Execute Rights",
+        "OE-basierte Zugriffskontrolle",
+        "Rollen-basierte Permissions",
+        "Typecheck passes"
+      ],
+      "priority": 82,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-083",
+      "title": "White-Labeling",
+      "description": "Als Tenant-Admin kann ich das UI anpassen",
+      "acceptanceCriteria": [
+        "Tenant-spezifisches Logo",
+        "Farbschema anpassbar",
+        "Custom Domain (optional)",
+        "Typecheck passes"
+      ],
+      "priority": 83,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-084",
+      "title": "Performance Optimization - Caching",
+      "description": "Als System optimiere ich Performance durch Caching",
+      "acceptanceCriteria": [
+        "Workflow Caching",
+        "Database Indexing",
+        "Query Optimization",
+        "Connection Pooling",
+        "Typecheck passes"
+      ],
+      "priority": 84,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-085",
+      "title": "Horizontal Scaling",
+      "description": "Als System skaliere ich horizontal für hohe Last",
+      "acceptanceCriteria": [
+        "Stateless Backend",
+        "Load Balancing",
+        "Queue-based Architecture",
+        "Valkey für Shared State",
+        "Kubernetes Deployment (EKS)",
+        "Typecheck passes"
+      ],
+      "priority": 85,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-086",
+      "title": "Rate Limiting",
+      "description": "Als System schütze ich vor Überlastung durch Rate Limiting",
+      "acceptanceCriteria": [
+        "API Call Limits",
+        "Workflow Execution Limits",
+        "Per-User/Per-OE Quotas",
+        "429 Too Many Requests Response",
+        "Typecheck passes"
+      ],
+      "priority": 86,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-087",
+      "title": "Outbound Webhooks",
+      "description": "Als User kann ich Webhooks an externe Systeme senden",
+      "acceptanceCriteria": [
+        "Custom Webhook Nodes",
+        "Signature Signing",
+        "Retry Logic",
+        "Payload Templates",
+        "Typecheck passes"
+      ],
+      "priority": 87,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-088",
+      "title": "Public API",
+      "description": "Als Entwickler kann ich Workflows via API triggern und abfragen",
+      "acceptanceCriteria": [
+        "Workflow-Triggering via API",
+        "Status Queries",
+        "Webhook Registration",
+        "API Keys & OAuth2",
+        "OpenAPI Spec",
+        "Typecheck passes"
+      ],
+      "priority": 88,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-089",
+      "title": "Pre-built Connectors",
+      "description": "Als User kann ich vorgefertigte Integrationen nutzen",
+      "acceptanceCriteria": [
+        "Email (SMTP, Exchange, Gmail)",
+        "Slack/Teams",
+        "SharePoint/OneDrive",
+        "SAP/DATEV (optional)",
+        "Typecheck passes"
+      ],
+      "priority": 89,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-090",
+      "title": "Workflow Testing - Test Mode",
+      "description": "Als User kann ich Workflows im Test-Modus ausführen",
+      "acceptanceCriteria": [
+        "Test Mode (Dry-Run) ohne echte Änderungen",
+        "Mock Data Injection",
+        "Step-by-Step Debugging",
+        "Unit Tests für Workflows",
+        "Typecheck passes"
+      ],
+      "priority": 90,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-091",
+      "title": "Workflow Versioning",
+      "description": "Als User kann ich Workflow-Versionen verwalten",
+      "acceptanceCriteria": [
+        "Workflow Versions",
+        "Rollback zu vorheriger Version",
+        "A/B Testing",
+        "Canary Deployments",
+        "Typecheck passes"
+      ],
+      "priority": 91,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

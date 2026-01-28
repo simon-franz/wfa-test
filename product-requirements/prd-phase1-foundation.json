@@ -1,0 +1,292 @@
+{
+  "project": "Workflow Automation Platform",
+  "phase": "Phase 1: Foundation & MVP",
+  "duration": "Wochen 1-6",
+  "branchName": "feature/phase1-foundation",
+  "description": "Core foundation with authentication, multi-tenancy, workflow engine, and basic designer UI",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Multi-Tenant Architecture Setup (Landlord-DB Pattern)",
+      "description": "Als System-Architekt benötige ich eine Multi-Tenant-Architektur mit Landlord-DB für Tenant-Metadaten und separaten Tenant-DBs für Business-Daten",
+      "acceptanceCriteria": [
+        "Landlord-DB (PostgreSQL Prod / SQLite Dev) mit tenants-Tabelle erstellt",
+        "Tenants-Tabelle enthält: id, name, slug, dbUrl, status, plan",
+        "Nur Metadaten in Landlord-DB, keine User-/Business-Daten",
+        "Tenant-DB Schema enthält: users, workflows, executions, credentials, approvals, synced_* Tabellen",
+        "Drizzle ORM konfiguriert für Multi-Dialect Support",
+        "Totale Datenisolation zwischen Tenants gewährleistet",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Tenant Provisioning API",
+      "description": "Als HR WORKS System kann ich automatisch neue Tenants via API erstellen mit Shared Secret Authentifizierung",
+      "acceptanceCriteria": [
+        "POST /api/tenants Endpoint implementiert",
+        "Header X-Provisioning-Secret validiert gegen PROVISIONING_SECRET env var",
+        "Request Body enthält: slug, name, hrworksCustomerId, apiKey, apiSecret, baseUrl",
+        "Tenant wird in Landlord-DB erstellt",
+        "Neue Tenant-DB wird automatisch provisioniert",
+        "HR WORKS Credentials werden verschlüsselt gespeichert",
+        "Initial Sync (Persons, OEs) wird async gestartet",
+        "Webhooks bei HR WORKS werden async registriert",
+        "Error Handling für fehlende/ungültige Secrets",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "JWT-basierte Tenant-Auflösung",
+      "description": "Als Backend-System löse ich Tenant-Kontext aus JWT Cookie auf für Single-Domain-Setup",
+      "acceptanceCriteria": [
+        "JWT Cookie 'auth_token' wird als HttpOnly Cookie gespeichert",
+        "JWT Payload enthält: sub (user_uuid), tenant_id, email, role, iat, exp",
+        "JwtAuthGuard validiert Cookie bei jedem Request",
+        "Tenant-ID wird aus JWT extrahiert und für DB-Queries verwendet",
+        "Cookie wird automatisch bei fetch mit credentials: 'include' mitgesendet",
+        "SSE-Verbindungen unterstützen Token im Header",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "4-Ebenen Rollen-System",
+      "description": "Als System implementiere ich ein 4-Ebenen Rollen-System mit server_admin, consultant, master_admin, workflow-administrator",
+      "acceptanceCriteria": [
+        "Rolle 'server_admin': Global scope, kann Mandanten verwalten, System-Konfiguration, alle Tenants sehen",
+        "Rolle 'consultant': Global scope für Marketplace, kann Workflows publizieren, Tenant-übergreifend",
+        "Rolle 'master_admin': Tenant-spezifisch, volle Rechte im Mandanten, User-Verwaltung, Billing, Settings",
+        "Rolle 'workflow-administrator': Tenant-spezifisch, Workflows erstellen/bearbeiten/löschen/ausführen, Executions sehen",
+        "JWT Payload erweitert um 'global_role' für Consultants mit Tenant-Zugriff",
+        "Zugriffsbeschränkung: Nur workflow-administrator oder master_admin aus HR WORKS dürfen sich anmelden",
+        "Guards implementiert für Rollen-basierte Zugriffskontrolle",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "OAuth2 Integration mit HR WORKS",
+      "description": "Als User kann ich mich via OAuth2 SSO mit HR WORKS anmelden",
+      "acceptanceCriteria": [
+        "OAuth2 Flow implementiert (Authorization Code Flow)",
+        "Redirect zu HR WORKS Login-Seite",
+        "Callback-Handler verarbeitet Authorization Code",
+        "Token Exchange gegen HR WORKS API",
+        "User-Daten werden aus HR WORKS abgerufen",
+        "JWT Token wird generiert und als HttpOnly Cookie gesetzt",
+        "Session Management implementiert",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Development Login Bypass",
+      "description": "Als Entwickler kann ich im Dev-Modus ohne OAuth2 einen Mock-User verwenden",
+      "acceptanceCriteria": [
+        "Dev Login Button nur sichtbar wenn NODE_ENV=development",
+        "Button erstellt JWT-Token mit Mock-User-Daten",
+        "Mock-User hat vorkonfigurierte Tenant-ID und Admin-Rechte",
+        "Backend validiert NODE_ENV und blockiert Dev-Login in Production",
+        "Schnelles Testen ohne HR WORKS OAuth2-Setup möglich",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Organisationseinheiten-Sync",
+      "description": "Als System synchronisiere ich Organisationseinheiten aus HR WORKS",
+      "acceptanceCriteria": [
+        "Initial Full-Sync aller OEs aus HR WORKS API",
+        "OEs werden in synced_organization_units Tabelle gespeichert",
+        "Delta-Updates via Webhooks implementiert",
+        "Lokales Caching für Performance",
+        "Fehlerbehandlung bei API-Fehlern",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Personen-Sync",
+      "description": "Als System synchronisiere ich Mitarbeiter-Daten aus HR WORKS",
+      "acceptanceCriteria": [
+        "Initial Full-Sync aller Personen aus HR WORKS API",
+        "Personen werden in synced_persons Tabelle gespeichert",
+        "Webhook-Handler für Person Created/Updated/Deleted/Deactivated",
+        "Mapping HR WORKS Person → Workflow User",
+        "Synchronisation von Vorgesetzten-Beziehungen (VG, VG von VG)",
+        "Fehlerbehandlung bei API-Fehlern",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "HR WORKS Webhook Handler",
+      "description": "Als System empfange und verarbeite ich Webhooks von HR WORKS mit Signature Verification",
+      "acceptanceCriteria": [
+        "Endpoint POST /webhooks/hrworks/{hrworksCustomerId} implementiert",
+        "Signature Verification mit HMAC SHA256",
+        "Headers x-hrworks-signature und x-hrworks-timestamp validiert",
+        "Payload enthält: event, resourceLocation, jobId, action",
+        "Actions unterstützt: resourceCreated, resourceUpdated, resourceDeleted, resourceDeactivated",
+        "Webhook-Handler triggert entsprechende Sync-Jobs",
+        "Fehlerbehandlung für ungültige Signaturen",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Core Workflow Engine - Workflow Definition Model",
+      "description": "Als System definiere ich Workflows als JSON Schema mit Nodes und Edges",
+      "acceptanceCriteria": [
+        "JSON Schema für Workflow-Definition erstellt",
+        "Schema enthält: id, name, description, version, graph (nodes, edges)",
+        "Node-Schema: id, type, position, data (configuration)",
+        "Edge-Schema: id, source, target, sourceHandle, targetHandle",
+        "Validierung von Workflow-Definitionen",
+        "Drizzle Schema für workflows Tabelle",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Core Workflow Engine - Workflow Instance Management",
+      "description": "Als System verwalte ich Workflow-Instanzen und deren Lifecycle",
+      "acceptanceCriteria": [
+        "Workflow-Instanzen können erstellt werden",
+        "Status-Tracking: pending, running, completed, failed, cancelled",
+        "Drizzle Schema für workflow_instances Tabelle",
+        "CRUD-Operationen für Workflow-Instanzen",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Core Workflow Engine - Execution Engine (State Machine)",
+      "description": "Als System führe ich Workflows als State Machine aus",
+      "acceptanceCriteria": [
+        "State Machine für Workflow-Execution implementiert",
+        "Node-Execution in korrekter Reihenfolge (topologische Sortierung)",
+        "Context-Passing zwischen Nodes",
+        "Error Handling und Status-Updates",
+        "Execution-Logs werden persistiert",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Core Workflow Engine - Event Queue (BullMQ)",
+      "description": "Als System verwende ich BullMQ für asynchrone Job-Verarbeitung",
+      "acceptanceCriteria": [
+        "BullMQ mit Valkey (Redis-Fork) konfiguriert",
+        "Queue für Workflow-Executions erstellt",
+        "Worker für Job-Verarbeitung implementiert",
+        "Retry-Strategien konfiguriert",
+        "Dead Letter Queue für fehlgeschlagene Jobs",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Core Workflow Engine - Logging & Audit Trail",
+      "description": "Als System logge ich alle Workflow-Executions für Audit Trail",
+      "acceptanceCriteria": [
+        "Execution-Logs werden in executions Tabelle gespeichert",
+        "Node-Logs mit Input/Output/Status/Timestamps",
+        "Fehler-Logs mit Stack Traces",
+        "Audit Trail für alle Änderungen an Workflows",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Workflow-Templates & Marketplace - Template Gallery",
+      "description": "Als User sehe ich verfügbare Workflow-Templates im Marketplace",
+      "acceptanceCriteria": [
+        "Template Gallery in Landlord-DB (global verfügbar)",
+        "Consultants und server_admins können Templates publizieren",
+        "Template-Metadaten: Titel, Beschreibung, Kategorie, Tags, Version, Author",
+        "Templates sind Tenant-übergreifend sichtbar",
+        "Kategorien: Onboarding, Offboarding, Approvals, HR-Prozesse, Custom",
+        "Rating & Reviews (optional)",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Workflow-Templates - Aktivieren-Funktion",
+      "description": "Als User kann ich Templates in meinen Tenant kopieren und nutzen",
+      "acceptanceCriteria": [
+        "Aktivieren-Button kopiert Template in Tenant-DB",
+        "Template wird als neuer Workflow erstellt",
+        "User kann Workflow anpassen/nutzen",
+        "Versionierung: Templates können aktualisiert werden",
+        "Update-Hinweis für Tenants bei neuen Versionen",
+        "Typecheck passes"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Workflow-Templates - Datenmodell",
+      "description": "Als System speichere ich Templates in Landlord-DB",
+      "acceptanceCriteria": [
+        "Drizzle Schema workflow_templates in Landlord-DB",
+        "Felder: id, title, description, category, tags, graph, version, authorId, isPublic, downloadCount",
+        "Timestamps: createdAt, updatedAt",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

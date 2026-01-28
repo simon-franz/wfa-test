@@ -1,0 +1,132 @@
+{
+  "project": "Workflow Automation Platform",
+  "phase": "Phase 2: PersonTask & Advanced Triggers",
+  "duration": "Wochen 7-12",
+  "branchName": "feature/phase2-persontask",
+  "description": "PersonTask integration, event-based triggers, and advanced action nodes",
+  "userStories": [
+    {
+      "id": "US-050",
+      "title": "PersonTask Node - Builder",
+      "description": "Als User kann ich PersonTasks in Workflows erstellen",
+      "acceptanceCriteria": [
+        "PersonTask Node implementiert",
+        "Builder für PersonTask API-Calls",
+        "Validierung von Task-Daten",
+        "Persistierung in HR WORKS via API",
+        "PersonTask-ID im Workflow-Kontext speichern",
+        "Typecheck passes"
+      ],
+      "priority": 50,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-051",
+      "title": "PersonTask Webhook Handler",
+      "description": "Als System empfange ich PersonTask-Updates und setze Workflows fort",
+      "acceptanceCriteria": [
+        "Webhook-Endpoint für PersonTask-Updates",
+        "Empfang von Task-Updates",
+        "Status-Mapping: offen, in Bearbeitung, erledigt, abgelehnt",
+        "Workflow-Fortsetzung bei Task-Completion",
+        "Retry-Handling bei Fehlern",
+        "Typecheck passes"
+      ],
+      "priority": 51,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-052",
+      "title": "PersonTask Frontend UI",
+      "description": "Als User konfiguriere ich PersonTasks über benutzerfreundliche UI",
+      "acceptanceCriteria": [
+        "Assignee-Auswahl (Person, Rolle, VG)",
+        "Task-Beschreibung mit Template-Editor",
+        "Deadline-Konfiguration",
+        "Priorität-Auswahl",
+        "Typecheck passes"
+      ],
+      "priority": 52,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-053",
+      "title": "Event-basierte Trigger - Person Created/Updated/Deleted",
+      "description": "Als User kann ich Workflows bei Person-Änderungen triggern",
+      "acceptanceCriteria": [
+        "Trigger für Person Created/Updated/Deleted/Deactivated",
+        "Webhook von HR WORKS empfangen",
+        "Filter nach OE/Rolle/Status",
+        "Payload-Mapping für Workflow-Context",
+        "Typecheck passes"
+      ],
+      "priority": 53,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-054",
+      "title": "Event-basierte Trigger - OE Changed",
+      "description": "Als User kann ich Workflows bei OE-Änderungen triggern",
+      "acceptanceCriteria": [
+        "Trigger für OE-Strukturänderungen",
+        "VG-Wechsel Detection",
+        "OE-Umbenennung Detection",
+        "Payload-Mapping für Workflow-Context",
+        "Typecheck passes"
+      ],
+      "priority": 54,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-055",
+      "title": "Custom Webhooks",
+      "description": "Als User kann ich generische Webhooks als Trigger verwenden",
+      "acceptanceCriteria": [
+        "Generic Webhook Endpoint pro Workflow",
+        "Signature Verification (optional)",
+        "Custom Payload Parsing",
+        "Webhook-URL für User sichtbar",
+        "Typecheck passes"
+      ],
+      "priority": 55,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-056",
+      "title": "Loop Node",
+      "description": "Als User kann ich über Arrays iterieren",
+      "acceptanceCriteria": [
+        "Iteration über Arrays",
+        "Parallel vs. Sequential Execution",
+        "Loop Variables für aktuelles Item und Index",
+        "Break/Continue Logik",
+        "Typecheck passes"
+      ],
+      "priority": 56,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-057",
+      "title": "Email Node",
+      "description": "Als User kann ich Emails aus Workflows versenden",
+      "acceptanceCriteria": [
+        "Template Engine (Handlebars) für Email-Body",
+        "Recipient Logic (Person, OE, VG)",
+        "Attachments Support",
+        "SMTP Configuration",
+        "Error Handling mit Retry",
+        "Typecheck passes"
+      ],
+      "priority": 57,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

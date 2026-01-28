@@ -1,0 +1,154 @@
+{
+  "project": "Workflow Automation Platform",
+  "version": "1.0.0-complete",
+  "description": "VOLLSTÄNDIGE PRD mit ALLEN Details aus plan.md - Jede Anforderung enthält technische Spezifikationen, Code-Beispiele, Tabellen und UI-Mockups",
+  "generated": "2026-01-27T14:56:30.252Z",
+  "metadata": {
+    "sourceFile": "plan.md",
+    "totalCharacters": 35607,
+    "codeExamples": 17,
+    "tables": 3,
+    "listItems": 202
+  },
+  "phases": [
+    {
+      "id": "PHASE-1",
+      "name": "Foundation & MVP",
+      "duration": "Wochen 1-6",
+      "userStories": [
+        {
+          "id": "US-001",
+          "title": "Multi-Tenant Architecture Setup (Landlord-DB Pattern)",
+          "description": "Als System-Architekt benötige ich eine Multi-Tenant-Architektur mit Landlord-DB für Tenant-Metadaten und separaten Tenant-DBs für Business-Daten",
+          "technicalDetails": {
+            "pattern": "Landlord-DB Pattern",
+            "diagram": "┌─────────────────────────────────────────────────────────────┐\n│                      LANDLORD DB                            │\n│  (PostgreSQL in Prod / SQLite in Dev)                       │\n│  ┌───────────────────────────────────────────────────┐     │\n│  │   tenants                                          │     │\n│  │  - id, name, slug, dbUrl, status, plan            │     │\n│  │  Nur Metadaten - keine User-/Business-Daten!      │     │\n│  └───────────────────────────────────────────────────┘     │\n└─────────────────────────────────────────────────────────────┘\n                              │\n         ┌────────────────────┼────────────────────┐\n         ▼                    ▼                    ▼\n┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐\n│   TENANT DB 1   │  │   TENANT DB 2   │  │   TENANT DB N   │\n│  - users        │  │  - users        │  │  - users        │\n│  - workflows    │  │  - workflows    │  │  - workflows    │\n│  - executions   │  │  - executions   │  │  - executions   │\n│  - credentials  │  │  - credentials  │  │  - credentials  │\n│  - approvals    │  │  - approvals    │  │  - approvals    │\n│  - synced_*     │  │  - synced_*     │  │  - synced_*     │\n└─────────────────┘  └─────────────────┘  └─────────────────┘",
+            "landlordDb": {
+              "database": "PostgreSQL (Prod) / SQLite (Dev)",
+              "table": "tenants",
+              "fields": [
+                "id",
+                "name",
+                "slug",
+                "dbUrl",
+                "status",
+                "plan"
+              ],
+              "constraint": "Nur Metadaten - keine User-/Business-Daten!"
+            },
+            "tenantDb": {
+              "tables": [
+                "users",
+                "workflows",
+                "executions",
+                "credentials",
+                "approvals",
+                "synced_persons",
+                "synced_organization_units"
+              ]
+            },
+            "benefits": [
+              "Totale Datenisolation zwischen Tenants",
+              "GDPR/Compliance-ready",
+              "Einfaches Offboarding (DROP DATABASE)",
+              "SQLite für Development, PostgreSQL für Production"
+            ]
+          },
+          "acceptanceCriteria": [
+            "Landlord-DB (PostgreSQL Prod / SQLite Dev) mit tenants-Tabelle erstellt",
+            "Tenants-Tabelle enthält: id (UUID), name, slug (unique), dbUrl, status, plan",
+            "Nur Metadaten in Landlord-DB, keine User-/Business-Daten",
+            "Tenant-DB Schema enthält: users, workflows, executions, credentials, approvals, synced_persons, synced_organization_units",
+            "Drizzle ORM konfiguriert für Multi-Dialect Support (SQLite + PostgreSQL)",
+            "Totale Datenisolation zwischen Tenants gewährleistet (separate Datenbanken)",
+            "Connection Pooling für Tenant-DBs implementiert",
+            "Typecheck passes"
+          ],
+          "priority": 1,
+          "passes": false
+        },
+        {
+          "id": "US-002",
+          "title": "Tenant Provisioning API",
+          "description": "Als HR WORKS System kann ich automatisch neue Tenants via API erstellen mit Shared Secret Authentifizierung",
+          "technicalDetails": {
+            "endpoint": "POST /api/tenants",
+            "authentication": "Header: X-Provisioning-Secret: <shared-secret>",
+            "requestBody": "// POST /api/tenants\n// Header: X-Provisioning-Secret: <shared-secret>\n{\n  \"slug\": \"acme-corp\",\n  \"name\": \"Acme Corporation\",\n  \"hrworksCustomerId\": \"123\",\n  \"apiKey\": \"...\",\n  \"apiSecret\": \"...\",\n  \"baseUrl\": \"api.hrworks.de\"\n}",
+            "ablauf": [
+              "1. HR WORKS erstellt API-Key-Pair für Kunden",
+              "2. HR WORKS ruft Provisioning-API mit Shared Secret auf",
+              "3. Workflow-App validiert Secret (PROVISIONING_SECRET env var)",
+              "4. Erstellt Tenant in Landlord-DB + neue Tenant-DB",
+              "5. Speichert verschlüsselte HR WORKS Credentials",
+              "6. Initial Sync (Persons, OEs) - async",
+              "7. Registriert Webhooks bei HR WORKS - async"
+            ],
+            "security": "Shared Secret zwischen HR WORKS und Workflow-App, verschlüsselte Credential-Speicherung"
+          },
+          "acceptanceCriteria": [
+            "POST /api/tenants Endpoint implementiert",
+            "Header X-Provisioning-Secret validiert gegen PROVISIONING_SECRET env var",
+            "Request Body enthält: slug, name, hrworksCustomerId, apiKey, apiSecret, baseUrl",
+            "Tenant wird in Landlord-DB erstellt mit allen Feldern",
+            "Neue Tenant-DB wird automatisch provisioniert (CREATE DATABASE + Migrations)",
+            "HR WORKS Credentials werden verschlüsselt gespeichert (AES-256)",
+            "Initial Sync (Persons, OEs) wird async gestartet (BullMQ Job)",
+            "Webhooks bei HR WORKS werden async registriert (BullMQ Job)",
+            "Error Handling für fehlende/ungültige Secrets (401 Unauthorized)",
+            "Error Handling für doppelte slugs (409 Conflict)",
+            "Response enthält: tenant_id, status, message",
+            "Typecheck passes"
+          ],
+          "priority": 2,
+          "passes": false
+        },
+        {
+          "id": "US-003",
+          "title": "JWT-basierte Tenant-Auflösung",
+          "description": "Als Backend-System löse ich Tenant-Kontext aus JWT Cookie auf für Single-Domain-Setup",
+          "technicalDetails": {
+            "cookieName": "auth_token",
+            "cookieType": "HttpOnly Cookie",
+            "jwtPayload": {
+              "sub": "user_uuid",
+              "tenant_id": "tenant_uuid (null für server_admin/consultant)",
+              "email": "user@company.de",
+              "role": "workflow-administrator",
+              "global_role": "consultant (Optional: für Consultants mit Tenant-Zugriff)",
+              "iat": 1234567890,
+              "exp": 1234567890
+            },
+            "diagram": "┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐\n│    Browser      │      │    Backend      │      │   Tenant DB     │\n│                 │      │                 │      │                 │\n│  Cookie:        │─────▶│  JWT Decode     │─────▶│  Queries mit    │\n│  auth_token=JWT │      │  → tenant_id    │      │  tenant_id      │\n│                 │      │  → user_id      │      │                 │\n└─────────────────┘      └─────────────────┘      └─────────────────┘",
+            "apiAuthentication": {
+              "method": "JWT-Token als HttpOnly Cookie",
+              "automatic": "Cookie wird automatisch bei jedem Request mitgesendet",
+              "validation": "Backend validiert Cookie via JwtAuthGuard",
+              "noManualHeader": "Kein manuelles Setzen des Authorization-Headers nötig",
+              "sseException": "Bei SSE: Token muss explizit im Header mitgegeben werden"
+            },
+            "codeExample": "// Frontend: API-Client mit automatischem Cookie-Handling\nconst api = {\n  async getWorkflows() {\n    // Cookie wird automatisch mitgesendet\n    const response = await fetch('/api/workflows', {\n      credentials: 'include', // Wichtig: Cookies mitsenden\n    });\n    return response.json();\n  },\n  \n  // SSE: Token explizit im Header\n  connectToExecutionStream(executionId: string) {\n    return new EventSource(`/api/executions/${executionId}/stream`, {\n      withCredentials: true, // Cookie mitsenden\n    });\n  }\n};",
+            "benefits": [
+              "Single Domain - kein DNS/SSL für Subdomains nötig",
+              "Totale Datenisolation zwischen Tenants",
+              "GDPR/Compliance-ready"
+            ]
+          },
+          "acceptanceCriteria": [
+            "JWT Cookie 'auth_token' wird als HttpOnly Cookie gespeichert",
+            "JWT Payload enthält: sub (user_uuid), tenant_id, email, role, global_role (optional), iat, exp",
+            "JwtAuthGuard validiert Cookie bei jedem Request",
+            "Tenant-ID wird aus JWT extrahiert und für DB-Queries verwendet",
+            "Cookie wird automatisch bei fetch mit credentials: 'include' mitgesendet",
+            "SSE-Verbindungen unterstützen Token im Header (withCredentials: true)",
+            "Frontend API-Client implementiert mit credentials: 'include'",
+            "Code-Beispiel für SSE mit EventSource und withCredentials",
+            "Typecheck passes"
+          ],
+          "priority": 3,
+          "passes": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,211 @@
+{
+  "project": "Workflow Automation Platform",
+  "description": "VOLLSTÄNDIGE PRD mit ALLEN Details aus plan.md",
+  "generated": "2026-01-27",
+  "sections": {
+    "Technische Entscheidungen (Finalisiert)": {
+      "content": "",
+      "length": 0
+    },
+    "Projektstruktur": {
+      "content": "```\nworkflow-automation/\n├── backend/          # NestJS Backend\n├── frontend/         # React Frontend mit SmartFace\n├── shared/           # Gemeinsame Types, Utils, Schemas\n├── tools/            # Build-Tools, Generatoren\n│   └── generators/\n│       └── api-generator/    # OpenAPI Client Generator\n└── docs/             # Dokumentation\n    └── plan-hrworks-integration.md  # HR WORKS API Generator Setup (aus Root übernehmen)\n```\n",
+      "length": 432
+    },
+    "Technologie-Stack": {
+      "content": "| Bereich | Entscheidung | Begründung |\n|---------|--------------|------------|\n| Runtime | **Bun** | Schneller als Node.js, native TypeScript-Support |\n| Backend-Framework | **NestJS** | Modulare Architektur, TypeScript-first |\n| ORM | **Drizzle** | Type-safe, Multi-Dialect (SQLite/PostgreSQL), Performance |\n| Datenbank | **PostgreSQL** (Prod), **SQLite** (Dev) | Schnelle lokale Entwicklung, robust in Production |\n| Queue-System | **BullMQ** | Benötigt Valkey (Redis-Fork), robust für async Jobs...",
+      "length": 1106
+    },
+    "Multi-Tenant Architektur (Landlord-DB Pattern)": {
+      "content": "```\n┌─────────────────────────────────────────────────────────────┐\n│                      LANDLORD DB                            │\n│  (PostgreSQL in Prod / SQLite in Dev)                       │\n│  ┌───────────────────────────────────────────────────┐     │\n│  │   tenants                                          │     │\n│  │  - id, name, slug, dbUrl, status, plan            │     │\n│  │  Nur Metadaten - keine User-/Business-Daten!      │     │\n│  └───────────────────────────────────────────────...",
+      "length": 1276
+    },
+    "Tenant-Provisioning (via API)": {
+      "content": "**Automatische Tenant-Erstellung aus HR WORKS:**\n```typescript\n// POST /api/tenants\n// Header: X-Provisioning-Secret: <shared-secret>\n{\n  \"slug\": \"acme-corp\",\n  \"name\": \"Acme Corporation\",\n  \"hrworksCustomerId\": \"123\",\n  \"apiKey\": \"...\",\n  \"apiSecret\": \"...\",\n  \"baseUrl\": \"api.hrworks.de\"\n}\n```\n\n**Ablauf:**\n1. HR WORKS erstellt API-Key-Pair für Kunden\n2. HR WORKS ruft Provisioning-API mit Shared Secret auf\n3. Workflow-App validiert Secret (`PROVISIONING_SECRET` env var)\n4. Erstellt Tenant in Lan...",
+      "length": 764
+    },
+    "Tenant-Auflösung (JWT Cookie - Single Domain)": {
+      "content": "```\n┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐\n│    Browser      │      │    Backend      │      │   Tenant DB     │\n│                 │      │                 │      │                 │\n│  Cookie:        │─────▶│  JWT Decode     │─────▶│  Queries mit    │\n│  auth_token=JWT │      │  → tenant_id    │      │  tenant_id      │\n│                 │      │  → user_id      │      │                 │\n└─────────────────┘      └─────────────────┘      └─────────────────┘\n```\n\n*...",
+      "length": 913
+    },
+    "Design-Richtlinien": {
+      "content": "- **Look & Feel**: Orientierung an HR WORKS UI\n- **Komponenten**: SmartFace Component Library (aus `/SmartFace-dev`)\n- **Styling**: Styled-Components (wie in SmartFace verwendet)\n\n---\n",
+      "length": 184
+    },
+    "Phase 1: Foundation & MVP (Wochen 1-6)": {
+      "content": "",
+      "length": 0
+    },
+    "Authentifizierung & Autorisierung": {
+      "content": "- OAuth2 Integration mit HR WORKS\n- SSO-Flow implementieren\n- Session Management mit JWT Token Handling\n- **Rollen-System (4 Ebenen)**:\n\n| Rolle | Scope | Berechtigungen |\n|-------|-------|----------------|\n| **server_admin** | Global (Landlord-DB) | Mandanten anlegen/löschen/verwalten, System-Konfiguration, alle Tenants sehen |\n| **consultant** | Global (Marketplace) | Workflows in Marketplace publizieren, Template-Verwaltung, Tenant-übergreifend |\n| **master_admin** | Tenant-spezifisch | Volle...",
+      "length": 2663
+    },
+    "Daten-Synchronisation": {
+      "content": "- Organisationseinheiten-Sync: Initial Full-Sync aus HR WORKS, Delta-Updates via Webhooks, lokales Caching\n- Personen-Sync: Initial Full-Sync aller Mitarbeiter, Webhook-Handler für Änderungen, Mapping HR WORKS Person → Workflow User\n- Synchronisation von Vorgesetzten-Beziehungen (VG, VG von VG)\n",
+      "length": 296
+    },
+    "HR WORKS Webhook Handler": {
+      "content": "**Endpoint:** `POST /webhooks/hrworks/{hrworksCustomerId}`\n\n**Signature Verification:**\n```typescript\nconst stringToSign = `${jobId}.${timestamp}`;\nconst expectedSig = crypto.createHmac('sha256', secretKey)\n  .update(stringToSign).digest('base64');\n```\n\n**Payload:**\n```json\n{\n  \"event\": \"serverEvent\",\n  \"resourceLocation\": \"https://api.hrworks.de/v2/persons/{uuid}\",\n  \"jobId\": \"...\",\n  \"action\": \"resourceCreated|resourceUpdated|resourceDeleted|resourceDeactivated\"\n}\n```\n\n**Headers:** `x-hrworks-...",
+      "length": 534
+    },
+    "Core Workflow Engine": {
+      "content": "- Workflow Definition Model (JSON Schema)\n- Workflow Instance Management\n- Execution Engine (State Machine)\n- Event Queue (BullMQ)\n- Logging & Audit Trail\n",
+      "length": 155
+    },
+    "Designer UI (Frontend)": {
+      "content": "\n**Node-Darstellung (kompakt & professionell):**\n- **Kompakte Nodes**: Icon + Label + Kurzbeschreibung (max. 2 Zeilen)\n- **Farbcodierung nach Typ**:\n  - Trigger: Blau\n  - HR WORKS: Orange/Coral\n  - Transformation: Lila\n  - Condition: Gelb\n  - Action: Grün\n- **Play-Button**: Grüner Play-Button oben rechts am Node (nur im Test-Modus)\n- **Status-Indicator**: Kleines Icon unten links (✓ success, ✗ error, ⏳ running)\n- **Keine technischen Details** im Node selbst (z.B. \"action.hrworks\" oder \"Node Type...",
+      "length": 6394
+    },
+    "Workflow-Übersicht & Navigation": {
+      "content": "- **Workflow-Liste als Tabelle** (statt Karten):\n  - Spalten: Name, Beschreibung, Status (Badge), Aktualisiert (Datum/Zeit), Aktionen\n  - Status-Badges mit Farben: Aktiv (grün), Inaktiv (gelb), Entwurf (grau)\n  - Action-Buttons pro Zeile: Historie, Ausführen, Duplizieren, Export, Löschen\n  - \"Import Workflow\" Button im Header der Tabelle (neben \"Neuer Workflow\")\n  - Klick auf Zeile öffnet Workflow-Designer\n- **Workflow-Designer Toolbar**:\n  - Buttons: Historie, Ausführen (mit Play-Icon), Aktivie...",
+      "length": 2463
+    },
+    "UI-Spezifikationen (Detail)": {
+      "content": "",
+      "length": 0
+    },
+    "Workflow-Übersicht": {
+      "content": "- **Darstellung als Tabelle** mit Spalten für Name, Beschreibung, Status (Badge), Aktualisiert (Datum/Zeit), Aktionen\n- Status-Badges: Aktiv (grün), Inaktiv (gelb), Entwurf (grau)\n- Action-Buttons: Historie, Ausführen, Löschen\n- Klick auf Zeile öffnet Workflow-Designer\n- Pro Workflow darf es **nur einen Trigger-Knoten** geben (Validierung im Designer)\n",
+      "length": 354
+    },
+    "Workflow-Designer Layout (oberer Bereich, ~60% der Höhe)": {
+      "content": "\n**Visueller Graph-Editor:**\n- Knoten-basierter Editor mit Drag-and-Drop-Funktionalität\n- **Drag & Drop aus Library**: Komponenten können aus einer seitlichen \"Library\" in den Designer gezogen werden\n- Knoten werden durch Verbindungslinien (Edges) verknüpft\n- Unterstützung für verschiedene Knotentypen (z.B. Jira, HR WORKS, Condition, API-Calls)\n- Jeder Knoten zeigt eine Vorschau seines Inhalts/Konfiguration\n- **Horizontale Anordnung** des Workflows von links nach rechts (immer!)\n\n**Verbindungsli...",
+      "length": 1247
+    },
+    "Verlauf/Historie (linker unterer Bereich)": {
+      "content": "\n**Statistik-Dashboard:**\n- Gesamte Ausführungen (Anzahl)\n- Ausgeführte Nodes (Anzahl)\n\n**Filter-Optionen:**\n- \"Alle Ausführungen\" / gefilterte Ansicht\n- Datumsfilter\n- Statusfilter\n\n**Ausführungsliste:**\n- Scrollbare Liste aller Workflow-Durchläufe\n- Pro Eintrag:\n  - Status-Icon (grüner Haken = erfolgreich, rot = fehlgeschlagen)\n  - Ausführungs-ID (z.B. \"Ausführung #1047\")\n  - Zeitstempel (Datum + Uhrzeit)\n- Klick auf Eintrag öffnet Details im rechten Panel\n",
+      "length": 463
+    },
+    "Ausführungsdetails (rechter unterer Bereich)": {
+      "content": "\n**Header:**\n- Ausführungs-ID mit Status-Icon\n- Gesamtdauer\n- Schließen-Button (X)\n\n**Knoten-Liste (chronologisch):**\n- Für jeden ausgeführten Knoten:\n  - Icon des Knotentyps\n  - Knotenname (z.B. \"Jira\", \"Condition\", \"Get Issue\")\n  - Ausführungsdauer\n  - Zeitstempel\n  - Aufklappbare Sections:\n    - **Eingabe**: JSON-Darstellung der Input-Daten\n    - **Ausgabe**: JSON-Darstellung der Output-Daten (syntax-highlighted)\n",
+      "length": 420
+    },
+    "Workflow-Versionierung & Historie": {
+      "content": "- **Zeitstempel-basierte Historisierung** für jeden Speichervorgang\n- **Personenzuordnung**: Wer hat wann gespeichert\n- **Versions-Wiederherstellung**: Alte Versionen können als neue Version wiederhergestellt werden\n- **Audit-Trail**: Vollständige Nachverfolgbarkeit aller Änderungen\n",
+      "length": 284
+    },
+    "Design-Vorgaben": {
+      "content": "- **Dunkles Theme** (Dark Mode)\n- Farbcodierung: Grün für Erfolg, Orange für Hinweise, Rot für Fehler\n- Syntax-Highlighting für JSON (Keys in einer Farbe, Strings in einer anderen)\n- Responsive Split-Panels zwischen den drei Bereichen\n",
+      "length": 235
+    },
+    "Trigger Nodes (Phase 1)": {
+      "content": "- Manual Trigger: Workflow manuell starten, Input-Parameter definierbar, für Testing & Debugging\n- Scheduled Trigger: Cron-basierte Ausführung, Zeitzone-Handling, einfache Intervalle (täglich, wöchentlich)\n",
+      "length": 206
+    },
+    "Error Handling für externe Systeme (Phase 1)": {
+      "content": "**Nur für Nodes die mit externen Systemen kommunizieren:**\n- HTTP Request Node\n- HR WORKS Node\n- Email Node (Phase 2)\n- Webhook Node (Phase 2)\n\n**Nicht für interne Nodes** (Delay, Condition, Data Transformation, Trigger).\n\n- **Error Branch (On Error)**:\n  - Optionaler Error-Output-Handle für Fallback-Logik\n  - Konfigurierbare Fehlerbehandlung:\n    - `stop`: Workflow stoppt bei Fehler (Default)\n    - `continue`: Fehler ignorieren, nächster Node wird ausgeführt\n    - `fallback`: Error-Branch ausfü...",
+      "length": 1134
+    },
+    "Action Nodes (Phase 1)": {
+      "content": "- HTTP Request Node: GET/POST/PUT/DELETE zu HR WORKS API, Header Configuration, Body Template (Handlebars), Response Mapping, **Timeout & Retry Settings**\n- **HR WORKS Node**: Dedizierter Knoten für HR WORKS Integration (Details siehe unten)\n- **Data Transformation Node**: \n  - Operationen für Datenverarbeitung: count, filter, map, reduce, sort, distinct\n  - JSONPath-Expressions für Daten-Extraktion\n  - Wrapping von Ergebnissen in Objekte für Context-Nutzung\n  - Aggregations-Funktionen\n  - Array...",
+      "length": 1840
+    },
+    "HR WORKS Integration Node (Phase 1)": {
+      "content": "\n**API-Client Generierung:** → Siehe **[plan-hrworks-integration.md](./plan-hrworks-integration.md)**\n\n> ℹ️ Im finalen `workflow-automation` Projekt wird diese Datei nach `docs/` verschoben.\n\n**Async Job Handling:**\n- HR WORKS API verwendet Job-basierte asynchrone Verarbeitung für Write-Operationen (POST/PUT/DELETE)\n- Backend pollt automatisch den Job-Status über `/jobs/{jobId}` Endpoint\n- Frontend zeigt Node als \"running\" bis Job abgeschlossen ist (Status: pending → finished/failed)\n- UI-Mappin...",
+      "length": 2838
+    },
+    "Expression Language (JSONata + Platzhalter)": {
+      "content": "\n**Library:** JSONata (npm) - bewährt, wird auch von n8n verwendet\n\n| Anwendung | Syntax | Beispiel |\n|-----------|--------|----------|\n| **Templates** | `{{expression}}` Platzhalter | `\"Hallo {{person.firstName}}\"` |\n| **Conditions** | Pure JSONata | `amount > 5000 and role = \"manager\"` |\n",
+      "length": 291
+    },
+    "Templates (Strings mit Platzhaltern)": {
+      "content": "```\nHallo {{person.firstName}},\nIhr Antrag über {{amount}}€ wurde eingereicht.\n```\n\n```typescript\n// Template Engine - Regex findet {{...}}, JSONata evaluiert\ntemplate.replace(/\\{\\{(.+?)\\}\\}/g, (match, expr) => {\n  return jsonata(expr).evaluate(context);\n});\n```\n",
+      "length": 263
+    },
+    "Conditions (Pure JSONata)": {
+      "content": "```javascript\namount > 5000                           // Einfach\nperson.role = \"manager\" and amount > 1000  // Kombiniert (ACHTUNG: = nicht ==)\n$count(approvers[status = \"approved\"]) >= 3  // Mit Funktionen\n```\n",
+      "length": 211
+    },
+    "Wichtige JSONata Funktionen": {
+      "content": "- **Strings:** `$lowercase()`, `$uppercase()`, `$contains()`, `$replace()`\n- **Numbers:** `$sum()`, `$average()`, `$round()`, `$abs()`\n- **Arrays:** `$count()`, `array[filter]`, `$distinct()`, `$sort()`\n- **Datum (custom):** `$now()`, `$formatDate()`, `$addDays()`, `$diffDays()`\n\n---\n",
+      "length": 285
+    },
+    "Phase 2: PersonTask & Advanced Triggers (Wochen 7-12)": {
+      "content": "",
+      "length": 0
+    },
+    "PersonTask Integration": {
+      "content": "- PersonTask Node: Builder für PersonTask API-Calls, Validierung von Task-Daten, Persistierung in HR WORKS via API\n- PersonTask-ID im Workflow-Kontext speichern\n- PersonTask Webhook Handler: Empfang von Task-Updates, Status-Mapping (offen, in Bearbeitung, erledigt, abgelehnt), Workflow-Fortsetzung bei Task-Completion, Retry-Handling\n",
+      "length": 335
+    },
+    "PersonTask Frontend UI": {
+      "content": "- Assignee-Auswahl (Person, Rolle, VG)\n- Task-Beschreibung (Template-Editor)\n- Deadline-Konfiguration\n- Priorität\n",
+      "length": 114
+    },
+    "Event-basierte Trigger": {
+      "content": "- Person Created/Updated/Deleted: Webhook von HR WORKS, Filter nach OE/Rolle/Status, Payload-Mapping\n- OE Changed: Strukturänderungen, VG-Wechsel, OE-Umbenennung\n- Custom Webhooks: Generic Webhook Endpoint, Signature Verification, Custom Payload Parsing\n",
+      "length": 254
+    },
+    "Erweiterte Action Nodes": {
+      "content": "- Data Transformation Node: JSON Path Expressions, Data Mapping, Aggregation Functions\n- Loop Node: Iteration über Arrays, Parallel vs. Sequential, Loop Variables\n- Email Node: Template Engine (Handlebars), Recipient Logic (Person, OE, VG), Attachments Support\n\n---\n",
+      "length": 266
+    },
+    "Phase 3: Genehmigungssystem (Wochen 13-20)": {
+      "content": "",
+      "length": 0
+    },
+    "Generisches Genehmigungsobjekt (Approval Builder)": {
+      "content": "- Datenmodell mit: id, workflowInstanceId, title, description, requestedBy, requestedAt, mode, approvers, currentStatus, responses, metadata\n- Approval Modes: ANY (First-Response-Wins), ALL (Unanimous), MAJORITY (>50%), SEQUENCE (Kaskade)\n- Approver-Struktur: personId, role (VG, VG von VG), order für Sequence\n",
+      "length": 311
+    },
+    "Approval Builder Service": {
+      "content": "- Validierung der Approval-Requests\n- Persistierung in HR WORKS DB\n- Resolution von dynamischen Approvern (VG, VG von VG)\n- Status-Berechnung je nach Mode\n",
+      "length": 155
+    },
+    "Approval Modes Implementierung": {
+      "content": "- ANY: Erster Response → Workflow fortsetzen, andere stornieren\n- ALL: Alle müssen genehmigen, bei Ablehnung sofort abgebrochen\n- MAJORITY: >50% Threshold, Live-Berechnung, Auto-Cancel bei Entscheidung\n- SEQUENCE: Order-basiert, nächster erst nach Genehmigung, bei Ablehnung Kette abbrechen\n",
+      "length": 291
+    },
+    "Approval Node Frontend": {
+      "content": "- Approval-Titel & Beschreibung (Template)\n- Mode-Auswahl (ANY/ALL/MAJORITY/SEQUENCE)\n- Approver Configuration: Direkte Person, Rollen-basiert, Dynamisch (VG von requestingPerson)\n- Deadline Configuration\n- Eskalation Rules\n",
+      "length": 224
+    },
+    "Approver UI (Smartface)": {
+      "content": "- Pending Approvals List\n- Approval Detail View\n- Approve/Reject mit Kommentar\n- History & Audit Trail\n",
+      "length": 103
+    },
+    "Advanced Approval Features": {
+      "content": "- Dynamic Approver Resolution (VG, VG von VG)\n- Delegation & Substitution (Urlaubsvertretung, Proxy-Approvals)\n- Eskalation: Timeout-basiert, Eskalation an nächsthöhere Ebene, Reminder-Emails\n\n---\n",
+      "length": 197
+    },
+    "Phase 4: Enterprise Features & Scale (Wochen 21-28)": {
+      "content": "",
+      "length": 0
+    },
+    "Monitoring & Observability": {
+      "content": "- Workflow Analytics Dashboard: Active Workflows, Execution Times, Error Rates, Bottleneck Detection, SLA Monitoring\n- Audit Trail & Compliance: Complete Execution History, Data Change Logs, Export (PDF, CSV), DSGVO-konforme Datenhaltung\n- Error Handling: Dead Letter Queue, Retry Strategies (exponential backoff), Manual Intervention, Rollback, Alert System\n",
+      "length": 359
+    },
+    "Advanced Node Types": {
+      "content": "- Sub-Workflow Node: Workflow als wiederverwendbare Komponente, Parameter Passing, Return Values, Versioning\n- Parallel Execution Node: Fork-Join Pattern, Parallel Branches, Synchronization Point, Timeout Handling\n- Database Node: Direct DB Queries (PostgreSQL), Insert/Update/Delete, Transaction Support, Query Builder UI\n- AI/LLM Node: OpenAI/Azure Integration, Prompt Templates, Response Parsing, Content Moderation\n",
+      "length": 419
+    },
+    "Workflow-Templates & Marketplace": {
+      "content": "**Template Gallery (Landlord-DB, global verfügbar):**\n- Consultants und server_admins können Workflows als Templates publizieren\n- Template-Metadaten: Titel, Beschreibung, Kategorie, Tags, Version, Author\n- Templates sind Tenant-übergreifend sichtbar\n- **\"Aktivieren\"-Funktion**: Kopiert Template in Tenant-DB zur Nutzung/Bearbeitung\n- Kategorien: Onboarding, Offboarding, Approvals, HR-Prozesse, Custom\n- Versionierung: Templates können aktualisiert werden, Tenants sehen Update-Hinweis\n- Rating & R...",
+      "length": 1597
+    },
+    "Advanced Trigger & Scheduling": {
+      "content": "- Composite Triggers: Multiple Conditions (AND/OR), Time + Event Kombination, Debouncing & Throttling\n- Smart Scheduling: Business Hours, Holiday Calendar, Timezone Support, Dynamic Scheduling\n",
+      "length": 193
+    },
+    "Variablen & Context Management": {
+      "content": "- Workflow Variables: Global, Node-lokal, Environment, Secrets (verschlüsselt)\n- Context Passing: Output/Input zwischen Nodes, JSON Path, Expression Language, Type Safety\n",
+      "length": 171
+    },
+    "Permissions & Multi-Tenancy": {
+      "content": "- Granulare Berechtigungen: Workflow-Ownership, Edit/View/Execute Rights, OE-basierte Zugriffskontrolle\n- Multi-Mandanten-Fähigkeit: Tenant-Isolation, White-Labeling, Tenant-spezifische Konfiguration\n",
+      "length": 200
+    },
+    "Performance & Scalability": {
+      "content": "- Workflow Caching, Database Indexing, Query Optimization, Connection Pooling\n- Horizontal Scaling: Stateless Backend, Load Balancing, Queue-based Architecture, Valkey für Shared State\n- Rate Limiting: API Call Limits, Workflow Execution Limits, Per-User/Per-OE Quotas\n",
+      "length": 269
+    },
+    "Integration Ecosystem": {
+      "content": "- Webhooks (Outbound): Custom Webhook Nodes, Signature Signing, Retry Logic, Payload Templates\n- Public API: Workflow-Triggering, Status Queries, Webhook Registration, API Keys & OAuth2\n- Pre-built Connectors: Email (SMTP, Exchange, Gmail), Slack/Teams, SharePoint/OneDrive, SAP/DATEV (optional)\n",
+      "length": 296
+    },
+    "Testing & Quality Assurance": {
+      "content": "- **Node-by-Node Testing (Phase 1)**:\n  - Play-Button an jedem Node für einzelne Ausführung\n  - Sequentielle Abhängigkeiten (Node nur ausführbar wenn Vorgänger ausgeführt)\n  - Output Caching für Context Panel\n  - Mock Trigger Data für Testing\n  - Visuelles Status-Feedback (pending, running, waiting, success, error)\n  - Output-Preview direkt am Node\n  - \"Run All\"-Button für komplette Workflow-Ausführung\n- Workflow Testing: Test Mode (Dry-Run), Mock Data Injection, Step-by-Step Debugging, Unit Tes...",
+      "length": 578
+    }
+  }
+}

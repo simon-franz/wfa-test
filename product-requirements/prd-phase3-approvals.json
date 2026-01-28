@@ -1,0 +1,174 @@
+{
+  "project": "Workflow Automation Platform",
+  "phase": "Phase 3: Genehmigungssystem",
+  "duration": "Wochen 13-20",
+  "branchName": "feature/phase3-approvals",
+  "description": "Generic approval system with multiple modes and dynamic approver resolution",
+  "userStories": [
+    {
+      "id": "US-058",
+      "title": "Generisches Genehmigungsobjekt - Datenmodell",
+      "description": "Als System speichere ich Genehmigungen mit allen relevanten Daten",
+      "acceptanceCriteria": [
+        "Datenmodell mit: id, workflowInstanceId, title, description, requestedBy, requestedAt",
+        "Felder: mode, approvers, currentStatus, responses, metadata",
+        "Approval Modes: ANY, ALL, MAJORITY, SEQUENCE",
+        "Approver-Struktur: personId, role (VG, VG von VG), order für Sequence",
+        "Drizzle Schema für approvals Tabelle",
+        "Typecheck passes"
+      ],
+      "priority": 58,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-059",
+      "title": "Approval Builder Service",
+      "description": "Als System erstelle und validiere ich Approval-Requests",
+      "acceptanceCriteria": [
+        "Validierung der Approval-Requests",
+        "Persistierung in HR WORKS DB",
+        "Resolution von dynamischen Approvern (VG, VG von VG)",
+        "Status-Berechnung je nach Mode",
+        "Typecheck passes"
+      ],
+      "priority": 59,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-060",
+      "title": "Approval Mode: ANY (First-Response-Wins)",
+      "description": "Als System implementiere ich ANY-Mode wo erste Antwort entscheidet",
+      "acceptanceCriteria": [
+        "Erster Response → Workflow fortsetzen",
+        "Andere Approvals automatisch stornieren",
+        "Status-Update für alle Approver",
+        "Typecheck passes"
+      ],
+      "priority": 60,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-061",
+      "title": "Approval Mode: ALL (Unanimous)",
+      "description": "Als System implementiere ich ALL-Mode wo alle genehmigen müssen",
+      "acceptanceCriteria": [
+        "Alle müssen genehmigen für Erfolg",
+        "Bei Ablehnung sofort abgebrochen",
+        "Status-Tracking für jeden Approver",
+        "Typecheck passes"
+      ],
+      "priority": 61,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-062",
+      "title": "Approval Mode: MAJORITY (>50%)",
+      "description": "Als System implementiere ich MAJORITY-Mode mit Mehrheitsentscheidung",
+      "acceptanceCriteria": [
+        ">50% Threshold für Genehmigung",
+        "Live-Berechnung bei jeder Response",
+        "Auto-Cancel bei Entscheidung (nicht mehr änderbar)",
+        "Typecheck passes"
+      ],
+      "priority": 62,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-063",
+      "title": "Approval Mode: SEQUENCE (Kaskade)",
+      "description": "Als System implementiere ich SEQUENCE-Mode mit sequentieller Genehmigung",
+      "acceptanceCriteria": [
+        "Order-basierte Genehmigung",
+        "Nächster Approver erst nach Genehmigung des vorherigen",
+        "Bei Ablehnung Kette abbrechen",
+        "Status-Tracking für Position in Kette",
+        "Typecheck passes"
+      ],
+      "priority": 63,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-064",
+      "title": "Approval Node Frontend",
+      "description": "Als User konfiguriere ich Genehmigungen im Workflow-Designer",
+      "acceptanceCriteria": [
+        "Approval-Titel & Beschreibung mit Template-Support",
+        "Mode-Auswahl (ANY/ALL/MAJORITY/SEQUENCE)",
+        "Approver Configuration: Direkte Person, Rollen-basiert, Dynamisch (VG)",
+        "Deadline Configuration",
+        "Eskalation Rules",
+        "Typecheck passes"
+      ],
+      "priority": 64,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-065",
+      "title": "Approver UI (SmartFace)",
+      "description": "Als Approver sehe ich meine Pending Approvals und kann genehmigen/ablehnen",
+      "acceptanceCriteria": [
+        "Pending Approvals List",
+        "Approval Detail View mit allen Informationen",
+        "Approve/Reject Buttons mit Kommentar-Feld",
+        "History & Audit Trail",
+        "Benachrichtigungen für neue Approvals",
+        "Typecheck passes"
+      ],
+      "priority": 65,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-066",
+      "title": "Dynamic Approver Resolution",
+      "description": "Als System löse ich dynamische Approver (VG, VG von VG) zur Laufzeit auf",
+      "acceptanceCriteria": [
+        "VG-Auflösung aus HR WORKS Daten",
+        "VG von VG (2. Ebene) Auflösung",
+        "Fehlerbehandlung wenn VG nicht gefunden",
+        "Caching für Performance",
+        "Typecheck passes"
+      ],
+      "priority": 66,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-067",
+      "title": "Delegation & Substitution",
+      "description": "Als Approver kann ich Genehmigungen delegieren oder Vertretungen einrichten",
+      "acceptanceCriteria": [
+        "Urlaubsvertretung konfigurierbar",
+        "Proxy-Approvals für Abwesenheit",
+        "Delegation an andere Person",
+        "Audit Trail für Delegationen",
+        "Typecheck passes"
+      ],
+      "priority": 67,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-068",
+      "title": "Eskalation",
+      "description": "Als System eskaliere ich Approvals bei Timeout",
+      "acceptanceCriteria": [
+        "Timeout-basierte Eskalation",
+        "Eskalation an nächsthöhere Ebene (VG von VG)",
+        "Reminder-Emails vor Eskalation",
+        "Konfigurierbare Eskalations-Regeln",
+        "Typecheck passes"
+      ],
+      "priority": 68,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

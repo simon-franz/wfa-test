@@ -1,0 +1,247 @@
+{
+  "project": "Workflow Automation Platform",
+  "phase": "Phase 1: Foundation & MVP - VOLLSTÄNDIG",
+  "duration": "Wochen 1-6",
+  "branchName": "feature/phase1-foundation",
+  "description": "Core foundation mit ALLEN technischen Details, Code-Beispielen und Spezifikationen",
+  "technicalDecisions": {
+    "projectStructure": "workflow-automation/ mit backend/, frontend/, shared/, tools/generators/api-generator/, docs/plan-hrworks-integration.md",
+    "techStack": {
+      "runtime": "Bun (schneller als Node.js, native TypeScript)",
+      "backend": "NestJS (modulare Architektur, TypeScript-first)",
+      "orm": "Drizzle (Type-safe, Multi-Dialect SQLite/PostgreSQL)",
+      "database": "PostgreSQL (Prod), SQLite (Dev)",
+      "queue": "BullMQ mit Valkey (Redis-Fork)",
+      "stateManagement": "Zustand",
+      "frontend": "Vite + React 18 SPA",
+      "uiFramework": "SmartFace aus /SmartFace-dev, Styled-Components",
+      "workflowDesigner": "React Flow",
+      "routing": "react-router-dom",
+      "realtime": "Server-Sent Events (SSE) mit @microsoft/fetch-event-source",
+      "hosting": "AWS EKS"
+    },
+    "designGuidelines": {
+      "lookAndFeel": "Orientierung an HR WORKS UI",
+      "theme": "Dunkles Theme (Dark Mode)",
+      "colors": "Grün (Erfolg), Orange (Hinweise), Rot (Fehler)"
+    }
+  },
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Multi-Tenant Architecture Setup (Landlord-DB Pattern)",
+      "description": "Als System-Architekt benötige ich eine Multi-Tenant-Architektur mit Landlord-DB für Tenant-Metadaten und separaten Tenant-DBs für Business-Daten",
+      "technicalDetails": {
+        "pattern": "Landlord-DB Pattern",
+        "landlordDb": {
+          "database": "PostgreSQL (Prod) / SQLite (Dev)",
+          "table": "tenants",
+          "fields": {
+            "id": "UUID primary key",
+            "name": "text not null",
+            "slug": "text unique not null",
+            "dbUrl": "text not null (connection string)",
+            "status": "text (active, inactive, suspended)",
+            "plan": "text (free, pro, enterprise)"
+          },
+          "constraint": "Nur Metadaten - KEINE User-/Business-Daten!"
+        },
+        "tenantDb": {
+          "tables": [
+            "users (Workflow-User, nicht HR WORKS Persons)",
+            "workflows (Workflow-Definitionen)",
+            "executions (Workflow-Ausführungen)",
+            "credentials (verschlüsselte API-Keys)",
+            "approvals (Genehmigungen)",
+            "synced_persons (aus HR WORKS)",
+            "synced_organization_units (aus HR WORKS)"
+          ]
+        },
+        "diagram": "Landlord-DB → [Tenant DB 1, Tenant DB 2, Tenant DB N]",
+        "benefits": [
+          "Totale Datenisolation zwischen Tenants",
+          "GDPR/Compliance-ready",
+          "Einfaches Offboarding (DROP DATABASE)",
+          "SQLite für Development, PostgreSQL für Production"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Landlord-DB (PostgreSQL Prod / SQLite Dev) mit tenants-Tabelle erstellt",
+        "Tenants-Tabelle enthält: id (UUID), name, slug (unique), dbUrl, status, plan",
+        "Nur Metadaten in Landlord-DB, keine User-/Business-Daten",
+        "Tenant-DB Schema enthält: users, workflows, executions, credentials, approvals, synced_persons, synced_organization_units",
+        "Drizzle ORM konfiguriert für Multi-Dialect Support (SQLite + PostgreSQL)",
+        "Totale Datenisolation zwischen Tenants gewährleistet (separate Datenbanken)",
+        "Connection Pooling für Tenant-DBs implementiert",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Tenant Provisioning API",
+      "description": "Als HR WORKS System kann ich automatisch neue Tenants via API erstellen mit Shared Secret Authentifizierung",
+      "technicalDetails": {
+        "endpoint": "POST /api/tenants",
+        "authentication": "Header: X-Provisioning-Secret: <shared-secret>",
+        "requestBody": {
+          "slug": "acme-corp",
+          "name": "Acme Corporation",
+          "hrworksCustomerId": "123",
+          "apiKey": "...",
+          "apiSecret": "...",
+          "baseUrl": "api.hrworks.de"
+        },
+        "ablauf": [
+          "1. HR WORKS erstellt API-Key-Pair für Kunden",
+          "2. HR WORKS ruft Provisioning-API mit Shared Secret auf",
+          "3. Workflow-App validiert Secret (PROVISIONING_SECRET env var)",
+          "4. Erstellt Tenant in Landlord-DB + neue Tenant-DB",
+          "5. Speichert verschlüsselte HR WORKS Credentials",
+          "6. Initial Sync (Persons, OEs) - async",
+          "7. Registriert Webhooks bei HR WORKS - async"
+        ],
+        "security": "Shared Secret zwischen HR WORKS und Workflow-App, verschlüsselte Credential-Speicherung"
+      },
+      "acceptanceCriteria": [
+        "POST /api/tenants Endpoint implementiert",
+        "Header X-Provisioning-Secret validiert gegen PROVISIONING_SECRET env var",
+        "Request Body enthält: slug, name, hrworksCustomerId, apiKey, apiSecret, baseUrl",
+        "Tenant wird in Landlord-DB erstellt mit allen Feldern",
+        "Neue Tenant-DB wird automatisch provisioniert (CREATE DATABASE + Migrations)",
+        "HR WORKS Credentials werden verschlüsselt gespeichert (AES-256)",
+        "Initial Sync (Persons, OEs) wird async gestartet (BullMQ Job)",
+        "Webhooks bei HR WORKS werden async registriert (BullMQ Job)",
+        "Error Handling für fehlende/ungültige Secrets (401 Unauthorized)",
+        "Error Handling für doppelte slugs (409 Conflict)",
+        "Response enthält: tenant_id, status, message",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "JWT-basierte Tenant-Auflösung",
+      "description": "Als Backend-System löse ich Tenant-Kontext aus JWT Cookie auf für Single-Domain-Setup",
+      "technicalDetails": {
+        "cookieName": "auth_token",
+        "cookieType": "HttpOnly Cookie",
+        "jwtPayload": {
+          "sub": "user_uuid",
+          "tenant_id": "tenant_uuid (null für server_admin/consultant)",
+          "email": "user@company.de",
+          "role": "workflow-administrator",
+          "global_role": "consultant (Optional: für Consultants mit Tenant-Zugriff)",
+          "iat": 1234567890,
+          "exp": 1234567890
+        },
+        "apiAuthentication": {
+          "method": "JWT-Token als HttpOnly Cookie",
+          "automatic": "Cookie wird automatisch bei jedem Request mitgesendet",
+          "validation": "Backend validiert Cookie via JwtAuthGuard",
+          "noManualHeader": "Kein manuelles Setzen des Authorization-Headers nötig",
+          "sseException": "Bei SSE: Token muss explizit im Header mitgegeben werden"
+        },
+        "codeExample": {
+          "frontend": "const api = {\n  async getWorkflows() {\n    // Cookie wird automatisch mitgesendet\n    const response = await fetch('/api/workflows', {\n      credentials: 'include', // Wichtig: Cookies mitsenden\n    });\n    return response.json();\n  },\n  \n  // SSE: Token explizit im Header\n  connectToExecutionStream(executionId: string) {\n    return new EventSource(`/api/executions/${executionId}/stream`, {\n      withCredentials: true, // Cookie mitsenden\n    });\n  }\n};"
+        },
+        "diagram": "Browser (Cookie: auth_token=JWT) → Backend (JWT Decode → tenant_id, user_id) → Tenant DB (Queries mit tenant_id)",
+        "benefits": [
+          "Single Domain - kein DNS/SSL für Subdomains nötig",
+          "Totale Datenisolation zwischen Tenants",
+          "GDPR/Compliance-ready"
+        ]
+      },
+      "acceptanceCriteria": [
+        "JWT Cookie 'auth_token' wird als HttpOnly Cookie gespeichert",
+        "JWT Payload enthält: sub (user_uuid), tenant_id, email, role, global_role (optional), iat, exp",
+        "JwtAuthGuard validiert Cookie bei jedem Request",
+        "Tenant-ID wird aus JWT extrahiert und für DB-Queries verwendet",
+        "Cookie wird automatisch bei fetch mit credentials: 'include' mitgesendet",
+        "SSE-Verbindungen unterstützen Token im Header (withCredentials: true)",
+        "Frontend API-Client implementiert mit credentials: 'include'",
+        "Code-Beispiel für SSE mit EventSource und withCredentials",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "4-Ebenen Rollen-System",
+      "description": "Als System implementiere ich ein 4-Ebenen Rollen-System mit server_admin, consultant, master_admin, workflow-administrator",
+      "technicalDetails": {
+        "roles": [
+          {
+            "role": "server_admin",
+            "scope": "Global (Landlord-DB)",
+            "permissions": [
+              "Mandanten anlegen/löschen/verwalten",
+              "System-Konfiguration",
+              "Alle Tenants sehen"
+            ]
+          },
+          {
+            "role": "consultant",
+            "scope": "Global (Marketplace)",
+            "permissions": [
+              "Workflows in Marketplace publizieren",
+              "Template-Verwaltung",
+              "Tenant-übergreifend"
+            ]
+          },
+          {
+            "role": "master_admin",
+            "scope": "Tenant-spezifisch",
+            "permissions": [
+              "Volle Rechte im eigenen Mandanten",
+              "User-Verwaltung",
+              "Billing",
+              "Settings"
+            ]
+          },
+          {
+            "role": "workflow-administrator",
+            "scope": "Tenant-spezifisch",
+            "permissions": [
+              "Workflows erstellen/bearbeiten/löschen/ausführen",
+              "Executions sehen",
+              "Keine User-Verwaltung"
+            ]
+          }
+        ],
+        "accessRestriction": "Nur Personen mit Rolle workflow-administrator oder master_admin aus HR WORKS dürfen sich in der Workflow-Automation App anmelden",
+        "otherUsers": "Andere HR WORKS User haben keinen direkten Zugriff auf die App (Integration in HR WORKS Oberfläche kommt später)",
+        "jwtPayloadExtended": {
+          "sub": "user_uuid",
+          "tenant_id": "tenant_uuid (null für server_admin/consultant)",
+          "email": "user@company.de",
+          "role": "workflow-administrator",
+          "global_role": "consultant (Optional: für Consultants mit Tenant-Zugriff)",
+          "iat": 1234567890,
+          "exp": 1234567890
+        }
+      },
+      "acceptanceCriteria": [
+        "Rolle 'server_admin': Global scope, kann Mandanten verwalten, System-Konfiguration, alle Tenants sehen",
+        "Rolle 'consultant': Global scope für Marketplace, kann Workflows publizieren, Tenant-übergreifend",
+        "Rolle 'master_admin': Tenant-spezifisch, volle Rechte im Mandanten, User-Verwaltung, Billing, Settings",
+        "Rolle 'workflow-administrator': Tenant-spezifisch, Workflows erstellen/bearbeiten/löschen/ausführen, Executions sehen, keine User-Verwaltung",
+        "JWT Payload erweitert um 'global_role' für Consultants mit Tenant-Zugriff",
+        "Zugriffsbeschränkung: Nur workflow-administrator oder master_admin aus HR WORKS dürfen sich anmelden",
+        "Andere HR WORKS User werden bei Login abgelehnt (403 Forbidden)",
+        "Guards implementiert für Rollen-basierte Zugriffskontrolle (@Roles() Decorator)",
+        "tenant_id ist null für server_admin und consultant (global scope)",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

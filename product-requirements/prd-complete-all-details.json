@@ -1,0 +1,488 @@
+{
+  "project": "Workflow Automation Platform",
+  "description": "VOLLSTÄNDIGE PRD mit ALLEN Details, Code-Beispielen, Tabellen und Spezifikationen aus plan.md",
+  "generated": "2026-01-27T14:55:38.771Z",
+  "statistics": {
+    "totalCodeBlocks": 17,
+    "totalTables": 3,
+    "totalListItems": 202,
+    "totalCharacters": 35607
+  },
+  "codeExamples": [
+    {
+      "id": "CODE-1",
+      "language": "text",
+      "code": "workflow-automation/\n├── backend/          # NestJS Backend\n├── frontend/         # React Frontend mit SmartFace\n├── shared/           # Gemeinsame Types, Utils, Schemas\n├── tools/            # Build-Tools, Generatoren\n│   └── generators/\n│       └── api-generator/    # OpenAPI Client Generator\n└── docs/             # Dokumentation\n    └── plan-hrworks-integration.md  # HR WORKS API Generator Setup (aus Root übernehmen)",
+      "context": ""
+    },
+    {
+      "id": "CODE-2",
+      "language": "text",
+      "code": "┌─────────────────────────────────────────────────────────────┐\n│                      LANDLORD DB                            │\n│  (PostgreSQL in Prod / SQLite in Dev)                       │\n│  ┌───────────────────────────────────────────────────┐     │\n│  │   tenants                                          │     │\n│  │  - id, name, slug, dbUrl, status, plan            │     │\n│  │  Nur Metadaten - keine User-/Business-Daten!      │     │\n│  └───────────────────────────────────────────────────┘     │\n└─────────────────────────────────────────────────────────────┘\n                              │\n         ┌────────────────────┼────────────────────┐\n         ▼                    ▼                    ▼\n┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐\n│   TENANT DB 1   │  │   TENANT DB 2   │  │   TENANT DB N   │\n│  - users        │  │  - users        │  │  - users        │\n│  - workflows    │  │  - workflows    │  │  - workflows    │\n│  - executions   │  │  - executions   │  │  - executions   │\n│  - credentials  │  │  - credentials  │  │  - credentials  │\n│  - approvals    │  │  - approvals    │  │  - approvals    │\n│  - synced_*     │  │  - synced_*     │  │  - synced_*     │\n└─────────────────┘  └─────────────────┘  └─────────────────┘",
+      "context": ""
+    },
+    {
+      "id": "CODE-3",
+      "language": "typescript",
+      "code": "// POST /api/tenants\n// Header: X-Provisioning-Secret: <shared-secret>\n{\n  \"slug\": \"acme-corp\",\n  \"name\": \"Acme Corporation\",\n  \"hrworksCustomerId\": \"123\",\n  \"apiKey\": \"...\",\n  \"apiSecret\": \"...\",\n  \"baseUrl\": \"api.hrworks.de\"\n}",
+      "context": ""
+    },
+    {
+      "id": "CODE-4",
+      "language": "text",
+      "code": "┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐\n│    Browser      │      │    Backend      │      │   Tenant DB     │\n│                 │      │                 │      │                 │\n│  Cookie:        │─────▶│  JWT Decode     │─────▶│  Queries mit    │\n│  auth_token=JWT │      │  → tenant_id    │      │  tenant_id      │\n│                 │      │  → user_id      │      │                 │\n└─────────────────┘      └─────────────────┘      └─────────────────┘",
+      "context": ""
+    },
+    {
+      "id": "CODE-5",
+      "language": "json",
+      "code": "{\n  \"sub\": \"user_uuid\",\n  \"tenant_id\": \"tenant_uuid\",\n  \"email\": \"user@company.de\",\n  \"role\": \"workflow-admin\",\n  \"iat\": 1234567890,\n  \"exp\": 1234567890\n}",
+      "context": ""
+    },
+    {
+      "id": "CODE-6",
+      "language": "json",
+      "code": "{\n  \"sub\": \"user_uuid\",\n  \"tenant_id\": \"tenant_uuid\",  // null für server_admin/consultant\n  \"email\": \"user@company.de\",\n  \"role\": \"workflow-administrator\",\n  \"global_role\": \"consultant\",  // Optional: für Consultants mit Tenant-Zugriff\n  \"iat\": 1234567890,\n  \"exp\": 1234567890\n}",
+      "context": ""
+    },
+    {
+      "id": "CODE-7",
+      "language": "typescript",
+      "code": "// Frontend: API-Client mit automatischem Cookie-Handling\nconst api = {\n  async getWorkflows() {\n    // Cookie wird automatisch mitgesendet\n    const response = await fetch('/api/workflows', {\n      credentials: 'include', // Wichtig: Cookies mitsenden\n    });\n    return response.json();\n  },\n  \n  // SSE: Token explizit im Header\n  connectToExecutionStream(executionId: string) {\n    return new EventSource(`/api/executions/${executionId}/stream`, {\n      withCredentials: true, // Cookie mitsenden\n    });\n  }\n};",
+      "context": ""
+    },
+    {
+      "id": "CODE-8",
+      "language": "typescript",
+      "code": "const stringToSign = `${jobId}.${timestamp}`;\nconst expectedSig = crypto.createHmac('sha256', secretKey)\n  .update(stringToSign).digest('base64');",
+      "context": ""
+    },
+    {
+      "id": "CODE-9",
+      "language": "json",
+      "code": "{\n  \"event\": \"serverEvent\",\n  \"resourceLocation\": \"https://api.hrworks.de/v2/persons/{uuid}\",\n  \"jobId\": \"...\",\n  \"action\": \"resourceCreated|resourceUpdated|resourceDeleted|resourceDeactivated\"\n}",
+      "context": ""
+    },
+    {
+      "id": "CODE-10",
+      "language": "text",
+      "code": "Name: [HR WORKS                    ]\n  \n  Einstellungen\n  ─────────────\n  API Endpoint: [Person nach ID abrufen  ▼]\n  \n  Parameter\n  ─────────────\n  Person ID *:  [z.B. {{trigger.id}}     ] 🔗\n  \n  [Knoten löschen]  [Speichern]",
+      "context": "  "
+    },
+    {
+      "id": "CODE-11",
+      "language": "text",
+      "code": "Name: [Daten-Transformation        ]\n  \n  Einstellungen\n  ─────────────\n  Operation:    [Anzahl (Count)         ▼]\n                - Anzahl (Count)\n                - Feld extrahieren\n                - Filtern\n                - Transformieren (Map)\n                - Summe\n                - Durchschnitt\n  \n  Input:        [{{HR WORKS.output.persons}}] 🔗\n  \n  [Knoten löschen]  [Speichern]",
+      "context": "  "
+    },
+    {
+      "id": "CODE-12",
+      "language": "text",
+      "code": "┌─────────────────────────────────────────────────┐\n│  HR WORKS Node                                  │\n├─────────────────────────────────────────────────┤\n│  Endpoint:  [Get Person by ID        ▼]        │\n├─────────────────────────────────────────────────┤\n│  Parameter:                                     │\n│  ┌─────────────────────────────────────────┐   │\n│  │ Person ID*:  [{{trigger.personId}}    ] │   │\n│  └─────────────────────────────────────────┘   │\n├─────────────────────────────────────────────────┤\n│  Output-Variable:  [personData              ]   │\n└─────────────────────────────────────────────────┘",
+      "context": ""
+    },
+    {
+      "id": "CODE-13",
+      "language": "text",
+      "code": "Hallo {{person.firstName}},\nIhr Antrag über {{amount}}€ wurde eingereicht.",
+      "context": ""
+    },
+    {
+      "id": "CODE-14",
+      "language": "typescript",
+      "code": "// Template Engine - Regex findet {{...}}, JSONata evaluiert\ntemplate.replace(/\\{\\{(.+?)\\}\\}/g, (match, expr) => {\n  return jsonata(expr).evaluate(context);\n});",
+      "context": ""
+    },
+    {
+      "id": "CODE-15",
+      "language": "javascript",
+      "code": "amount > 5000                           // Einfach\nperson.role = \"manager\" and amount > 1000  // Kombiniert (ACHTUNG: = nicht ==)\n$count(approvers[status = \"approved\"]) >= 3  // Mit Funktionen",
+      "context": ""
+    },
+    {
+      "id": "CODE-16",
+      "language": "text",
+      "code": "1. Consultant erstellt Workflow in eigenem Tenant\n2. \"Als Template publizieren\" → Titel, Beschreibung, Kategorie\n3. Template wird in Landlord-DB gespeichert (global)\n4. Andere Tenants sehen Template in Gallery\n5. \"Aktivieren\" → Workflow wird in Tenant kopiert\n6. Tenant kann Workflow anpassen/nutzen",
+      "context": ""
+    },
+    {
+      "id": "CODE-17",
+      "language": "typescript",
+      "code": "export const workflowTemplates = pgTable('workflow_templates', {\n  id: uuid('id').defaultRandom().primaryKey(),\n  title: text('title').notNull(),\n  description: text('description'),\n  category: text('category'), // 'onboarding', 'offboarding', 'approvals', etc.\n  tags: jsonb('tags'), // ['hr', 'automation', 'approval']\n  graph: jsonb('graph').notNull(), // Workflow-Definition\n  version: text('version').default('1.0.0'),\n  authorId: uuid('author_id').references(() => globalUsers.id),\n  isPublic: boolean('is_public').default(true),\n  downloadCount: integer('download_count').default(0),\n  createdAt: timestamp('created_at').defaultNow(),\n  updatedAt: timestamp('updated_at').defaultNow(),\n});",
+      "context": ""
+    }
+  ],
+  "tables": [
+    {
+      "id": "TABLE-1",
+      "headers": [
+        "Bereich",
+        "Entscheidung",
+        "Begründung"
+      ],
+      "rows": [
+        [
+          "Runtime",
+          "**Bun**",
+          "Schneller als Node.js, native TypeScript-Support"
+        ],
+        [
+          "Backend-Framework",
+          "**NestJS**",
+          "Modulare Architektur, TypeScript-first"
+        ],
+        [
+          "ORM",
+          "**Drizzle**",
+          "Type-safe, Multi-Dialect (SQLite/PostgreSQL), Performance"
+        ],
+        [
+          "Datenbank",
+          "**PostgreSQL** (Prod), **SQLite** (Dev)",
+          "Schnelle lokale Entwicklung, robust in Production"
+        ],
+        [
+          "Queue-System",
+          "**BullMQ**",
+          "Benötigt Valkey (Redis-Fork), robust für async Jobs"
+        ],
+        [
+          "State-Management",
+          "**Zustand**",
+          "Einfacher als Redux, weniger Boilerplate"
+        ],
+        [
+          "Frontend",
+          "**Vite + React**",
+          "Schnelles Build-Tool, React 18 SPA"
+        ],
+        [
+          "UI-Framework",
+          "**SmartFace**",
+          "HR WORKS Design-System, shadcn-ähnlich"
+        ],
+        [
+          "Workflow-Designer",
+          "**React Flow**",
+          "Bewährt (n8n, make.com)"
+        ],
+        [
+          "Routing",
+          "**react-router-dom**",
+          "Client-seitiges Routing"
+        ],
+        [
+          "Echtzeit-Updates",
+          "**Server-Sent Events (SSE)**",
+          "Unidirektionale Streams für Execution Updates, geringere Last als Polling. Library: `@microsoft/fetch-event-source`"
+        ],
+        [
+          "Hosting",
+          "**AWS EKS**",
+          "Kubernetes für Skalierung"
+        ],
+        [
+          "CI/CD",
+          "Später definieren"
+        ]
+      ],
+      "context": ""
+    },
+    {
+      "id": "TABLE-2",
+      "headers": [
+        "Rolle",
+        "Scope",
+        "Berechtigungen"
+      ],
+      "rows": [
+        [
+          "**server_admin**",
+          "Global (Landlord-DB)",
+          "Mandanten anlegen/löschen/verwalten, System-Konfiguration, alle Tenants sehen"
+        ],
+        [
+          "**consultant**",
+          "Global (Marketplace)",
+          "Workflows in Marketplace publizieren, Template-Verwaltung, Tenant-übergreifend"
+        ],
+        [
+          "**master_admin**",
+          "Tenant-spezifisch",
+          "Volle Rechte im eigenen Mandanten, User-Verwaltung, Billing, Settings"
+        ],
+        [
+          "**workflow-administrator**",
+          "Tenant-spezifisch",
+          "Workflows erstellen/bearbeiten/löschen/ausführen, Executions sehen, keine User-Verwaltung"
+        ]
+      ],
+      "context": ""
+    },
+    {
+      "id": "TABLE-3",
+      "headers": [
+        "Anwendung",
+        "Syntax",
+        "Beispiel"
+      ],
+      "rows": [
+        [
+          "**Templates**",
+          "`{{expression}}` Platzhalter",
+          "`\"Hallo {{person.firstName}}\"`"
+        ],
+        [
+          "**Conditions**",
+          "Pure JSONata",
+          "`amount > 5000 and role = \"manager\"`"
+        ]
+      ],
+      "context": ""
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-2",
+      "section": "Technische Entscheidungen (Finalisiert)",
+      "title": "Technische Entscheidungen (Finalisiert)",
+      "details": [
+        "**Single Domain** - kein DNS/SSL für Subdomains nötig",
+        "Totale Datenisolation zwischen Tenants",
+        "GDPR/Compliance-ready",
+        "Einfaches Offboarding (`DROP DATABASE`)",
+        "SQLite für Development, PostgreSQL für Production",
+        "**Look & Feel**: Orientierung an HR WORKS UI",
+        "**Komponenten**: SmartFace Component Library (aus `/SmartFace-dev`)",
+        "**Styling**: Styled-Components (wie in SmartFace verwendet)"
+      ],
+      "fullContent": "\n### Projektstruktur\n```\nworkflow-automation/\n├── backend/          # NestJS Backend\n├── frontend/         # React Frontend mit SmartFace\n├── shared/           # Gemeinsame Types, Utils, Schemas\n├── tools/            # Build-Tools, Generatoren\n│   └── generators/\n│       └── api-generator/    # OpenAPI Client Generator\n└── docs/             # Dokumentation\n    └── plan-hrworks-integration.md  # HR WORKS API Generator Setup (aus Root übernehmen)\n```\n\n### Technologie-Stack\n| Bereich | Entscheidung | Begründung |\n|---------|--------------|------------|\n| Runtime | **Bun** | Schneller als Node.js, native TypeScript-Support |\n| Backend-Framework | **NestJS** | Modulare Architektur, TypeScript-first |\n| ORM | **Drizzle** | Type-safe, Multi-Dialect (SQLite/PostgreSQL), Performance |\n| Datenbank | **PostgreSQL** (Prod), **SQLite** (Dev) | Schnelle lokale Entwicklung, robust in Production |\n| Queue-System | **BullMQ** | Benötigt Valkey (Redis-Fork), robust für async Jobs |\n| State-Management | "
+    },
+    {
+      "id": "REQ-3",
+      "section": "Phase 1: Foundation & MVP (Wochen 1-6)",
+      "title": "Phase 1: Foundation & MVP (Wochen 1-6)",
+      "details": [
+        "OAuth2 Integration mit HR WORKS",
+        "SSO-Flow implementieren",
+        "Session Management mit JWT Token Handling",
+        "**Rollen-System (4 Ebenen)**:",
+        "**Zugriffsbeschränkung**: Nur Personen mit Rolle `workflow-administrator` oder `master_admin` aus HR WORKS dürfen sich in der Workflow-Automation App anmelden",
+        "**Andere HR WORKS User**: Haben keinen direkten Zugriff auf die App (Integration in HR WORKS Oberfläche kommt später)",
+        "**JWT Payload erweitert**:",
+        "**API-Authentifizierung (alle AJAX/Fetch-Calls)**:",
+        "**Development Login Bypass**:",
+        "Organisationseinheiten-Sync: Initial Full-Sync aus HR WORKS, Delta-Updates via Webhooks, lokales Caching",
+        "Personen-Sync: Initial Full-Sync aller Mitarbeiter, Webhook-Handler für Änderungen, Mapping HR WORKS Person → Workflow User",
+        "Synchronisation von Vorgesetzten-Beziehungen (VG, VG von VG)",
+        "Workflow Definition Model (JSON Schema)",
+        "Workflow Instance Management",
+        "Execution Engine (State Machine)",
+        "Event Queue (BullMQ)",
+        "Logging & Audit Trail",
+        "**Kompakte Nodes**: Icon + Label + Kurzbeschreibung (max. 2 Zeilen)",
+        "**Farbcodierung nach Typ**:",
+        "**Play-Button**: Grüner Play-Button oben rechts am Node (nur im Test-Modus)",
+        "**Status-Indicator**: Kleines Icon unten links (✓ success, ✗ error, ⏳ running)",
+        "**Keine technischen Details** im Node selbst (z.B. \"action.hrworks\" oder \"Node Type\")",
+        "**Gestrichelte Linien** (nicht durchgezogen)",
+        "**Animierte Datenfluss-Visualisierung**: Punkte/Striche bewegen sich entlang der Linie",
+        "**Bezier-Kurven** für natürliche Verbindungen",
+        "**Hover-Effekt**: Linie wird dicker, Lösch-Icon erscheint",
+        "**Farbe**: Grau (neutral), bei Hover: Primärfarbe",
+        "**Rechte Sidebar** öffnet sich beim Klick auf Node",
+        "**Strukturierte Felder** statt JSON-Textfeld:",
+        "**Beispiel HR WORKS Node**:",
+        "**Beispiel Data Transformation Node**:",
+        "❌ \"Node Type: action.transform\"",
+        "❌ \"Configuration (JSON)\"",
+        "❌ \"Enter configuration (JSON)\"",
+        "✅ Stattdessen: Spezifische, benutzerfreundliche Felder pro Node-Typ",
+        "Canvas mit Drag & Drop",
+        "Node Palette (Start, Action, End)",
+        "Connection Drawing zwischen Nodes",
+        "**Echtzeit-Execution-Updates via SSE**:",
+        "**Context Panel / Variable Picker**:",
+        "**Node-by-Node Testing (Play-Button)**:",
+        "**Template Placeholder System**:",
+        "**Canvas Controls**:",
+        "**Context Menu für Nodes**:",
+        "**Deletable Edges**:",
+        "Workflow Speichern/Laden",
+        "**Workflow Export (JSON)**:",
+        "**Workflow Import (JSON)**:",
+        "**Workflow Duplizieren**:",
+        "**Workflow-Liste als Tabelle** (statt Karten):",
+        "**Workflow-Designer Toolbar**:",
+        "**Ausführungshistorie-Seite** (`/workflows/:id/executions`):",
+        "**Workflow-Ausführung**:",
+        "**Darstellung als Tabelle** mit Spalten für Name, Beschreibung, Status (Badge), Aktualisiert (Datum/Zeit), Aktionen",
+        "Status-Badges: Aktiv (grün), Inaktiv (gelb), Entwurf (grau)",
+        "Action-Buttons: Historie, Ausführen, Löschen",
+        "Klick auf Zeile öffnet Workflow-Designer",
+        "Pro Workflow darf es **nur einen Trigger-Knoten** geben (Validierung im Designer)",
+        "Knoten-basierter Editor mit Drag-and-Drop-Funktionalität",
+        "**Drag & Drop aus Library**: Komponenten können aus einer seitlichen \"Library\" in den Designer gezogen werden",
+        "Knoten werden durch Verbindungslinien (Edges) verknüpft",
+        "Unterstützung für verschiedene Knotentypen (z.B. Jira, HR WORKS, Condition, API-Calls)",
+        "Jeder Knoten zeigt eine Vorschau seines Inhalts/Konfiguration",
+        "**Horizontale Anordnung** des Workflows von links nach rechts (immer!)",
+        "**Bezier-Kurven** für natürliche, geschwungene Verbindungen",
+        "**Hover-Icon zum Löschen**: Kanten zeigen bei Hover ein Icon, mit dem sie gelöscht werden können",
+        "**Datenfluss-Animation**: Animierte Linien, die visualisieren wohin die Daten fließen",
+        "**Verbindungspunkte bei Multi-Output-Knoten**: Bei Bedingungen, Switches oder ähnlichen Knoten mit mehreren Ausgängen liegen die Verbindungsstücke immer auf dem Rahmen der Box",
+        "Workflow-Name mit Dropdown zur Bearbeitung",
+        "Versionsnummer (z.B. \"0.0.14\")",
+        "Toggle für Aktivierung/Deaktivierung",
+        "Zoom-Steuerung (-, Prozentanzeige, +)",
+        "Undo/Redo-Buttons",
+        "Vollbild-Toggle",
+        "Hilfe-Button",
+        "Grüner \"+\" FAB-Button zum Hinzufügen neuer Knoten",
+        "Gesamte Ausführungen (Anzahl)",
+        "Ausgeführte Nodes (Anzahl)",
+        "\"Alle Ausführungen\" / gefilterte Ansicht",
+        "Datumsfilter",
+        "Statusfilter",
+        "Scrollbare Liste aller Workflow-Durchläufe",
+        "Pro Eintrag:",
+        "Klick auf Eintrag öffnet Details im rechten Panel",
+        "Ausführungs-ID mit Status-Icon",
+        "Gesamtdauer",
+        "Schließen-Button (X)",
+        "Für jeden ausgeführten Knoten:",
+        "**Zeitstempel-basierte Historisierung** für jeden Speichervorgang",
+        "**Personenzuordnung**: Wer hat wann gespeichert",
+        "**Versions-Wiederherstellung**: Alte Versionen können als neue Version wiederhergestellt werden",
+        "**Audit-Trail**: Vollständige Nachverfolgbarkeit aller Änderungen",
+        "**Dunkles Theme** (Dark Mode)",
+        "Farbcodierung: Grün für Erfolg, Orange für Hinweise, Rot für Fehler",
+        "Syntax-Highlighting für JSON (Keys in einer Farbe, Strings in einer anderen)",
+        "Responsive Split-Panels zwischen den drei Bereichen",
+        "Manual Trigger: Workflow manuell starten, Input-Parameter definierbar, für Testing & Debugging",
+        "Scheduled Trigger: Cron-basierte Ausführung, Zeitzone-Handling, einfache Intervalle (täglich, wöchentlich)",
+        "HTTP Request Node",
+        "HR WORKS Node",
+        "Email Node (Phase 2)",
+        "Webhook Node (Phase 2)",
+        "**Error Branch (On Error)**:",
+        "**Retry-Konfiguration**:",
+        "**Timeout-Konfiguration**:",
+        "HTTP Request Node: GET/POST/PUT/DELETE zu HR WORKS API, Header Configuration, Body Template (Handlebars), Response Mapping, **Timeout & Retry Settings**",
+        "**HR WORKS Node**: Dedizierter Knoten für HR WORKS Integration (Details siehe unten)",
+        "**Data Transformation Node**:",
+        "Delay Node: Zeitverzögerung (Minuten, Stunden, Tage), Pause & Resume, Persistente Delays mit BullMQ",
+        "**Condition Node (Multi-Condition Switch)**:",
+        "HR WORKS API verwendet Job-basierte asynchrone Verarbeitung für Write-Operationen (POST/PUT/DELETE)",
+        "Backend pollt automatisch den Job-Status über `/jobs/{jobId}` Endpoint",
+        "Frontend zeigt Node als \"running\" bis Job abgeschlossen ist (Status: pending → finished/failed)",
+        "UI-Mapping: Async-Calls werden als synchrone Operationen dargestellt - Node bleibt aktiv bis Job fertig",
+        "Timeout-Handling: Nach 60 Sekunden wird Job als fehlgeschlagen markiert",
+        "Retry-Logic: Bei Netzwerkfehlern automatische Wiederholung (max. 3x)",
+        "**Output-Mapping**: Bei Erfolg wird nur das `data` Objekt aus der Job-Response als Node-Output gesetzt (ohne Wrapper)",
+        "**Dictionary Response Flattening**: HR WORKS API liefert Dictionary-Format - alle Werte werden automatisch flattened für einfacheren Zugriff",
+        "JWT-Token von HR WORKS API hat 15 Minuten Gültigkeit",
+        "Automatische Token-Refresh bei Ablauf",
+        "Token wird im Response-Feld `token` zurückgegeben (nicht `access_token`)",
+        "Sichere Speicherung in Tenant-Konfiguration",
+        "Unterstützung für alle HR WORKS Person-Felder: personnelNumber, birthday, gender, role, department, etc.",
+        "Automatische Typ-Validierung basierend auf OpenAPI Spec",
+        "Select-Felder für Enum-Werte (z.B. Gender, Salutation)",
+        "**Strings:** `$lowercase()`, `$uppercase()`, `$contains()`, `$replace()`",
+        "**Numbers:** `$sum()`, `$average()`, `$round()`, `$abs()`",
+        "**Arrays:** `$count()`, `array[filter]`, `$distinct()`, `$sort()`",
+        "**Datum (custom):** `$now()`, `$formatDate()`, `$addDays()`, `$diffDays()`"
+      ],
+      "fullContent": "\n### Authentifizierung & Autorisierung\n- OAuth2 Integration mit HR WORKS\n- SSO-Flow implementieren\n- Session Management mit JWT Token Handling\n- **Rollen-System (4 Ebenen)**:\n\n| Rolle | Scope | Berechtigungen |\n|-------|-------|----------------|\n| **server_admin** | Global (Landlord-DB) | Mandanten anlegen/löschen/verwalten, System-Konfiguration, alle Tenants sehen |\n| **consultant** | Global (Marketplace) | Workflows in Marketplace publizieren, Template-Verwaltung, Tenant-übergreifend |\n| **master_admin** | Tenant-spezifisch | Volle Rechte im eigenen Mandanten, User-Verwaltung, Billing, Settings |\n| **workflow-administrator** | Tenant-spezifisch | Workflows erstellen/bearbeiten/löschen/ausführen, Executions sehen, keine User-Verwaltung |\n\n- **Zugriffsbeschränkung**: Nur Personen mit Rolle `workflow-administrator` oder `master_admin` aus HR WORKS dürfen sich in der Workflow-Automation App anmelden\n- **Andere HR WORKS User**: Haben keinen direkten Zugriff auf die App (Integration in HR "
+    },
+    {
+      "id": "REQ-4",
+      "section": "Phase 2: PersonTask & Advanced Triggers (Wochen 7-12)",
+      "title": "Phase 2: PersonTask & Advanced Triggers (Wochen 7-12)",
+      "details": [
+        "PersonTask Node: Builder für PersonTask API-Calls, Validierung von Task-Daten, Persistierung in HR WORKS via API",
+        "PersonTask-ID im Workflow-Kontext speichern",
+        "PersonTask Webhook Handler: Empfang von Task-Updates, Status-Mapping (offen, in Bearbeitung, erledigt, abgelehnt), Workflow-Fortsetzung bei Task-Completion, Retry-Handling",
+        "Assignee-Auswahl (Person, Rolle, VG)",
+        "Task-Beschreibung (Template-Editor)",
+        "Deadline-Konfiguration",
+        "Priorität",
+        "Person Created/Updated/Deleted: Webhook von HR WORKS, Filter nach OE/Rolle/Status, Payload-Mapping",
+        "OE Changed: Strukturänderungen, VG-Wechsel, OE-Umbenennung",
+        "Custom Webhooks: Generic Webhook Endpoint, Signature Verification, Custom Payload Parsing",
+        "Data Transformation Node: JSON Path Expressions, Data Mapping, Aggregation Functions",
+        "Loop Node: Iteration über Arrays, Parallel vs. Sequential, Loop Variables",
+        "Email Node: Template Engine (Handlebars), Recipient Logic (Person, OE, VG), Attachments Support"
+      ],
+      "fullContent": "\n### PersonTask Integration\n- PersonTask Node: Builder für PersonTask API-Calls, Validierung von Task-Daten, Persistierung in HR WORKS via API\n- PersonTask-ID im Workflow-Kontext speichern\n- PersonTask Webhook Handler: Empfang von Task-Updates, Status-Mapping (offen, in Bearbeitung, erledigt, abgelehnt), Workflow-Fortsetzung bei Task-Completion, Retry-Handling\n\n### PersonTask Frontend UI\n- Assignee-Auswahl (Person, Rolle, VG)\n- Task-Beschreibung (Template-Editor)\n- Deadline-Konfiguration\n- Priorität\n\n### Event-basierte Trigger\n- Person Created/Updated/Deleted: Webhook von HR WORKS, Filter nach OE/Rolle/Status, Payload-Mapping\n- OE Changed: Strukturänderungen, VG-Wechsel, OE-Umbenennung\n- Custom Webhooks: Generic Webhook Endpoint, Signature Verification, Custom Payload Parsing\n\n### Erweiterte Action Nodes\n- Data Transformation Node: JSON Path Expressions, Data Mapping, Aggregation Functions\n- Loop Node: Iteration über Arrays, Parallel vs. Sequential, Loop Variables\n- Email Node: Templat"
+    },
+    {
+      "id": "REQ-5",
+      "section": "Phase 3: Genehmigungssystem (Wochen 13-20)",
+      "title": "Phase 3: Genehmigungssystem (Wochen 13-20)",
+      "details": [
+        "Datenmodell mit: id, workflowInstanceId, title, description, requestedBy, requestedAt, mode, approvers, currentStatus, responses, metadata",
+        "Approval Modes: ANY (First-Response-Wins), ALL (Unanimous), MAJORITY (>50%), SEQUENCE (Kaskade)",
+        "Approver-Struktur: personId, role (VG, VG von VG), order für Sequence",
+        "Validierung der Approval-Requests",
+        "Persistierung in HR WORKS DB",
+        "Resolution von dynamischen Approvern (VG, VG von VG)",
+        "Status-Berechnung je nach Mode",
+        "ANY: Erster Response → Workflow fortsetzen, andere stornieren",
+        "ALL: Alle müssen genehmigen, bei Ablehnung sofort abgebrochen",
+        "MAJORITY: >50% Threshold, Live-Berechnung, Auto-Cancel bei Entscheidung",
+        "SEQUENCE: Order-basiert, nächster erst nach Genehmigung, bei Ablehnung Kette abbrechen",
+        "Approval-Titel & Beschreibung (Template)",
+        "Mode-Auswahl (ANY/ALL/MAJORITY/SEQUENCE)",
+        "Approver Configuration: Direkte Person, Rollen-basiert, Dynamisch (VG von requestingPerson)",
+        "Deadline Configuration",
+        "Eskalation Rules",
+        "Pending Approvals List",
+        "Approval Detail View",
+        "Approve/Reject mit Kommentar",
+        "History & Audit Trail",
+        "Dynamic Approver Resolution (VG, VG von VG)",
+        "Delegation & Substitution (Urlaubsvertretung, Proxy-Approvals)",
+        "Eskalation: Timeout-basiert, Eskalation an nächsthöhere Ebene, Reminder-Emails"
+      ],
+      "fullContent": "\n### Generisches Genehmigungsobjekt (Approval Builder)\n- Datenmodell mit: id, workflowInstanceId, title, description, requestedBy, requestedAt, mode, approvers, currentStatus, responses, metadata\n- Approval Modes: ANY (First-Response-Wins), ALL (Unanimous), MAJORITY (>50%), SEQUENCE (Kaskade)\n- Approver-Struktur: personId, role (VG, VG von VG), order für Sequence\n\n### Approval Builder Service\n- Validierung der Approval-Requests\n- Persistierung in HR WORKS DB\n- Resolution von dynamischen Approvern (VG, VG von VG)\n- Status-Berechnung je nach Mode\n\n### Approval Modes Implementierung\n- ANY: Erster Response → Workflow fortsetzen, andere stornieren\n- ALL: Alle müssen genehmigen, bei Ablehnung sofort abgebrochen\n- MAJORITY: >50% Threshold, Live-Berechnung, Auto-Cancel bei Entscheidung\n- SEQUENCE: Order-basiert, nächster erst nach Genehmigung, bei Ablehnung Kette abbrechen\n\n### Approval Node Frontend\n- Approval-Titel & Beschreibung (Template)\n- Mode-Auswahl (ANY/ALL/MAJORITY/SEQUENCE)\n- Approv"
+    },
+    {
+      "id": "REQ-6",
+      "section": "Phase 4: Enterprise Features & Scale (Wochen 21-28)",
+      "title": "Phase 4: Enterprise Features & Scale (Wochen 21-28)",
+      "details": [
+        "Workflow Analytics Dashboard: Active Workflows, Execution Times, Error Rates, Bottleneck Detection, SLA Monitoring",
+        "Audit Trail & Compliance: Complete Execution History, Data Change Logs, Export (PDF, CSV), DSGVO-konforme Datenhaltung",
+        "Error Handling: Dead Letter Queue, Retry Strategies (exponential backoff), Manual Intervention, Rollback, Alert System",
+        "Sub-Workflow Node: Workflow als wiederverwendbare Komponente, Parameter Passing, Return Values, Versioning",
+        "Parallel Execution Node: Fork-Join Pattern, Parallel Branches, Synchronization Point, Timeout Handling",
+        "Database Node: Direct DB Queries (PostgreSQL), Insert/Update/Delete, Transaction Support, Query Builder UI",
+        "AI/LLM Node: OpenAI/Azure Integration, Prompt Templates, Response Parsing, Content Moderation",
+        "Consultants und server_admins können Workflows als Templates publizieren",
+        "Template-Metadaten: Titel, Beschreibung, Kategorie, Tags, Version, Author",
+        "Templates sind Tenant-übergreifend sichtbar",
+        "**\"Aktivieren\"-Funktion**: Kopiert Template in Tenant-DB zur Nutzung/Bearbeitung",
+        "Kategorien: Onboarding, Offboarding, Approvals, HR-Prozesse, Custom",
+        "Versionierung: Templates können aktualisiert werden, Tenants sehen Update-Hinweis",
+        "Rating & Reviews (optional)",
+        "Composite Triggers: Multiple Conditions (AND/OR), Time + Event Kombination, Debouncing & Throttling",
+        "Smart Scheduling: Business Hours, Holiday Calendar, Timezone Support, Dynamic Scheduling",
+        "Workflow Variables: Global, Node-lokal, Environment, Secrets (verschlüsselt)",
+        "Context Passing: Output/Input zwischen Nodes, JSON Path, Expression Language, Type Safety",
+        "Granulare Berechtigungen: Workflow-Ownership, Edit/View/Execute Rights, OE-basierte Zugriffskontrolle",
+        "Multi-Mandanten-Fähigkeit: Tenant-Isolation, White-Labeling, Tenant-spezifische Konfiguration",
+        "Workflow Caching, Database Indexing, Query Optimization, Connection Pooling",
+        "Horizontal Scaling: Stateless Backend, Load Balancing, Queue-based Architecture, Valkey für Shared State",
+        "Rate Limiting: API Call Limits, Workflow Execution Limits, Per-User/Per-OE Quotas",
+        "Webhooks (Outbound): Custom Webhook Nodes, Signature Signing, Retry Logic, Payload Templates",
+        "Public API: Workflow-Triggering, Status Queries, Webhook Registration, API Keys & OAuth2",
+        "Pre-built Connectors: Email (SMTP, Exchange, Gmail), Slack/Teams, SharePoint/OneDrive, SAP/DATEV (optional)",
+        "**Node-by-Node Testing (Phase 1)**:",
+        "Workflow Testing: Test Mode (Dry-Run), Mock Data Injection, Step-by-Step Debugging, Unit Tests",
+        "Versioning: Workflow Versions, Rollback, A/B Testing, Canary Deployments"
+      ],
+      "fullContent": "\n### Monitoring & Observability\n- Workflow Analytics Dashboard: Active Workflows, Execution Times, Error Rates, Bottleneck Detection, SLA Monitoring\n- Audit Trail & Compliance: Complete Execution History, Data Change Logs, Export (PDF, CSV), DSGVO-konforme Datenhaltung\n- Error Handling: Dead Letter Queue, Retry Strategies (exponential backoff), Manual Intervention, Rollback, Alert System\n\n### Advanced Node Types\n- Sub-Workflow Node: Workflow als wiederverwendbare Komponente, Parameter Passing, Return Values, Versioning\n- Parallel Execution Node: Fork-Join Pattern, Parallel Branches, Synchronization Point, Timeout Handling\n- Database Node: Direct DB Queries (PostgreSQL), Insert/Update/Delete, Transaction Support, Query Builder UI\n- AI/LLM Node: OpenAI/Azure Integration, Prompt Templates, Response Parsing, Content Moderation\n\n### Workflow-Templates & Marketplace\n**Template Gallery (Landlord-DB, global verfügbar):**\n- Consultants und server_admins können Workflows als Templates publiziere"
+    }
+  ]
+}

@@ -1,0 +1,340 @@
+{
+  "project": "Workflow Automation Platform",
+  "phase": "Phase 1: Designer UI & Basic Nodes",
+  "duration": "Wochen 1-6 (continued)",
+  "branchName": "feature/phase1-designer-ui",
+  "description": "Visual workflow designer with React Flow, node configuration, and basic node types",
+  "userStories": [
+    {
+      "id": "US-018",
+      "title": "React Flow Canvas Setup",
+      "description": "Als User sehe ich einen visuellen Workflow-Designer mit Drag & Drop",
+      "acceptanceCriteria": [
+        "React Flow integriert",
+        "Canvas mit Zoom/Pan-Funktionalität",
+        "Horizontale Anordnung von links nach rechts",
+        "Dunkles Theme (Dark Mode)",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Node Palette & Drag-and-Drop",
+      "description": "Als User kann ich Nodes aus einer Library in den Designer ziehen",
+      "acceptanceCriteria": [
+        "Seitliche Node-Library mit verfügbaren Node-Typen",
+        "Drag & Drop aus Library in Canvas",
+        "Node-Kategorien: Trigger, Action, Condition, Transformation",
+        "Farbcodierung: Trigger (Blau), HR WORKS (Orange), Transformation (Lila), Condition (Gelb), Action (Grün)",
+        "Typecheck passes"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Kompakte Node-Darstellung",
+      "description": "Als User sehe ich Nodes kompakt mit Icon, Label und Kurzbeschreibung",
+      "acceptanceCriteria": [
+        "Node zeigt Icon + Label + Kurzbeschreibung (max 2 Zeilen)",
+        "Farbcodierung nach Node-Typ",
+        "Play-Button oben rechts (nur im Test-Modus)",
+        "Status-Indicator unten links (✓ success, ✗ error, ⏳ running)",
+        "Keine technischen Details im Node sichtbar",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Bezier-Kurven Edges mit Animation",
+      "description": "Als User sehe ich geschwungene Verbindungslinien mit Datenfluss-Animation",
+      "acceptanceCriteria": [
+        "Gestrichelte Bezier-Kurven für Verbindungen",
+        "Animierte Punkte/Striche bewegen sich entlang der Linie",
+        "Hover-Effekt: Linie wird dicker, Lösch-Icon erscheint",
+        "Farbe: Grau (neutral), bei Hover: Primärfarbe",
+        "Klick auf Lösch-Icon entfernt Verbindung",
+        "Typecheck passes"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Node Configuration Panel (Rechte Sidebar)",
+      "description": "Als User kann ich Nodes über strukturierte Felder konfigurieren (KEIN JSON)",
+      "acceptanceCriteria": [
+        "Rechte Sidebar öffnet sich beim Klick auf Node",
+        "Strukturierte Felder statt JSON-Textfeld",
+        "Name-Input für Node-Namen",
+        "Einstellungen gruppiert nach Kategorie",
+        "Dropdowns für Auswahlfelder (API Endpoint, Operation)",
+        "Parameter-Felder dynamisch basierend auf Node-Typ",
+        "Variable Picker Button (🔗) neben jedem Input-Feld",
+        "Speichern/Löschen Buttons",
+        "WICHTIG: Keine generischen Felder wie 'Node Type: action.transform' oder 'Configuration (JSON)' oder 'Enter configuration (JSON)'",
+        "Stattdessen: Spezifische, benutzerfreundliche Felder pro Node-Typ",
+        "Beispiel HR WORKS Node: Name-Feld, API Endpoint Dropdown, Parameter-Felder mit Platzhaltern (z.B. {{trigger.id}}), Variable Picker Button",
+        "Beispiel Data Transformation Node: Name-Feld, Operation Dropdown (Anzahl/Count, Feld extrahieren, Filtern, Transformieren/Map, Summe, Durchschnitt), Input-Feld mit Variable Picker",
+        "Typecheck passes"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Context Panel / Variable Picker",
+      "description": "Als User kann ich Outputs vorheriger Nodes als Variablen auswählen",
+      "acceptanceCriteria": [
+        "Expandable Tree-View zeigt Outputs aller vorherigen Nodes",
+        "Array-Navigation mit Indexierung ([0], [1], etc.)",
+        "Wert-Anzeige für primitive Typen (Strings, Numbers, Booleans)",
+        "Klickbar auf allen Ebenen (Arrays, Objekte, Leaf-Nodes)",
+        "Array-Metadaten: Länge und Typ-Informationen",
+        "Syntax-Highlighting für JSON",
+        "Filterfunktion zum Suchen von Feldern",
+        "Wird als Overlay/Sidebar beim Klick in Input-Felder angezeigt",
+        "Typecheck passes"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "Node-by-Node Testing (Play-Button)",
+      "description": "Als User kann ich einzelne Nodes sequentiell testen",
+      "acceptanceCriteria": [
+        "Jeder Node hat Play-Button zum einzelnen Ausführen",
+        "Play-Button nur aktiv wenn alle vorherigen Nodes ausgeführt",
+        "Sequentielle Ausführung: A → B → C",
+        "Output wird im Node gespeichert und im Context Panel verfügbar",
+        "Visuelles Feedback: pending (grau), running (blau/spinner), waiting (gelb), success (grün/Haken), error (rot/X)",
+        "Run All-Button zum Ausführen aller Nodes in Reihenfolge",
+        "Cached Outputs bleiben erhalten bis Workflow-Definition ändert",
+        "Typecheck passes"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "Input/Output-Preview unterhalb Nodes",
+      "description": "Als User sehe ich Input/Output-Daten direkt am Node nach Ausführung",
+      "acceptanceCriteria": [
+        "Expandable Section unterhalb des Node-Körpers",
+        "2 Tabs: Input und Output",
+        "JSON-Darstellung mit Syntax-Highlighting",
+        "Ein-/ausklappbare Objekte und Arrays",
+        "Nur sichtbar nach Node-Ausführung",
+        "Kann minimiert/maximiert werden",
+        "Typecheck passes"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "Template Placeholder System",
+      "description": "Als System löse ich Variablen-Referenzen in Templates auf",
+      "acceptanceCriteria": [
+        "Syntax {{NodeName.output.field}} für Variablen-Referenzen",
+        "Funktioniert in Manual Test und Workflow Execution",
+        "Unterstützt verschachtelte Strukturen (nested objects/arrays)",
+        "Backend-Methode getValueByPath() für Pfad-Auflösung",
+        "Context-Button in Input-Feldern öffnet Context Panel",
+        "Typecheck passes"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-024",
+      "title": "Canvas Controls",
+      "description": "Als User kann ich Canvas mit Zoom, Undo/Redo und weiteren Controls steuern",
+      "acceptanceCriteria": [
+        "Zoom-Steuerung (-, Prozentanzeige, +)",
+        "Undo/Redo-Buttons",
+        "Vollbild-Toggle",
+        "Auto-Layout-Funktion für automatische Node-Anordnung",
+        "Hilfe-Button",
+        "Grüner + FAB-Button zum Hinzufügen neuer Knoten",
+        "Typecheck passes"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-025",
+      "title": "Context Menu für Nodes",
+      "description": "Als User kann ich Nodes per Rechtsklick verwalten",
+      "acceptanceCriteria": [
+        "Rechtsklick auf Node öffnet Context Menu",
+        "Optionen: Duplizieren, Löschen, Konfigurieren, Testen",
+        "Keyboard-Shortcuts (z.B. Delete-Taste)",
+        "Typecheck passes"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-026",
+      "title": "Workflow Speichern/Laden",
+      "description": "Als User kann ich Workflows speichern und laden",
+      "acceptanceCriteria": [
+        "Speichern-Button im Designer-Toolbar",
+        "Workflow-Definition wird in DB persistiert",
+        "Laden von gespeicherten Workflows",
+        "Auto-Save Funktionalität (optional)",
+        "Typecheck passes"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-027",
+      "title": "Workflow Export (JSON)",
+      "description": "Als User kann ich Workflows als JSON-Datei exportieren",
+      "acceptanceCriteria": [
+        "Export-Button im Designer oder Workflow-Übersicht",
+        "Komplette Workflow-Definition als JSON",
+        "Enthält alle Nodes, Edges und Konfigurationen",
+        "Download als .json Datei",
+        "Standardisiertes JSON-Schema für Portabilität",
+        "Typecheck passes"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-028",
+      "title": "Workflow Import (JSON)",
+      "description": "Als User kann ich Workflows aus JSON-Datei importieren",
+      "acceptanceCriteria": [
+        "Import-Button in Workflow-Übersicht",
+        "Validierung des Imports (Schema-Validierung, Node-Typ-Prüfung)",
+        "Erstellt neuen Workflow aus Import mit eindeutigem Namen",
+        "Konflikt-Handling bei doppelten Namen (automatische Umbenennung)",
+        "Fehlerbehandlung mit aussagekräftigen Fehlermeldungen",
+        "Typecheck passes"
+      ],
+      "priority": 28,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-029",
+      "title": "Workflow Duplizieren",
+      "description": "Als User kann ich Workflows duplizieren",
+      "acceptanceCriteria": [
+        "Duplizieren-Button in Workflow-Übersicht und Designer-Toolbar",
+        "Erstellt vollständige Kopie mit neuem Namen (z.B. 'Original Name (Kopie)')",
+        "Kopiert alle Nodes, Edges und Konfigurationen",
+        "Neue IDs für alle Elemente (keine Referenz-Konflikte)",
+        "Öffnet duplizierten Workflow direkt im Designer",
+        "Typecheck passes"
+      ],
+      "priority": 29,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-030",
+      "title": "Workflow-Übersicht als Tabelle",
+      "description": "Als User sehe ich alle Workflows in einer übersichtlichen Tabelle",
+      "acceptanceCriteria": [
+        "Tabelle mit Spalten: Name, Beschreibung, Status (Badge), Aktualisiert (Datum/Zeit), Aktionen",
+        "Status-Badges: Aktiv (grün), Inaktiv (gelb), Entwurf (grau)",
+        "Action-Buttons pro Zeile: Historie, Ausführen, Duplizieren, Export, Löschen",
+        "Import Workflow Button im Header",
+        "Klick auf Zeile öffnet Workflow-Designer",
+        "Pro Workflow nur ein Trigger-Knoten erlaubt (Validierung)",
+        "Typecheck passes"
+      ],
+      "priority": 30,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-031",
+      "title": "Workflow-Designer Toolbar",
+      "description": "Als User habe ich schnellen Zugriff auf wichtige Workflow-Aktionen",
+      "acceptanceCriteria": [
+        "Buttons: Historie, Ausführen (mit Play-Icon), Aktivieren/Deaktivieren, Speichern",
+        "Historie-Button navigiert zur Ausführungshistorie",
+        "Zurück-Navigation von Historie zum Designer",
+        "Typecheck passes"
+      ],
+      "priority": 31,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-032",
+      "title": "Ausführungshistorie-Seite (Split-Layout)",
+      "description": "Als User sehe ich alle Workflow-Ausführungen mit Details",
+      "acceptanceCriteria": [
+        "Split-Layout: Liste links (350px), Details rechts",
+        "Ausführungsliste: Zurück-Button, nummerierte Einträge (#1, #2), Datum/Zeit, Status-Badge, Execution-ID",
+        "Detail-Panel: Header mit Status/Start-/Endzeit/Fehlermeldung",
+        "Node-Liste aufklappbar mit Output/Fehler/Metadaten",
+        "JSON-Viewer mit Syntax-Highlighting und ein-/ausklappbaren Objekten",
+        "Node-Namen-Mapping (condition-123 → Bedingung)",
+        "Node-Icons (▶️ Trigger, ⏰ Scheduled, 🔀 Condition, etc.)",
+        "Typecheck passes"
+      ],
+      "priority": 32,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-033",
+      "title": "Echtzeit-Execution-Updates via SSE",
+      "description": "Als User sehe ich Live-Updates während Workflow-Ausführung",
+      "acceptanceCriteria": [
+        "Backend sendet Live-Updates über Server-Sent Events",
+        "Frontend verwendet @microsoft/fetch-event-source mit withCredentials: true",
+        "Node-Status-Updates in Echtzeit (running, success, error)",
+        "Ersetzt Polling-Mechanismus",
+        "Automatische Reconnect-Logik bei Verbindungsabbruch",
+        "Checkmarks/Error-Icons während Ausführung",
+        "Alert nach Abschluss (Erfolg/Fehler)",
+        "Typecheck passes"
+      ],
+      "priority": 33,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-034",
+      "title": "Workflow-Versionierung & Historie",
+      "description": "Als User kann ich Workflow-Versionen nachverfolgen und wiederherstellen",
+      "acceptanceCriteria": [
+        "Zeitstempel-basierte Historisierung für jeden Speichervorgang",
+        "Personenzuordnung: Wer hat wann gespeichert",
+        "Versions-Wiederherstellung: Alte Versionen als neue Version wiederherstellen",
+        "Audit-Trail: Vollständige Nachverfolgbarkeit aller Änderungen",
+        "Typecheck passes"
+      ],
+      "priority": 34,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
